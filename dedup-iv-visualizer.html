@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>82 · Remove Adjacent Repeated Characters IV — 原地栈可视化</title>
+<style>
+  :root{
+    --paper:#FBFAF4;
+    --grid:#DCE6EE;
+    --ink:#1B3A6B;
+    --graphite:#3D4450;
+    --pencil-red:#C0392B;
+    --stack-green:#2E7D4F;
+    --stack-fill:#E4F1E8;
+    --dead:#B8BDC4;
+    --card:#FFFFFF;
+    --code-bg:#232830;
+    --code-line:#3A4250;
+    --mono:"SF Mono","JetBrains Mono",Consolas,"Courier New",monospace;
+    --sans:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:var(--sans);
+    color:var(--graphite);
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+      var(--paper);
+    background-size:24px 24px;
+    min-height:100vh;
+    padding:32px 16px 64px;
+  }
+  .wrap{max-width:960px;margin:0 auto}
+
+  header{margin-bottom:28px;border-left:5px solid var(--ink);padding-left:16px}
+  header h1{font-size:1.35rem;color:var(--ink);letter-spacing:.5px}
+  header .sub{font-size:.85rem;margin-top:6px;color:#6b7280}
+  header .sub code{font-family:var(--mono);background:#EEF2F6;padding:1px 6px;border-radius:4px}
+
+  .panel{background:var(--card);border:1.5px solid var(--ink);border-radius:10px;
+         box-shadow:4px 4px 0 rgba(27,58,107,.12);padding:18px 20px;margin-bottom:20px}
+  .panel h2{font-size:.8rem;text-transform:uppercase;letter-spacing:2px;color:var(--ink);margin-bottom:14px}
+
+  /* 输入区 */
+  .input-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .input-row input{
+    font-family:var(--mono);font-size:1rem;padding:8px 12px;
+    border:1.5px solid var(--graphite);border-radius:6px;width:220px;letter-spacing:2px;
+  }
+  .input-row input:focus{outline:2px solid var(--ink);outline-offset:1px}
+  button{
+    font-family:var(--sans);font-size:.85rem;padding:8px 14px;cursor:pointer;
+    border:1.5px solid var(--graphite);border-radius:6px;background:#fff;color:var(--graphite);
+    transition:transform .08s, background .15s;
+  }
+  button:hover{background:#F0F3F7}
+  button:active{transform:translate(1px,1px)}
+  button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  button.primary:hover{background:#264C87}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .presets button{font-family:var(--mono);font-size:.8rem;padding:5px 10px;letter-spacing:1px}
+  .hint{font-size:.75rem;color:#94A0AD;margin-top:10px}
+
+  /* 数组可视化 */
+  .board{overflow-x:auto;padding:8px 4px 4px}
+  .cells{display:flex;gap:6px;width:max-content;margin:0 auto}
+  .cell{
+    width:56px;display:flex;flex-direction:column;align-items:center;gap:4px;
+    font-family:var(--mono);
+  }
+  .cell .idx{font-size:.68rem;color:#9AA5B1}
+  .cell .box{
+    width:52px;height:52px;border:2px solid var(--graphite);border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.5rem;background:#fff;transition:all .25s;
+    position:relative;
+  }
+  .cell.stack .box{background:var(--stack-fill);border-color:var(--stack-green)}
+  .cell.stacktop .box{border-width:3px;box-shadow:0 0 0 3px rgba(46,125,79,.18)}
+  .cell.cursor .box{border-color:var(--pencil-red);border-width:3px;box-shadow:0 0 0 3px rgba(192,57,43,.15)}
+  .cell.dead .box{background:#F1F2F4;border-color:var(--dead);color:var(--dead);border-style:dashed}
+  .cell.flash .box{animation:pop .4s ease}
+  @keyframes pop{0%{transform:scale(.8)}55%{transform:scale(1.12)}100%{transform:scale(1)}}
+  .cell .tags{height:38px;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:.7rem;font-weight:700}
+  .tag-end{color:var(--stack-green)}
+  .tag-i{color:var(--pencil-red)}
+  .tag-end::before,.tag-i::before{content:"↑";display:block;text-align:center;font-size:.8rem;line-height:.7}
+
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:.75rem;color:#6b7280}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .chip{width:14px;height:14px;border-radius:4px;border:2px solid var(--graphite);display:inline-block}
+  .chip.g{background:var(--stack-fill);border-color:var(--stack-green)}
+  .chip.r{border-color:var(--pencil-red)}
+  .chip.d{background:#F1F2F4;border-color:var(--dead);border-style:dashed}
+
+  /* 步骤说明 */
+  .stepdesc{
+    margin-top:16px;padding:12px 16px;border-left:4px solid var(--ink);
+    background:#F4F7FB;border-radius:0 8px 8px 0;font-size:.95rem;min-height:48px;
+  }
+  .stepdesc.equal{border-left-color:var(--pencil-red);background:#FBF1EF}
+  .stepdesc.done{border-left-color:var(--stack-green);background:var(--stack-fill);font-weight:700}
+  .result-str{font-family:var(--mono);letter-spacing:2px}
+
+  /* 控制条 */
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+  .controls .counter{font-family:var(--mono);font-size:.8rem;color:#6b7280;margin-left:auto}
+  select{padding:6px 8px;border:1.5px solid var(--graphite);border-radius:6px;font-size:.8rem;background:#fff}
+
+  /* 代码面板 */
+  .codebox{
+    background:var(--code-bg);border-radius:10px;padding:14px 0;overflow-x:auto;
+    font-family:var(--mono);font-size:.82rem;line-height:1.75;
+  }
+  .codeline{display:flex;white-space:pre;color:#C6CBD4;padding:0 18px;transition:background .2s}
+  .codeline .ln{width:26px;color:#5A6376;user-select:none;flex-shrink:0}
+  .codeline.active{background:var(--code-line);color:#fff;border-left:3px solid var(--pencil-red);padding-left:15px}
+  .codeline.active .ln{color:#E8A79D}
+
+  /* 对照表 */
+  table{border-collapse:collapse;width:100%;font-size:.85rem}
+  th,td{border:1px solid var(--grid);padding:8px 12px;text-align:left}
+  th{background:#F4F7FB;color:var(--ink)}
+  td code{font-family:var(--mono);background:#EEF2F6;padding:1px 6px;border-radius:4px;font-size:.8rem}
+
+  footer{text-align:center;font-size:.72rem;color:#A5AEB8;margin-top:32px}
+
+  @media (max-width:640px){
+    .cell{width:44px}
+    .cell .box{width:40px;height:40px;font-size:1.15rem}
+    .controls .counter{margin-left:0;width:100%}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>82 · Remove Adjacent Repeated Characters IV</h1>
+    <div class="sub">原地栈解法可视化 — 用原数组左半段 <code>array[0..end]</code> 冒充栈,<code>end</code> 是栈顶,<code>i</code> 是新来的字符</div>
+  </header>
+
+  <section class="panel">
+    <h2>输入</h2>
+    <div class="input-row">
+      <input id="inp" maxlength="14" value="abbbaaccz" spellcheck="false" autocomplete="off" aria-label="输入字符串">
+      <button class="primary" id="loadBtn">载入并重置</button>
+    </div>
+    <div class="presets" id="presets"></div>
+    <div class="hint">仅限字母,最长 14 个字符(保证格子放得下)。试试 abba —— 连锁消除的经典现场。</div>
+  </section>
+
+  <section class="panel">
+    <h2>数组即栈</h2>
+    <div class="board"><div class="cells" id="cells"></div></div>
+    <div class="legend">
+      <span><i class="chip g"></i>栈区 array[0..end]</span>
+      <span><i class="chip r"></i>当前字符 i</span>
+      <span><i class="chip d"></i>废弃区(已被消/已读完,可覆盖)</span>
+    </div>
+    <div class="stepdesc" id="desc" aria-live="polite"></div>
+    <div class="controls">
+      <button id="resetBtn" title="回到第一步">⏮ 重置</button>
+      <button id="prevBtn" title="上一步 (←)">← 上一步</button>
+      <button class="primary" id="playBtn" title="播放/暂停 (空格)">▶ 播放</button>
+      <button id="nextBtn" title="下一步 (→)">下一步 →</button>
+      <select id="speed" aria-label="播放速度">
+        <option value="1400">慢速</option>
+        <option value="850" selected>中速</option>
+        <option value="450">快速</option>
+      </select>
+      <span class="counter" id="counter"></span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>对应代码(老师的原地版)</h2>
+    <div class="codebox" id="codebox"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Deque 版 ↔ 原地版:同一个算法,栈换介质</h2>
+    <table>
+      <tr><th>Deque 显式栈</th><th>end 指针原地栈</th></tr>
+      <tr><td><code>stack.isEmpty()</code></td><td><code>end == -1</code></td></tr>
+      <tr><td><code>stack.peek()</code></td><td><code>array[end]</code></td></tr>
+      <tr><td><code>stack.push(c)</code></td><td><code>array[++end] = c</code></td></tr>
+      <tr><td><code>stack.pop()</code></td><td><code>end--</code></td></tr>
+      <tr><td>pop 全部 + 倒序输出</td><td><code>new String(array, 0, end + 1)</code></td></tr>
+    </table>
+  </section>
+
+  <footer>先比后压 · 压完即走 · 消除之后回头看 —— 82 Remove Adjacent Repeated Characters IV</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 代码面板 ---------- */
+  var CODE = [
+    "char[] array = input.toCharArray();",
+    "int end = 0;",
+    "for (int i = 1; i < array.length; i++) {",
+    "    if (end == -1 || array[i] != array[end]) {",
+    "        array[++end] = array[i];   // 压栈",
+    "    } else {",
+    "        end--;                     // 弹栈",
+    "        while (i+1 < array.length && array[i] == array[i+1]) {",
+    "            i++;                   // 跳过整段重复",
+    "        }",
+    "    }",
+    "}",
+    "return new String(array, 0, end + 1);"
+  ];
+  var codebox = document.getElementById("codebox");
+  CODE.forEach(function(line, idx){
+    var div = document.createElement("div");
+    div.className = "codeline";
+    div.id = "cl" + idx;
+    div.innerHTML = '<span class="ln">' + (idx+1) + '</span>' +
+      line.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    codebox.appendChild(div);
+  });
+
+  /* ---------- 模拟:预生成每一步快照 ---------- */
+  function simulate(input){
+    var steps = [];
+    var arr = input.split("");
+    var n = arr.length;
+    function snap(line, desc, extra){
+      var s = { arr: arr.slice(), end: end, i: null, line: line, desc: desc };
+      if (extra) for (var k in extra) s[k] = extra[k];
+      steps.push(s);
+    }
+    if (n <= 1){
+      var end = n - 1;
+      steps.push({arr:arr.slice(), end:end, i:null, line:12,
+        desc:'长度 ≤ 1,直接返回 "' + input + '"', done:true});
+      return steps;
+    }
+    var end = 0;
+    snap(0, "String 不可变,先拷进 char 数组,准备原地操作");
+    snap(1, 'end = 0:此刻 array[0..0] 就是"栈",array[end] 是栈顶 \'' + arr[0] + "'");
+
+    for (var i = 1; i < n; i++){
+      if (end === -1 || arr[i] !== arr[end]){
+        snap(3, end === -1
+          ? "i=" + i + ":栈空(end == -1),没人可比 = 不重复 → 走压栈分支"
+          : "i=" + i + ":比较新字符 '" + arr[i] + "' vs 栈顶 '" + arr[end] + "' → 不相等 → 压栈",
+          {i: i});
+        end++;
+        arr[end] = arr[i];
+        snap(4, "array[++end] = array[i]:'" + arr[end] + "' 写进栈区,end → " + end + "(先加后用:栈顶先上移,再写入)",
+          {i: i, flash: end});
+      } else {
+        snap(3, "i=" + i + ":比较新字符 '" + arr[i] + "' vs 栈顶 '" + arr[end] + "' → 相等!进消除分支",
+          {i: i, equal: true});
+        end--;
+        snap(6, "end--:栈顶被弹掉,end → " + end +
+          (end === -1 ? "(栈空了)" : ",新栈顶 '" + arr[end] + "'。注意:下一轮新字符会跟它比 —— 这就是\"消除之后回头看\""),
+          {i: i, equal: true});
+        while (i + 1 < n && arr[i] === arr[i+1]){
+          snap(7, "前瞻 array[i+1]='" + arr[i+1] + "',还和当前相同 → 属于同一段重复", {i: i, equal: true});
+          i++;
+          snap(8, "i++ → " + i + ":跳过它(前瞻式不越界,所以不需要回退)", {i: i, equal: true});
+        }
+        snap(7, (i + 1 < n
+          ? "前瞻 array[i+1]='" + arr[i+1] + "',不同了 → 这段重复跳完,交还给 for 前进"
+          : "已到末尾 → 这段重复跳完"), {i: i, equal: true});
+      }
+    }
+    var result = arr.slice(0, end + 1).join("");
+    snap(12, "循环结束:new String(array, 0, end+1) → 结果 " +
+      (end === -1 ? '""(空串,全消光了)' : '"' + result + '"'), {done: true});
+    return steps;
+  }
+
+  /* ---------- 渲染 ---------- */
+  var cellsEl = document.getElementById("cells");
+  var descEl  = document.getElementById("desc");
+  var counterEl = document.getElementById("counter");
+  var steps = [], cur = 0, timer = null, curInput = "";
+
+  function render(){
+    var s = steps[cur];
+    cellsEl.innerHTML = "";
+    s.arr.forEach(function(ch, idx){
+      var cell = document.createElement("div");
+      var cls = ["cell"];
+      var inStack = idx <= s.end;
+      var isTop   = idx === s.end && s.end >= 0;
+      var isCur   = s.i !== null && idx === s.i;
+      var isDead  = !inStack && s.i !== null && idx < s.i;
+      var isDoneDead = !inStack && s.done;
+      if (inStack) cls.push("stack");
+      if (isTop) cls.push("stacktop");
+      if (isCur) cls.push("cursor");
+      if (isDead || isDoneDead) cls.push("dead");
+      if (s.flash === idx) cls.push("flash");
+      cell.className = cls.join(" ");
+      var tags = "";
+      if (isTop) tags += '<span class="tag-end">end</span>';
+      if (isCur) tags += '<span class="tag-i">i</span>';
+      cell.innerHTML =
+        '<span class="idx">' + idx + '</span>' +
+        '<div class="box">' + ch + '</div>' +
+        '<div class="tags">' + tags + '</div>';
+      cellsEl.appendChild(cell);
+    });
+    if (s.end === -1){
+      var note = document.createElement("div");
+      note.className = "cell";
+      note.innerHTML = '<span class="idx">&nbsp;</span>' +
+        '<div class="box" style="border-style:dashed;color:#9AA5B1;font-size:.6rem">栈空</div>' +
+        '<div class="tags"><span class="tag-end">end=-1</span></div>';
+      cellsEl.insertBefore(note, cellsEl.firstChild);
+    }
+
+    descEl.className = "stepdesc" + (s.equal ? " equal" : "") + (s.done ? " done" : "");
+    descEl.innerHTML = s.done ? '✅ <span class="result-str">' + s.desc + '</span>' : s.desc;
+
+    for (var k = 0; k < CODE.length; k++){
+      document.getElementById("cl" + k).classList.toggle("active", k === s.line);
+    }
+    counterEl.textContent = "步骤 " + (cur + 1) + " / " + steps.length;
+    document.getElementById("prevBtn").disabled = (cur === 0);
+    document.getElementById("nextBtn").disabled = (cur === steps.length - 1);
+    if (cur === steps.length - 1) stopPlay();
+  }
+
+  /* ---------- 控制 ---------- */
+  var playBtn = document.getElementById("playBtn");
+  function stopPlay(){
+    if (timer){ clearInterval(timer); timer = null; }
+    playBtn.textContent = "▶ 播放";
+  }
+  function startPlay(){
+    if (cur === steps.length - 1) cur = 0;
+    var gap = parseInt(document.getElementById("speed").value, 10);
+    timer = setInterval(function(){
+      if (cur < steps.length - 1){ cur++; render(); } else stopPlay();
+    }, gap);
+    playBtn.textContent = "⏸ 暂停";
+    render();
+  }
+  playBtn.addEventListener("click", function(){ timer ? stopPlay() : startPlay(); });
+  document.getElementById("nextBtn").addEventListener("click", function(){
+    stopPlay(); if (cur < steps.length - 1){ cur++; render(); }
+  });
+  document.getElementById("prevBtn").addEventListener("click", function(){
+    stopPlay(); if (cur > 0){ cur--; render(); }
+  });
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    stopPlay(); cur = 0; render();
+  });
+  document.getElementById("speed").addEventListener("change", function(){
+    if (timer){ stopPlay(); startPlay(); }
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.target.tagName === "INPUT") return;
+    if (e.key === "ArrowRight"){ e.preventDefault(); stopPlay(); if (cur < steps.length-1){ cur++; render(); } }
+    else if (e.key === "ArrowLeft"){ e.preventDefault(); stopPlay(); if (cur > 0){ cur--; render(); } }
+    else if (e.key === " "){ e.preventDefault(); timer ? stopPlay() : startPlay(); }
+  });
+
+  /* ---------- 载入 ---------- */
+  var inp = document.getElementById("inp");
+  function load(str){
+    str = (str || "").replace(/[^a-zA-Z]/g, "").slice(0, 14);
+    if (!str){ inp.focus(); return; }
+    inp.value = str;
+    curInput = str;
+    stopPlay();
+    steps = simulate(str);
+    cur = 0;
+    render();
+  }
+  document.getElementById("loadBtn").addEventListener("click", function(){ load(inp.value); });
+  inp.addEventListener("keydown", function(e){ if (e.key === "Enter") load(inp.value); });
+
+  var PRESETS = ["abbbaaccz", "aabccdc", "abba", "aab"];
+  var presetsEl = document.getElementById("presets");
+  PRESETS.forEach(function(p){
+    var b = document.createElement("button");
+    b.textContent = p;
+    b.addEventListener("click", function(){ load(p); });
+    presetsEl.appendChild(b);
+  });
+
+  load("abbbaaccz");
+})();
+</script>
+</body>
+</html>
