@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>200 · Max Water Trapped II — 围墙灌水(Best-First Search)可视化</title>
+<style>
+  :root{
+    --paper:#FBFAF4; --grid:#DCE6EE; --ink:#1B3A6B; --graphite:#3D4450;
+    --pencil-red:#C0392B; --wall-green:#2E7D4F; --water:#4A90C2;
+    --water-fill:rgba(74,144,194,.5); --settled:#EAF3EC;
+    --card:#FFFFFF; --code-bg:#232830; --code-line:#3A4250;
+    --mono:"SF Mono","JetBrains Mono",Consolas,"Courier New",monospace;
+    --sans:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);color:var(--graphite);
+    background:linear-gradient(var(--grid) 1px,transparent 1px),
+               linear-gradient(90deg,var(--grid) 1px,transparent 1px),var(--paper);
+    background-size:24px 24px;min-height:100vh;padding:32px 16px 64px}
+  .wrap{max-width:980px;margin:0 auto}
+  header{margin-bottom:24px;border-left:5px solid var(--ink);padding-left:16px}
+  header h1{font-size:1.28rem;color:var(--ink)}
+  header .sub{font-size:.85rem;margin-top:6px;color:#6b7280;line-height:1.7}
+  header .sub b{color:var(--pencil-red)}
+  .panel{background:var(--card);border:1.5px solid var(--ink);border-radius:10px;
+    box-shadow:4px 4px 0 rgba(27,58,107,.12);padding:18px 20px;margin-bottom:20px}
+  .panel h2{font-size:.8rem;text-transform:uppercase;letter-spacing:2px;color:var(--ink);margin-bottom:14px}
+  textarea{font-family:var(--mono);font-size:.9rem;padding:10px 12px;width:100%;max-width:420px;
+    border:1.5px solid var(--graphite);border-radius:6px;letter-spacing:1px;resize:vertical;min-height:74px}
+  textarea:focus{outline:2px solid var(--ink);outline-offset:1px}
+  button{font-family:var(--sans);font-size:.85rem;padding:8px 14px;cursor:pointer;
+    border:1.5px solid var(--graphite);border-radius:6px;background:#fff;color:var(--graphite);
+    transition:transform .08s,background .15s}
+  button:hover{background:#F0F3F7}
+  button:active{transform:translate(1px,1px)}
+  button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  button.primary:hover{background:#264C87}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .presets button{font-family:var(--mono);font-size:.76rem;padding:5px 10px}
+  .hint{font-size:.75rem;color:#94A0AD;margin-top:10px}
+  .input-row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+
+  .stage{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+  .gridbox{flex:0 0 auto}
+  .mat{border-collapse:collapse;font-family:var(--mono)}
+  .mat td{width:58px;height:58px;text-align:center;vertical-align:middle;position:relative;
+    border:2px solid var(--bar-edge,#8A96A3);background:#EDF0F4;transition:background .25s,border-color .25s;
+    font-weight:700;font-size:1.05rem}
+  .mat td .h{display:block;line-height:1.1}
+  .mat td .w{display:block;font-size:.62rem;color:var(--water);font-weight:700}
+  .mat td.wall{border-color:var(--wall-green);border-width:3px;background:#E4F1E8}
+  .mat td.cur{border-color:var(--pencil-red);border-width:3.5px;background:#FBE9E5;
+    box-shadow:0 0 0 3px rgba(192,57,43,.18)}
+  .mat td.nei{border-color:var(--water);border-width:3px;background:#EAF3FB}
+  .mat td.done{background:var(--settled);color:#7C8A80}
+  .mat td.hasw{background:var(--water-fill);color:#123A5C}
+  .mat td.raised .h::after{content:"↑";color:var(--pencil-red);font-size:.7rem;margin-left:1px}
+
+  .side{flex:1 1 280px;min-width:260px}
+  .heapview{font-family:var(--mono);font-size:.78rem;background:#F4F7FB;border:1.5px dashed var(--ink);
+    border-radius:8px;padding:10px 12px;line-height:1.9;word-break:break-all}
+  .heapview b{color:var(--pencil-red)}
+  .heapview .tag{font-size:.68rem;color:#6b7280;font-family:var(--sans)}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;font-size:.74rem;color:#6b7280}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .chip{width:15px;height:15px;border-radius:4px;border:2px solid #8A96A3;background:#EDF0F4;display:inline-block}
+  .chip.wl{border-color:var(--wall-green);background:#E4F1E8}
+  .chip.cu{border-color:var(--pencil-red);background:#FBE9E5}
+  .chip.ne{border-color:var(--water);background:#EAF3FB}
+  .chip.wa{background:var(--water-fill)}
+  .chip.dn{background:var(--settled)}
+
+  .stepdesc{margin-top:14px;padding:12px 16px;border-left:4px solid var(--ink);
+    background:#F4F7FB;border-radius:0 8px 8px 0;font-size:.92rem;min-height:52px;line-height:1.75}
+  .stepdesc.settle{border-left-color:var(--water);background:#EFF6FB}
+  .stepdesc.done{border-left-color:var(--wall-green);background:#E4F1E8;font-weight:700}
+  .stepdesc code{font-family:var(--mono);background:#E4EAF1;padding:1px 6px;border-radius:4px;font-size:.85em}
+  .keychain{margin-top:10px;padding:10px 14px;background:#FBF1EF;border-left:4px solid var(--pencil-red);
+    border-radius:0 8px 8px 0;font-size:.86rem;font-family:var(--mono);display:none;line-height:1.7}
+  .keychain.show{display:block}
+
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+  .controls .counter{font-family:var(--mono);font-size:.8rem;color:#6b7280;margin-left:auto}
+  select{padding:6px 8px;border:1.5px solid var(--graphite);border-radius:6px;font-size:.8rem;background:#fff}
+  footer{text-align:center;font-size:.72rem;color:#A5AEB8;margin-top:32px}
+  @media (max-width:640px){ .mat td{width:44px;height:44px;font-size:.9rem} .controls .counter{margin-left:0;width:100%} }
+  @media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>200 · Max Water Trapped II — 围墙灌水(Best-First Search)</h1>
+    <div class="sub">
+      一维的两根指针,升维成<b>一整圈围墙</b>(minHeap 维护)。每轮 poll 出围墙<b>最矮的缺口</b>,
+      水从这里往里漫:邻居比缺口矮 → 淹到缺口高度,水当场结算;邻居入墙前身高抬到水面
+      (nei.height = max(cur, nei))。没有任何"矩形/框"——每格各自结算,累加即答案。
+    </div>
+  </header>
+
+  <section class="panel">
+    <h2>输入矩阵(每行一排,空格/逗号分隔)</h2>
+    <div class="input-row">
+      <textarea id="inp" spellcheck="false">2 3 4 2
+3 1 2 3
+4 3 5 4</textarea>
+      <button class="primary" id="loadBtn">载入并重置</button>
+    </div>
+    <div class="presets" id="presets"></div>
+    <div class="hint">最大 7×7,高度 0–9。第二个预设是"缺口迷宫":看水如何从缺口绕路漏光——四方向直线法在它身上必错。</div>
+  </section>
+
+  <section class="panel">
+    <h2>矩阵 · 格内上=当前有效高度,下=已结算水量</h2>
+    <div class="stage">
+      <div class="gridbox" id="gridbox"></div>
+      <div class="side">
+        <div class="heapview" id="heapview"></div>
+        <div class="legend">
+          <span><i class="chip"></i>未访问</span>
+          <span><i class="chip wl"></i>围墙(在堆中)</span>
+          <span><i class="chip cu"></i>本轮最矮缺口 cur</span>
+          <span><i class="chip ne"></i>正在处理的邻居</span>
+          <span><i class="chip wa"></i>结算出水的格子</span>
+          <span><i class="chip dn"></i>已出堆(处理完)</span>
+        </div>
+      </div>
+    </div>
+    <div class="stepdesc" id="desc" aria-live="polite"></div>
+    <div class="keychain" id="keychain"></div>
+    <div class="controls">
+      <button id="resetBtn">⏮ 重置</button>
+      <button id="prevBtn">← 上一步</button>
+      <button class="primary" id="playBtn">▶ 播放</button>
+      <button id="nextBtn">下一步 →</button>
+      <select id="speed" aria-label="播放速度">
+        <option value="1800">慢速</option>
+        <option value="1100" selected>中速</option>
+        <option value="600">快速</option>
+      </select>
+      <span class="counter" id="counter"></span>
+    </div>
+  </section>
+
+  <footer>整圈围墙 · 最矮缺口 · 漫过去结算 · 入墙先抬高 —— 200 Max Water Trapped II</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 模拟:预生成快照 ---------- */
+  function simulate(mat){
+    var R = mat.length, C = mat[0].length;
+    var steps = [];
+    // 状态矩阵:eff=有效高度(可能被抬), water, state: 0未访问 1墙(堆中) 2已出堆
+    var eff = mat.map(function(r){return r.slice();});
+    var water = mat.map(function(r){return r.map(function(){return 0;});});
+    var state = mat.map(function(r){return r.map(function(){return 0;});});
+    var raised = mat.map(function(r){return r.map(function(){return false;});});
+    var result = 0;
+    // 简易堆:数组+排序(可视化规模小,够用)
+    var heap = [];
+    function offer(x,y){ heap.push([x,y]); state[x][y]=1; }
+    function pollMin(){
+      var bi=0;
+      for (var t=1;t<heap.length;t++){
+        if (eff[heap[t][0]][heap[t][1]] < eff[heap[bi][0]][heap[bi][1]]) bi=t;
+      }
+      return heap.splice(bi,1)[0];
+    }
+    function heapStr(){
+      var items = heap.slice().sort(function(p,q){return eff[p[0]][p[1]]-eff[q[0]][q[1]];});
+      return items.map(function(p,ix){
+        var s = "("+p[0]+","+p[1]+")h"+eff[p[0]][p[1]];
+        return ix===0 ? "<b>"+s+"</b>" : s;
+      }).join(" · ") || "(空)";
+    }
+    function snap(o){
+      steps.push(Object.assign({
+        eff: eff.map(function(r){return r.slice();}),
+        water: water.map(function(r){return r.slice();}),
+        state: state.map(function(r){return r.slice();}),
+        raised: raised.map(function(r){return r.slice();}),
+        heap: heapStr(), result: result,
+        cur:null, nei:null, desc:"", key:null, phase:""
+      }, o));
+    }
+
+    if (R < 3 || C < 3){
+      snap({phase:"done", desc:"行或列不足 3,内部没有格子,存不了水 → 0"});
+      return steps;
+    }
+    // init 整圈边界
+    for (var j=0;j<C;j++){ offer(0,j); offer(R-1,j); }
+    for (var i=1;i<R-1;i++){ offer(i,0); offer(i,C-1); }
+    snap({phase:"init",
+      desc:"初始化:<b>整圈边界</b>入堆当围墙,水位=自身(靠边直接漏)。为什么必须整圈?——围墙有洞,水就从洞绕出去,内部谁的水位都定不了",
+      key:"一维的\"左右两端点\"升维 = 二维的\"整圈边界\""});
+
+    var DIR = [[1,0],[-1,0],[0,1],[0,-1]];
+    while (heap.length){
+      var p = pollMin(), cx=p[0], cy=p[1];
+      state[cx][cy] = 2;
+      snap({phase:"poll", cur:[cx,cy],
+        desc:"poll 围墙最矮:("+cx+","+cy+") 有效高度 <b>"+eff[cx][cy]+"</b> —— 水从这个缺口往里漫",
+        key:"安全论证(=199 升维):邻居想逃到边界,任何路径都得穿围墙,而围墙处处 ≥ "+eff[cx][cy]+" → 邻居的\"最优逃跑路线最高坎\"保底 ≥ "+eff[cx][cy]+" → 水面 = max(缺口, 自身),当场定案"});
+      for (var d=0; d<4; d++){
+        var nx=cx+DIR[d][0], ny=cy+DIR[d][1];
+        if (nx<0||nx>=R||ny<0||ny>=C||state[nx][ny]!==0) continue;
+        var w = Math.max(0, eff[cx][cy] - mat[nx][ny] - water[nx][ny]);
+        // 注:mat为原始高度;water此时必为0(未访问),写成通式防误解
+        var gain = Math.max(0, eff[cx][cy] - eff[nx][ny]);
+        result += gain;
+        water[nx][ny] = gain;
+        var before = eff[nx][ny];
+        var didRaise = eff[cx][cy] > eff[nx][ny];
+        eff[nx][ny] = Math.max(eff[cx][cy], eff[nx][ny]);
+        raised[nx][ny] = didRaise;
+        offer(nx,ny);
+        snap({phase:"settle", cur:[cx,cy], nei:[nx,ny],
+          desc:"邻居 ("+nx+","+ny+") 身高 "+before+(gain>0
+            ? " < 缺口 "+eff[cx][cy]+" → 淹到 "+eff[cx][cy]+",结算水 <code>"+eff[cx][cy]+"−"+before+" = "+gain+"</code>,累计 <b>"+result+"</b>;入墙身高抬到水面 "+eff[nx][ny]
+            : " ≥ 缺口 → 漫不过去,无水;原样入墙")+
+            "(标 visited,入堆)",
+          key: didRaise ? "入墙先抬高:它以后当墙时,挡水按水面 "+eff[nx][ny]+" 算,不是按身高 "+before+"——漏了这行,\"坑里还有坑\"的地形会把内坑的水算少" : null});
+      }
+    }
+    snap({phase:"done", desc:"堆空,每格恰好进出一次 → 总水量 = <b>"+result+"</b>(Time O(mn·log 墙长), Space O(mn))"});
+    return steps;
+  }
+
+  /* ---------- 渲染 ---------- */
+  var gridbox=document.getElementById("gridbox"), descEl=document.getElementById("desc");
+  var keyEl=document.getElementById("keychain"), counterEl=document.getElementById("counter");
+  var heapEl=document.getElementById("heapview");
+  var steps=[], cur=0, timer=null, MAT=[];
+
+  function render(){
+    var s=steps[cur], R=MAT.length, C=MAT[0].length;
+    var html=['<table class="mat">'];
+    for (var i=0;i<R;i++){
+      html.push("<tr>");
+      for (var j=0;j<C;j++){
+        var cls=[];
+        if (s.state[i][j]===1) cls.push("wall");
+        if (s.state[i][j]===2) cls.push("done");
+        if (s.water[i][j]>0) cls.push("hasw");
+        if (s.cur && s.cur[0]===i && s.cur[1]===j) cls.push("cur");
+        if (s.nei && s.nei[0]===i && s.nei[1]===j) cls.push("nei");
+        if (s.raised[i][j]) cls.push("raised");
+        html.push('<td class="'+cls.join(" ")+'"><span class="h">'+s.eff[i][j]+'</span>'+
+          (s.water[i][j]>0?'<span class="w">水'+s.water[i][j]+'</span>':'')+'</td>');
+      }
+      html.push("</tr>");
+    }
+    html.push("</table>");
+    gridbox.innerHTML=html.join("");
+    heapEl.innerHTML='<span class="tag">minHeap(按有效高度排,加粗=最矮):</span><br>'+s.heap+
+      '<br><span class="tag">累计水量 result = </span><b>'+s.result+'</b>';
+    descEl.className="stepdesc"+(s.phase==="settle"?" settle":"")+(s.phase==="done"?" done":"");
+    descEl.innerHTML=s.desc;
+    keyEl.className="keychain"+(s.key?" show":"");
+    keyEl.textContent=s.key||"";
+    counterEl.textContent="步骤 "+(cur+1)+" / "+steps.length;
+    document.getElementById("prevBtn").disabled=(cur===0);
+    document.getElementById("nextBtn").disabled=(cur===steps.length-1);
+    if (cur===steps.length-1) stopPlay();
+  }
+
+  /* ---------- 控制 ---------- */
+  var playBtn=document.getElementById("playBtn");
+  function stopPlay(){ if(timer){clearInterval(timer);timer=null;} playBtn.textContent="▶ 播放"; }
+  function startPlay(){
+    if (cur===steps.length-1) cur=0;
+    timer=setInterval(function(){ if(cur<steps.length-1){cur++;render();} else stopPlay(); },
+      parseInt(document.getElementById("speed").value,10));
+    playBtn.textContent="⏸ 暂停"; render();
+  }
+  playBtn.addEventListener("click",function(){ timer?stopPlay():startPlay(); });
+  document.getElementById("nextBtn").addEventListener("click",function(){ stopPlay(); if(cur<steps.length-1){cur++;render();} });
+  document.getElementById("prevBtn").addEventListener("click",function(){ stopPlay(); if(cur>0){cur--;render();} });
+  document.getElementById("resetBtn").addEventListener("click",function(){ stopPlay(); cur=0; render(); });
+  document.getElementById("speed").addEventListener("change",function(){ if(timer){stopPlay();startPlay();} });
+  document.addEventListener("keydown",function(e){
+    if (e.target.tagName==="TEXTAREA"||e.target.tagName==="INPUT") return;
+    if (e.key==="ArrowRight"){ e.preventDefault(); stopPlay(); if(cur<steps.length-1){cur++;render();} }
+    else if (e.key==="ArrowLeft"){ e.preventDefault(); stopPlay(); if(cur>0){cur--;render();} }
+    else if (e.key===" "){ e.preventDefault(); timer?stopPlay():startPlay(); }
+  });
+
+  /* ---------- 载入 ---------- */
+  var inp=document.getElementById("inp");
+  function parse(str){
+    var rows=str.trim().split(/\n+/).map(function(line){
+      return line.trim().split(/[\s,，]+/).map(Number)
+        .filter(function(x){return !isNaN(x)&&x>=0;})
+        .map(function(x){return Math.min(9,Math.floor(x));});
+    }).filter(function(r){return r.length>0;});
+    if (!rows.length) return null;
+    var C=rows[0].length;
+    if (rows.some(function(r){return r.length!==C;})) return null;
+    return rows.slice(0,7).map(function(r){return r.slice(0,7);});
+  }
+  function load(str){
+    var m=parse(str);
+    if (!m){ descEl.className="stepdesc"; descEl.textContent="输入无效:每行数字个数要一致"; return; }
+    MAT=m; inp.value=m.map(function(r){return r.join(" ");}).join("\n");
+    stopPlay(); steps=simulate(MAT); cur=0; render();
+  }
+  document.getElementById("loadBtn").addEventListener("click",function(){ load(inp.value); });
+  var PRESETS=[
+    {name:"题目原例", v:"2 3 4 2\n3 1 2 3\n4 3 5 4"},
+    {name:"缺口迷宫(直线法必错)", v:"9 9 9 9 9\n9 1 1 1 9\n9 9 9 1 9\n9 9 9 1 9"},
+    {name:"坑里有坑(漏抬高必错)", v:"5 5 5 5 5\n5 3 3 3 5\n5 3 0 3 5\n5 3 3 3 5\n5 5 5 5 5"},
+    {name:"全平", v:"2 2 2\n2 2 2\n2 2 2"}
+  ];
+  var pe=document.getElementById("presets");
+  PRESETS.forEach(function(p){
+    var b=document.createElement("button"); b.textContent=p.name;
+    b.addEventListener("click",function(){ load(p.v); }); pe.appendChild(b);
+  });
+  load(PRESETS[0].v);
+})();
+</script>
+</body>
+</html>
