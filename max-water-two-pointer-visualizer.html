@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>199 · Max Water Trapped I — 两端双指针可视化</title>
+<style>
+  :root{
+    --paper:#FBFAF4; --grid:#DCE6EE; --ink:#1B3A6B; --graphite:#3D4450;
+    --pencil-red:#C0392B; --lmax-green:#2E7D4F; --rmax-purple:#7B4FA6;
+    --water:#4A90C2; --water-fill:rgba(74,144,194,.55);
+    --bar:#C9D2DC; --bar-edge:#8A96A3; --card:#FFFFFF;
+    --code-bg:#232830; --code-line:#3A4250;
+    --mono:"SF Mono","JetBrains Mono",Consolas,"Courier New",monospace;
+    --sans:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:var(--sans);color:var(--graphite);
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px), var(--paper);
+    background-size:24px 24px; min-height:100vh; padding:32px 16px 64px;
+  }
+  .wrap{max-width:960px;margin:0 auto}
+  header{margin-bottom:28px;border-left:5px solid var(--ink);padding-left:16px}
+  header h1{font-size:1.3rem;color:var(--ink)}
+  header .sub{font-size:.85rem;margin-top:6px;color:#6b7280;line-height:1.6}
+  header .sub b{color:var(--pencil-red)}
+  .panel{background:var(--card);border:1.5px solid var(--ink);border-radius:10px;
+         box-shadow:4px 4px 0 rgba(27,58,107,.12);padding:18px 20px;margin-bottom:20px}
+  .panel h2{font-size:.8rem;text-transform:uppercase;letter-spacing:2px;color:var(--ink);margin-bottom:14px}
+  .input-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .input-row input{font-family:var(--mono);font-size:.95rem;padding:8px 12px;
+    border:1.5px solid var(--graphite);border-radius:6px;width:260px;letter-spacing:1px}
+  .input-row input:focus{outline:2px solid var(--ink);outline-offset:1px}
+  button{font-family:var(--sans);font-size:.85rem;padding:8px 14px;cursor:pointer;
+    border:1.5px solid var(--graphite);border-radius:6px;background:#fff;color:var(--graphite);
+    transition:transform .08s, background .15s}
+  button:hover{background:#F0F3F7}
+  button:active{transform:translate(1px,1px)}
+  button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  button.primary:hover{background:#264C87}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .presets button{font-family:var(--mono);font-size:.78rem;padding:5px 10px}
+  .hint{font-size:.75rem;color:#94A0AD;margin-top:10px}
+  .board{overflow-x:auto;padding:4px}
+  .board svg{display:block;margin:0 auto}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:.75rem;color:#6b7280}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .chip{width:14px;height:14px;border-radius:4px;border:2px solid var(--bar-edge);background:var(--bar);display:inline-block}
+  .chip.w{background:var(--water-fill);border-color:var(--water)}
+  .chip.l{background:none;border:none;border-top:3px dashed var(--lmax-green);height:0;width:20px;border-radius:0}
+  .chip.r2{background:none;border:none;border-top:3px dashed var(--rmax-purple);height:0;width:20px;border-radius:0}
+  .chip.p{background:none;border-color:var(--pencil-red)}
+  .stepdesc{margin-top:14px;padding:12px 16px;border-left:4px solid var(--ink);
+    background:#F4F7FB;border-radius:0 8px 8px 0;font-size:.92rem;min-height:52px;line-height:1.7}
+  .stepdesc.settle{border-left-color:var(--water);background:#EFF6FB}
+  .stepdesc.done{border-left-color:var(--lmax-green);background:#E4F1E8;font-weight:700}
+  .stepdesc code{font-family:var(--mono);background:#E4EAF1;padding:1px 6px;border-radius:4px;font-size:.85em}
+  .keychain{margin-top:10px;padding:10px 14px;background:#FBF1EF;border-left:4px solid var(--pencil-red);
+    border-radius:0 8px 8px 0;font-size:.88rem;font-family:var(--mono);display:none}
+  .keychain.show{display:block}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+  .controls .counter{font-family:var(--mono);font-size:.8rem;color:#6b7280;margin-left:auto}
+  select{padding:6px 8px;border:1.5px solid var(--graphite);border-radius:6px;font-size:.8rem;background:#fff}
+  .codebox{background:var(--code-bg);border-radius:10px;padding:14px 0;overflow-x:auto;
+    font-family:var(--mono);font-size:.8rem;line-height:1.75}
+  .codeline{display:flex;white-space:pre;color:#C6CBD4;padding:0 18px;transition:background .2s}
+  .codeline .ln{width:26px;color:#5A6376;user-select:none;flex-shrink:0}
+  .codeline.active{background:var(--code-line);color:#fff;border-left:3px solid var(--pencil-red);padding-left:15px}
+  .codeline.active .ln{color:#E8A79D}
+  footer{text-align:center;font-size:.72rem;color:#A5AEB8;margin-top:32px}
+  @media (max-width:640px){ .controls .counter{margin-left:0;width:100%} }
+  @media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>199 · Max Water Trapped I — 两端双指针</h1>
+    <div class="sub">
+      每格水位 = min(左边最高, 右边最高) − 自己。双指针的灵魂:<b>矮的那侧敢当场结算</b>——
+      因为对面"至少有当前那根这么高"垫底,min 由我这侧的 max 说了算,对面之后再高都与我无关。
+    </div>
+  </header>
+
+  <section class="panel">
+    <h2>输入</h2>
+    <div class="input-row">
+      <input id="inp" value="2,1,3,2,4" spellcheck="false" autocomplete="off" aria-label="输入柱高,逗号分隔">
+      <button class="primary" id="loadBtn">载入并重置</button>
+    </div>
+    <div class="presets" id="presets"></div>
+    <div class="hint">逗号或空格分隔,最多 14 根柱,高度 0–9。试试 4,2,1,3 —— 观察右矮时结算只看 rmax。</div>
+  </section>
+
+  <section class="panel">
+    <h2>直方图 · 蓝色=已结算的水</h2>
+    <div class="board" id="board"></div>
+    <div class="legend">
+      <span><i class="chip"></i>柱子</span>
+      <span><i class="chip w"></i>已结算的水</span>
+      <span><i class="chip l"></i>lmax(左侧历史最高)</span>
+      <span><i class="chip r2"></i>rmax(右侧历史最高)</span>
+      <span><i class="chip p"></i>L / R 指针</span>
+    </div>
+    <div class="stepdesc" id="desc" aria-live="polite"></div>
+    <div class="keychain" id="keychain"></div>
+    <div class="controls">
+      <button id="resetBtn">⏮ 重置</button>
+      <button id="prevBtn">← 上一步</button>
+      <button class="primary" id="playBtn">▶ 播放</button>
+      <button id="nextBtn">下一步 →</button>
+      <select id="speed" aria-label="播放速度">
+        <option value="1600">慢速</option>
+        <option value="1000" selected>中速</option>
+        <option value="550">快速</option>
+      </select>
+      <span class="counter" id="counter"></span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>对应代码</h2>
+    <div class="codebox" id="codebox"></div>
+  </section>
+
+  <footer>矮侧结算 · 对面垫底 · min 已定案 —— 199 Max Water Trapped I</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var CODE = [
+    "int left = 0, right = n - 1;",
+    "int lmax = array[left], rmax = array[right];",
+    "int result = 0;",
+    "while (left < right) {",
+    "    if (array[left] <= array[right]) {",
+    "        result += Math.max(0, lmax - array[left]);  // 只用lmax!",
+    "        lmax = Math.max(lmax, array[left]);",
+    "        left++;",
+    "    } else {",
+    "        result += Math.max(0, rmax - array[right]); // 只用rmax!",
+    "        rmax = Math.max(rmax, array[right]);",
+    "        right--;",
+    "    }",
+    "}",
+    "return result;"
+  ];
+  var codebox = document.getElementById("codebox");
+  CODE.forEach(function(line, idx){
+    var div = document.createElement("div");
+    div.className = "codeline"; div.id = "cl"+idx;
+    div.innerHTML = '<span class="ln">'+(idx+1)+'</span>'+
+      line.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    codebox.appendChild(div);
+  });
+
+  /* ---------- 模拟 ---------- */
+  function simulate(a){
+    var steps = [], n = a.length;
+    var water = new Array(n).fill(0);
+    function snap(o){
+      steps.push(Object.assign({
+        a:a, left:left, right:right, lmax:lmax, rmax:rmax,
+        result:result, water:water.slice(), line:o.line||3,
+        desc:o.desc||"", key:o.key||null, phase:o.phase||"", focus:o.focus
+      }, o));
+    }
+    if (n <= 2){
+      var left=0, right=Math.max(0,n-1), lmax=n?a[0]:0, rmax=n?a[n-1]:0, result=0;
+      snap({line:14, phase:"done", desc:"柱子不足 3 根,两端夹不住水,结果 0"});
+      return steps;
+    }
+    var left=0, right=n-1, lmax=a[0], rmax=a[n-1], result=0;
+    snap({line:1, phase:"init",
+      desc:"L、R 各守一端;lmax、rmax 各自记录本侧走过的历史最高(开局就是脚下这根)"});
+    while (left < right){
+      var goLeft = a[left] <= a[right];
+      snap({line:4, phase:"compare",
+        desc:"比较两端:array[L]=" + a[left] + (goLeft?" ≤ ":" > ") + "array[R]=" + a[right] +
+             " → <b>" + (goLeft?"左侧矮(或平)":"右侧矮") + "</b>,矮侧结算",
+        key: goLeft
+          ? "为什么敢? rmax(" + rmax + ") ≥ array[R](" + a[right] + ") ≥ array[L](" + a[left] + ") → 右边最终最高 ≥ " + a[left] + " → min(lmax, 右边最终最高) 由 lmax(" + lmax + ") 定案"
+          : "为什么敢? lmax(" + lmax + ") ≥ array[L](" + a[left] + ") ≥ array[R](" + a[right] + ") → 左边最终最高 ≥ " + a[right] + " → min(rmax, 左边最终最高) 由 rmax(" + rmax + ") 定案"});
+      if (goLeft){
+        var w = Math.max(0, lmax - a[left]);
+        result += w; water[left] = w;
+        var settledAt = left;
+        lmax = Math.max(lmax, a[left]);
+        left++;
+        snap({line:5, phase:"settle", focus:settledAt,
+          desc:"结算 index " + settledAt + ":水 = max(0, lmax − 高度) = max(0, " +
+               (w>0 ? (Math.max(lmax, a[settledAt])===lmax? lmax : lmax) : lmax) + " 之前的lmax − " + a[settledAt] + ") = <b>" + w + "</b>" +
+               (w===0 ? "(自己就是新高,兜不住水,顺便刷新 lmax)" : "") +
+               " → 累计 " + result + ";L 前进"});
+      } else {
+        var w2 = Math.max(0, rmax - a[right]);
+        result += w2; water[right] = w2;
+        var settledAt2 = right;
+        rmax = Math.max(rmax, a[right]);
+        right--;
+        snap({line:9, phase:"settle", focus:settledAt2,
+          desc:"结算 index " + settledAt2 + ":水 = max(0, rmax − 高度) = <b>" + w2 + "</b>" +
+               (w2===0 ? "(自己就是新高,兜不住水,顺便刷新 rmax)" : "") +
+               " → 累计 " + result + ";R 前进"});
+      }
+    }
+    snap({line:14, phase:"done",
+      desc:"L、R 会师,每格恰好被结算一次(O(n) 一趟,O(1) 空间)→ 总水量 = <b>" + result + "</b>"});
+    return steps;
+  }
+
+  /* ---------- 渲染 ---------- */
+  var boardEl = document.getElementById("board"), descEl = document.getElementById("desc");
+  var keyEl = document.getElementById("keychain"), counterEl = document.getElementById("counter");
+  var steps = [], cur = 0, timer = null, arr = [];
+
+  function render(){
+    var s = steps[cur], n = arr.length;
+    var cw = Math.min(56, Math.max(36, Math.floor(720/Math.max(1,n))));
+    var ch = 34, maxH = Math.max.apply(null, arr.concat([1]));
+    var padL = 30, padB = 46, padT = 26;
+    var W = padL + n*cw + 20, H = padT + maxH*ch + padB;
+    var svg = ['<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" xmlns="http://www.w3.org/2000/svg" font-family="var(--mono)">'];
+    function y(h){ return padT + (maxH - h)*ch; }
+    // 横向刻度线
+    for (var g=0; g<=maxH; g++){
+      svg.push('<line x1="'+padL+'" y1="'+y(g)+'" x2="'+(padL+n*cw)+'" y2="'+y(g)+'" stroke="#E4EAF0" stroke-width="1"/>');
+      svg.push('<text x="'+(padL-8)+'" y="'+(y(g)+4)+'" font-size="10" fill="#9AA5B1" text-anchor="end">'+g+'</text>');
+    }
+    // 柱与水
+    for (var idx=0; idx<n; idx++){
+      var x = padL + idx*cw + 3, bw = cw - 6, h = arr[idx];
+      var isL = idx === s.left, isR = idx === s.right, isFocus = s.focus === idx;
+      // 水(画在柱顶之上)
+      if (s.water[idx] > 0){
+        svg.push('<rect x="'+x+'" y="'+y(h+s.water[idx])+'" width="'+bw+'" height="'+(s.water[idx]*ch)+'" fill="var(--water-fill)" stroke="var(--water)" stroke-width="1.5" rx="3"/>');
+      }
+      // 柱
+      svg.push('<rect x="'+x+'" y="'+y(h)+'" width="'+bw+'" height="'+Math.max(2,h*ch)+'" fill="'+(isFocus?'#B8CCE0':'var(--bar)')+'" stroke="'+((isL||isR)?'var(--pencil-red)':'var(--bar-edge)')+'" stroke-width="'+((isL||isR)?3:1.5)+'" rx="4"/>');
+      // 高度数字
+      svg.push('<text x="'+(x+bw/2)+'" y="'+(y(h)-5)+'" font-size="11" fill="var(--graphite)" text-anchor="middle" font-weight="700">'+h+'</text>');
+      // index 与指针
+      svg.push('<text x="'+(x+bw/2)+'" y="'+(padT+maxH*ch+16)+'" font-size="10" fill="#9AA5B1" text-anchor="middle">'+idx+'</text>');
+      if (isL) svg.push('<text x="'+(x+bw/2)+'" y="'+(padT+maxH*ch+32)+'" font-size="12" fill="var(--pencil-red)" text-anchor="middle" font-weight="700">↑L</text>');
+      if (isR) svg.push('<text x="'+(x+bw/2)+'" y="'+(padT+maxH*ch+(isL?44:32))+'" font-size="12" fill="var(--pencil-red)" text-anchor="middle" font-weight="700">↑R</text>');
+    }
+    // lmax 虚线(覆盖 [0..left]),rmax 虚线(覆盖 [right..n-1])
+    if (s.phase !== "done"){
+      var lx2 = padL + (s.left+1)*cw - 3;
+      svg.push('<line x1="'+padL+'" y1="'+y(s.lmax)+'" x2="'+lx2+'" y2="'+y(s.lmax)+'" stroke="var(--lmax-green)" stroke-width="2.5" stroke-dasharray="7,5"/>');
+      svg.push('<text x="'+(padL+2)+'" y="'+(y(s.lmax)-5)+'" font-size="10" fill="var(--lmax-green)" font-weight="700">lmax='+s.lmax+'</text>');
+      var rx1 = padL + s.right*cw + 3;
+      svg.push('<line x1="'+rx1+'" y1="'+y(s.rmax)+'" x2="'+(padL+n*cw)+'" y2="'+y(s.rmax)+'" stroke="var(--rmax-purple)" stroke-width="2.5" stroke-dasharray="7,5"/>');
+      svg.push('<text x="'+(padL+n*cw-2)+'" y="'+(y(s.rmax)-5)+'" font-size="10" fill="var(--rmax-purple)" font-weight="700" text-anchor="end">rmax='+s.rmax+'</text>');
+    }
+    svg.push('</svg>');
+    boardEl.innerHTML = svg.join("");
+
+    descEl.className = "stepdesc" + (s.phase==="settle"?" settle":"") + (s.phase==="done"?" done":"");
+    descEl.innerHTML = s.desc + (s.phase!=="done" ? ' <code>累计水量 result = '+s.result+'</code>' : '');
+    keyEl.className = "keychain" + (s.key ? " show" : "");
+    keyEl.textContent = s.key || "";
+
+    for (var k=0;k<CODE.length;k++) document.getElementById("cl"+k).classList.toggle("active", k===s.line);
+    counterEl.textContent = "步骤 " + (cur+1) + " / " + steps.length;
+    document.getElementById("prevBtn").disabled = (cur===0);
+    document.getElementById("nextBtn").disabled = (cur===steps.length-1);
+    if (cur===steps.length-1) stopPlay();
+  }
+
+  /* ---------- 控制 ---------- */
+  var playBtn = document.getElementById("playBtn");
+  function stopPlay(){ if (timer){ clearInterval(timer); timer=null; } playBtn.textContent = "▶ 播放"; }
+  function startPlay(){
+    if (cur===steps.length-1) cur=0;
+    timer = setInterval(function(){ if (cur<steps.length-1){ cur++; render(); } else stopPlay(); },
+      parseInt(document.getElementById("speed").value,10));
+    playBtn.textContent = "⏸ 暂停"; render();
+  }
+  playBtn.addEventListener("click", function(){ timer?stopPlay():startPlay(); });
+  document.getElementById("nextBtn").addEventListener("click", function(){ stopPlay(); if(cur<steps.length-1){cur++;render();} });
+  document.getElementById("prevBtn").addEventListener("click", function(){ stopPlay(); if(cur>0){cur--;render();} });
+  document.getElementById("resetBtn").addEventListener("click", function(){ stopPlay(); cur=0; render(); });
+  document.getElementById("speed").addEventListener("change", function(){ if(timer){stopPlay();startPlay();} });
+  document.addEventListener("keydown", function(e){
+    if (e.target.tagName==="INPUT") return;
+    if (e.key==="ArrowRight"){ e.preventDefault(); stopPlay(); if(cur<steps.length-1){cur++;render();} }
+    else if (e.key==="ArrowLeft"){ e.preventDefault(); stopPlay(); if(cur>0){cur--;render();} }
+    else if (e.key===" "){ e.preventDefault(); timer?stopPlay():startPlay(); }
+  });
+
+  /* ---------- 载入 ---------- */
+  var inp = document.getElementById("inp");
+  function load(str){
+    var nums = (str||"").split(/[\s,，]+/).map(Number).filter(function(x){return !isNaN(x)&&x>=0;})
+                .map(function(x){return Math.min(9, Math.floor(x));}).slice(0,14);
+    if (!nums.length){ inp.focus(); return; }
+    inp.value = nums.join(",");
+    arr = nums; stopPlay();
+    steps = simulate(arr); cur = 0; render();
+  }
+  document.getElementById("loadBtn").addEventListener("click", function(){ load(inp.value); });
+  inp.addEventListener("keydown", function(e){ if (e.key==="Enter") load(inp.value); });
+  var PRESETS = ["2,1,3,2,4","4,2,1,3","3,0,3","5,1,4,1,5","2,4,1,3,2,5"];
+  var pe = document.getElementById("presets");
+  PRESETS.forEach(function(p){
+    var b=document.createElement("button"); b.textContent=p;
+    b.addEventListener("click", function(){ load(p); }); pe.appendChild(b);
+  });
+  load("2,1,3,2,4");
+})();
+</script>
+</body>
+</html>
