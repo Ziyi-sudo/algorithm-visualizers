@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>141 Path Sum To Target — 前缀和 + HashSet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#12141a; --panel:#191c24; --panel2:#1f2430; --line:#2a2f3c;
+  --fg:#d7dbe4; --dim:#828a9c; --faint:#5a6274;
+  --amber:#e8a33d; --amber-bg:#3a2c14;
+  --blue:#6aa9e0; --blue-bg:#16293c;
+  --green:#5cba7d; --green-bg:#153021;
+  --rose:#d97a7a; --rose-bg:#341c1e;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --disp:'Space Grotesk',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:2.5rem 1.5rem 4rem}
+
+header{border-bottom:1px solid var(--line);padding-bottom:1.5rem;margin-bottom:1.75rem}
+h1{font-family:var(--disp);font-weight:700;font-size:1.6rem;letter-spacing:-.02em;margin:0 0 .35rem}
+.sub{color:var(--dim);font-size:.9rem;margin:0}
+.sub code{font-family:var(--mono);color:var(--blue)}
+
+.targets{display:flex;gap:.5rem;align-items:center;margin-top:1.1rem;flex-wrap:wrap}
+.targets span{font-size:.8rem;color:var(--faint);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;margin-right:.25rem}
+.tg{font-family:var(--mono);font-size:.9rem;background:transparent;color:var(--dim);border:1px solid var(--line);padding:.3rem .8rem;border-radius:4px;cursor:pointer;transition:all .15s}
+.tg:hover{border-color:var(--faint);color:var(--fg)}
+.tg[aria-pressed="true"]{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.card h2{font-family:var(--mono);font-size:.72rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0;padding:.7rem .9rem;border-bottom:1px solid var(--line);background:var(--panel2)}
+.body{padding:.9rem}
+
+svg{display:block;width:100%;height:auto}
+.edge{stroke:var(--line);stroke-width:1.5}
+.nd circle{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;transition:all .18s}
+.nd text.k{fill:var(--dim);font-family:var(--mono);font-size:14px;transition:fill .18s}
+.nd text.p{fill:var(--faint);font-family:var(--mono);font-size:11px;opacity:0;transition:opacity .18s}
+.nd.chain circle{fill:var(--blue-bg);stroke:var(--blue)}
+.nd.chain text.k{fill:var(--blue)}
+.nd.chain text.p{opacity:1;fill:var(--blue)}
+.nd.cur circle{fill:var(--amber-bg);stroke:var(--amber);stroke-width:2.5}
+.nd.cur text.k{fill:var(--amber)}
+.nd.cur text.p{opacity:1;fill:var(--amber)}
+.nd.hit circle{fill:var(--green-bg);stroke:var(--green);stroke-width:2.5}
+.nd.hit text.k,.nd.hit text.p{fill:var(--green);opacity:1}
+.nd.pop circle{stroke:var(--rose);stroke-dasharray:3 3}
+.nd.pop text.k{fill:var(--rose)}
+
+pre{margin:0;font-family:var(--mono);font-size:.76rem;line-height:1.85;overflow-x:auto}
+.ln{display:block;padding:0 .9rem 0 0;border-left:2px solid transparent;white-space:pre;transition:background .15s}
+.ln .no{display:inline-block;width:2.1em;text-align:right;color:var(--faint);margin-right:1em;user-select:none}
+.ln.on{background:var(--amber-bg);border-left-color:var(--amber)}
+.ln.on .no{color:var(--amber)}
+.kw{color:#c58fd8}.ty{color:#6aa9e0}.st{color:#8fb87a}.cm{color:var(--faint);font-style:italic}
+
+.chips{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;min-height:40px}
+.chip{font-family:var(--mono);font-size:.92rem;padding:.3rem .8rem;border-radius:5px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);transition:all .2s}
+.chip.on{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
+.chip.new{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+.chip.match{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.chip.drop{background:transparent;border-style:dashed;border-color:var(--rose);color:var(--rose);opacity:.5}
+.chip.seg{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.chip.cut{opacity:.28;text-decoration:line-through}
+.emptyc{color:var(--faint);font-family:var(--mono);font-size:.85rem}
+.sep{color:var(--faint);font-family:var(--mono);font-size:.85rem}
+
+.calc{font-family:var(--mono);font-size:.95rem;line-height:2.1;color:var(--dim)}
+.calc .hl{color:var(--fg)}
+.calc .q{color:var(--amber)}
+.calc .ok{color:var(--green)}
+.calc .no{color:var(--rose)}
+.calc .lbl{color:var(--faint);font-size:.78rem;display:inline-block;min-width:14.5em}
+
+.stickybar{position:sticky;top:0;z-index:20;background:var(--ink);padding:.75rem 0 .9rem;border-bottom:1px solid var(--line);margin-bottom:.4rem}
+.narr{margin:.7rem 0 0;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:0 8px 8px 0;padding:.85rem 1.1rem;min-height:56px;display:flex;align-items:center}
+.narr.key{border-left-color:var(--rose);background:var(--rose-bg)}
+.narr.win{border-left-color:var(--green);background:var(--green-bg)}
+.narr p{margin:0;font-size:.94rem}
+.narr b{font-family:var(--mono);font-weight:500}
+
+.ctrl{display:flex;gap:.6rem;align-items:center;margin-top:0;flex-wrap:wrap}
+button{font-family:var(--sans);font-size:.88rem;background:var(--panel2);color:var(--fg);border:1px solid var(--line);padding:.5rem 1.1rem;border-radius:5px;cursor:pointer;transition:all .15s}
+button:hover:not(:disabled){border-color:var(--faint);background:var(--line)}
+button:disabled{opacity:.35;cursor:default}
+button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+#play{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+.count{font-family:var(--mono);font-size:.82rem;color:var(--faint);margin-left:auto}
+.hint{font-size:.78rem;color:var(--faint);margin:.5rem 0 1.1rem}
+.hint kbd{font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:.05rem .35rem;font-size:.9em}
+
+.notes{margin-top:3rem;border-top:1px solid var(--line);padding-top:1.75rem}
+.notes h3{font-family:var(--disp);font-size:1.05rem;font-weight:500;margin:0 0 .6rem}
+.notes p{color:var(--dim);font-size:.92rem;margin:0 0 1rem;max-width:70ch}
+.notes code{font-family:var(--mono);font-size:.88em;color:var(--blue);background:var(--panel2);padding:.1rem .35rem;border-radius:3px}
+.notes strong{color:var(--fg);font-weight:500}
+.notes .eq{font-family:var(--mono);font-size:.9rem;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:.8rem 1rem;margin:0 0 1rem;line-height:2}
+
+@media (max-width:900px){ .grid{grid-template-columns:1fr} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Path Sum To Target — 前缀和为什么能用减法</h1>
+  <p class="sub">路径从某节点向下走到它的后代。核心问题：<code>我之前见过 prefixSum − target 吗？</code></p>
+  <div class="targets" role="group" aria-label="选择 target">
+    <span>target</span>
+    <button class="tg" data-t="17" aria-pressed="true">17</button>
+    <button class="tg" data-t="20" aria-pressed="false">20</button>
+    <button class="tg" data-t="11" aria-pressed="false">11</button>
+    <button class="tg" data-t="10" aria-pressed="false">10</button>
+  </div>
+</header>
+
+<div class="stickybar">
+  <div class="ctrl">
+    <button id="prev">← 上一步</button>
+    <button id="next">下一步 →</button>
+    <button id="play">自动播放</button>
+    <button id="reset">重来</button>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="narr" id="narr"><p></p></div>
+</div>
+<p class="hint">键盘 <kbd>←</kbd> <kbd>→</kbd> 单步，<kbd>空格</kbd> 播放／暂停</p>
+
+<div class="grid">
+  <div class="card">
+    <h2>树（小字 = 从 root 到该点的 prefixSum）</h2>
+    <div class="body">
+      <svg viewBox="0 0 420 300" role="img" aria-label="示例二叉树">
+        <line class="edge" x1="210" y1="46" x2="112" y2="102"/>
+        <line class="edge" x1="210" y1="46" x2="308" y2="102"/>
+        <line class="edge" x1="320" y1="130" x2="262" y2="176"/>
+        <line class="edge" x1="320" y1="130" x2="378" y2="176"/>
+        <line class="edge" x1="250" y1="204" x2="202" y2="250"/>
+        <g class="nd" id="k5"><circle cx="210" cy="36" r="21"/><text class="k" x="210" y="34" text-anchor="middle" dominant-baseline="central">5</text><text class="p" x="210" y="48" text-anchor="middle" dominant-baseline="central">5</text></g>
+        <g class="nd" id="k2"><circle cx="100" cy="112" r="21"/><text class="k" x="100" y="110" text-anchor="middle" dominant-baseline="central">2</text><text class="p" x="100" y="124" text-anchor="middle" dominant-baseline="central">7</text></g>
+        <g class="nd" id="k11"><circle cx="320" cy="112" r="21"/><text class="k" x="320" y="110" text-anchor="middle" dominant-baseline="central">11</text><text class="p" x="320" y="124" text-anchor="middle" dominant-baseline="central">16</text></g>
+        <g class="nd" id="k6"><circle cx="250" cy="188" r="21"/><text class="k" x="250" y="186" text-anchor="middle" dominant-baseline="central">6</text><text class="p" x="250" y="200" text-anchor="middle" dominant-baseline="central">22</text></g>
+        <g class="nd" id="k14"><circle cx="390" cy="188" r="21"/><text class="k" x="390" y="186" text-anchor="middle" dominant-baseline="central">14</text><text class="p" x="390" y="200" text-anchor="middle" dominant-baseline="central">30</text></g>
+        <g class="nd" id="k3"><circle cx="190" cy="262" r="21"/><text class="k" x="190" y="260" text-anchor="middle" dominant-baseline="central">3</text><text class="p" x="190" y="274" text-anchor="middle" dominant-baseline="central">25</text></g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>代码 — Method 2</h2>
+    <div class="body"><pre id="code"></pre></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:1rem">
+  <h2>当前这一步在算什么</h2>
+  <div class="body"><div class="calc" id="calc"></div></div>
+</div>
+
+<div class="card" style="margin-top:1rem">
+  <h2>prefixSums — 当前这条链上所有祖先的前缀和</h2>
+  <div class="body"><div class="chips" id="set"></div></div>
+</div>
+
+<div class="card" style="margin-top:1rem">
+  <h2>链上的节点（命中时：划掉的是被减去的部分，剩下的就是答案）</h2>
+  <div class="body"><div class="chips" id="chain"></div></div>
+</div>
+
+<div class="notes">
+  <h3>整个方法只靠一个移项</h3>
+  <div class="eq">
+    若「某祖先之后 → 当前节点」这一段的和 = target<br>
+    则　prefixSum[当前] − prefixSum[某祖先] = target<br>
+    移项　<strong>prefixSum[某祖先] = prefixSum[当前] − target</strong>
+  </div>
+  <p>站在任何一个点，<code>prefixSum[当前]</code> 和 <code>target</code> 都是已知的，所以要找的那个祖先前缀也就算得出来。剩下的问题只有一个：<strong>这样的祖先真的存在吗？</strong>把路上见过的所有前缀和丢进 Set，一次 <code>contains</code> 就查完了。</p>
+  <p>注意「算出来」和「找到」是两回事。<code>prevSum − target</code> 只是一张通缉令——它描述了要找的祖先长什么样，但那个祖先存不存在，得去 Set 里查。</p>
+
+  <h3>为什么 Set 里要先放一个 0</h3>
+  <p>0 代表「还没走任何一步」的空前缀。有了它，起点恰好是 root 的路径才匹配得上——否则 <code>5 → 11 → 6</code> 这种从头开始的整条路会被漏掉。</p>
+
+  <h3>Set 里装的只是当前这条链</h3>
+  <p>进门放进去，出门要拿掉。任何时刻 Set 的内容都等于「从 root 到当前节点」这一条链上的前缀和，大小是 <code>O(height)</code> 而不是 <code>O(n)</code>。不删的话，走到右子树时会看到左子树留下的前缀，而它们根本不在同一条向下的链上。</p>
+  <p><strong>螺丝刀原理：</strong><code>prefixSums.add(x)</code> 返回 <code>false</code> 说明这个值早就有人放进去了（两个祖先的前缀和撞了）。那它不是你的，走的时候别删——所以要用 <code>needRemove</code> 记一下。是你拿过来的你带走，不是你放的别动人家的。</p>
+
+  <h3>和 Method 1 的差别</h3>
+  <p>Method 1 站在每个点往回扫一遍所有祖先，<code>O(n × height)</code>，最坏 <code>O(n²)</code>。Method 2 把那个循环换成一次 Set 查询，降到 <code>O(n)</code>。思路来自数组题「找和为 target 的 subarray」——一条 root→leaf 的路就是一个数组。</p>
+
+  <h3>为什么这题只能 top down</h3>
+  <p>它要问的是「我头上的祖先里有没有某个前缀和」。祖先的信息只能从上面带下来，子树 return 上来的东西里没有祖先。所以和 639 / 140 那种两个方向都能写的题不同，这题锁死 top down。</p>
+</div>
+
+</div>
+
+<script>
+const CODE=[
+ ['<span class="kw">private</span> <span class="ty">boolean</span> helper(<span class="ty">TreeNode</span> root, <span class="ty">Set</span>&lt;<span class="ty">Integer</span>&gt; ps, <span class="ty">int</span> prevSum, <span class="ty">int</span> target) {',0],
+ ['    prevSum += root.key;',1],
+ ['    <span class="kw">if</span> (ps.contains(prevSum - target)) <span class="kw">return</span> <span class="st">true</span>;',2],
+ ['    <span class="ty">boolean</span> needRemove = ps.add(prevSum);',3],
+ ['    <span class="kw">if</span> (root.left != <span class="st">null</span> &amp;&amp; helper(root.left, ps, prevSum, target)) <span class="kw">return</span> <span class="st">true</span>;',4],
+ ['    <span class="kw">if</span> (root.right != <span class="st">null</span> &amp;&amp; helper(root.right, ps, prevSum, target)) <span class="kw">return</span> <span class="st">true</span>;',5],
+ ['    <span class="kw">if</span> (needRemove) ps.remove(prevSum);   <span class="cm">// 出门还原</span>',6],
+ ['    <span class="kw">return</span> <span class="st">false</span>;',7],
+ ['}',8]
+];
+
+const T={k:5,l:{k:2},r:{k:11,l:{k:6,l:{k:3}},r:{k:14}}};
+
+function trace(target){
+  const ev=[],chain=[],prefixes=[0],set=[];
+  function snap(o){
+    return Object.assign({chain:chain.slice(),prefixes:prefixes.slice(),set:set.slice()},o);
+  }
+  function helper(n,prevSum){
+    prevSum+=n.k;
+    chain.push(n.k); prefixes.push(prevSum);
+    ev.push(snap({line:1,cur:n.k,prevSum,
+      msg:`进入 <b>${n.k}</b>，prefixSum = <b>${prevSum}</b>（从 root 到我）`}));
+
+    const q=prevSum-target;
+    const hit=set.includes(q);
+    ev.push(snap({line:2,cur:n.k,prevSum,query:q,hit,
+      matchIdx:hit?prefixes.indexOf(q):-1,
+      msg:hit
+        ?`Set 里有 <b>${q}</b> → 从那个祖先之后到我这一段，和正好是 ${target}`
+        :`要找 <b>${q}</b>，Set 里没有 → 继续往下走`,
+      win:hit}));
+    if(hit){chain.pop();prefixes.pop();return true}
+
+    const dup=set.includes(prevSum);
+    if(!dup) set.push(prevSum);
+    ev.push(snap({line:3,cur:n.k,prevSum,justAdded:dup?null:prevSum,dup,
+      msg:dup?`<b>${prevSum}</b> 早就在 Set 里了（不是我放的，走时别删）`
+             :`把 <b>${prevSum}</b> 放进 Set`}));
+
+    if(n.l){
+      ev.push(snap({line:4,cur:n.k,prevSum,msg:`往左子树 <b>${n.l.k}</b> 走`}));
+      if(helper(n.l,prevSum)){
+        ev.push(snap({line:4,cur:n.k,prevSum,msg:`左子树返回 true，一路往上传`,win:true}));
+        chain.pop();prefixes.pop();return true;
+      }
+    }
+    if(n.r){
+      ev.push(snap({line:5,cur:n.k,prevSum,msg:`往右子树 <b>${n.r.k}</b> 走`}));
+      if(helper(n.r,prevSum)){
+        ev.push(snap({line:5,cur:n.k,prevSum,msg:`右子树返回 true，一路往上传`,win:true}));
+        chain.pop();prefixes.pop();return true;
+      }
+    }
+
+    if(!dup){const i=set.indexOf(prevSum); if(i>=0)set.splice(i,1);}
+    const gone=chain.pop(); prefixes.pop();
+    ev.push(snap({line:6,cur:gone,pop:gone,dropped:dup?null:prevSum,
+      msg:`离开 <b>${gone}</b>：${dup?'这个前缀不是我放的，不删':`把 <b>${prevSum}</b> 从 Set 拿走`}，链也缩短`,
+      key:true}));
+    ev.push(snap({line:7,cur:null,msg:`向上返回 false，父节点接着搜别处`}));
+    return false;
+  }
+  helper(T,0);
+  if(!ev[ev.length-1].win) ev.push(snap({line:null,msg:`整棵树搜完，没有和为 ${target} 的路径`}));
+  return ev;
+}
+
+let target=17,steps=trace(17),i=0,timer=null;
+const $=id=>document.getElementById(id);
+const KEYS=[5,2,11,6,14,3];
+
+$('code').innerHTML=CODE.map((c,n)=>`<span class="ln" data-l="${n}"><span class="no">${n+1}</span>${c[0]}</span>`).join('');
+
+function draw(){
+  const s=steps[i];
+  document.querySelectorAll('.ln').forEach(l=>l.classList.toggle('on',+l.dataset.l===s.line));
+
+  KEYS.forEach(k=>{
+    const g=$('k'+k); g.className.baseVal='nd';
+    if(s.chain.includes(k)) g.classList.add('chain');
+    if(s.pop===k) g.classList.add('pop');
+    else if(s.cur===k) g.classList.add(s.win?'hit':'cur');
+  });
+
+  let c='';
+  if(s.prevSum!==undefined){
+    c+=`<div><span class="lbl">prefixSum[当前]</span><span class="hl">${s.prevSum}</span></div>`;
+  }
+  if(s.query!==undefined){
+    c+=`<div><span class="lbl">要找的祖先前缀 = 当前 − target</span><span class="hl">${s.prevSum}</span> − <span class="hl">${target}</span> = <span class="q">${s.query}</span></div>`;
+    c+=s.hit
+      ? `<div><span class="lbl">Set 里有吗</span><span class="ok">有 ✓　中间那段 = ${s.prevSum} − ${s.query} = ${target}</span></div>`
+      : `<div><span class="lbl">Set 里有吗</span><span class="no">没有</span></div>`;
+  }
+  $('calc').innerHTML=c||'<span class="emptyc">—</span>';
+
+  const setChips=s.set.map(v=>{
+    let cls='chip on';
+    if(s.justAdded===v) cls='chip new';
+    if(s.hit&&v===s.query) cls='chip match';
+    return `<span class="${cls}">${v}</span>`;
+  });
+  if(s.dropped!=null) setChips.push(`<span class="chip drop">${s.dropped}</span>`);
+  $('set').innerHTML=setChips.length?setChips.join(''):'<span class="emptyc">空</span>';
+
+  let chainChips;
+  if(s.hit&&s.matchIdx>=0){
+    chainChips=s.chain.map((k,ix)=>
+      ix<s.matchIdx ? `<span class="chip cut">${k}</span>` : `<span class="chip seg">${k}</span>`);
+  }else{
+    chainChips=s.chain.map((k,ix)=>
+      `<span class="chip${ix===s.chain.length-1?' new':' on'}">${k}</span>`);
+    if(s.pop!==undefined) chainChips.push(`<span class="chip drop">${s.pop}</span>`);
+  }
+  $('chain').innerHTML=chainChips.length?chainChips.join('<span class="sep">→</span>'):'<span class="emptyc">空</span>';
+
+  const n=$('narr'); n.className='narr'+(s.key?' key':'')+(s.win?' win':'');
+  n.querySelector('p').innerHTML=s.msg;
+  $('count').textContent=`${i+1} / ${steps.length}`;
+  $('prev').disabled=i===0; $('next').disabled=i===steps.length-1;
+}
+function go(d){i=Math.max(0,Math.min(steps.length-1,i+d));draw();if(i===steps.length-1)stop()}
+function stop(){clearInterval(timer);timer=null;$('play').textContent='自动播放'}
+$('next').onclick=()=>go(1); $('prev').onclick=()=>go(-1);
+$('reset').onclick=()=>{stop();i=0;draw()};
+$('play').onclick=()=>{
+  if(timer){stop();return}
+  if(i===steps.length-1)i=0;
+  $('play').textContent='暂停';
+  timer=setInterval(()=>{if(i>=steps.length-1){stop();return}go(1)},1200);
+};
+document.querySelectorAll('.tg').forEach(b=>b.onclick=()=>{
+  stop();
+  document.querySelectorAll('.tg').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  target=+b.dataset.t; steps=trace(target); i=0; draw();
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'){e.preventDefault();go(1)}
+  if(e.key==='ArrowLeft'){e.preventDefault();go(-1)}
+  if(e.key===' '){e.preventDefault();$('play').click()}
+});
+draw();
+</script>
+</body>
+</html>
