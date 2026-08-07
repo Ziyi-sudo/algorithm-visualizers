@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>523 Flatten — prev 指针倒着建链</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#12141a; --panel:#191c24; --panel2:#1f2430; --line:#2a2f3c;
+  --fg:#d7dbe4; --dim:#828a9c; --faint:#5a6274;
+  --amber:#e8a33d; --amber-bg:#3a2c14;
+  --blue:#6aa9e0; --blue-bg:#16293c;
+  --green:#5cba7d; --green-bg:#153021;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --disp:'Space Grotesk',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:2.5rem 1.5rem 4rem}
+header{border-bottom:1px solid var(--line);padding-bottom:1.3rem;margin-bottom:1.2rem}
+h1{font-family:var(--disp);font-weight:700;font-size:1.5rem;letter-spacing:-.02em;margin:0 0 .35rem}
+.sub{color:var(--dim);font-size:.9rem;margin:0}
+.sub code{font-family:var(--mono);color:var(--blue)}
+
+.stickybar{position:sticky;top:0;z-index:20;background:var(--ink);padding:.75rem 0 .9rem;border-bottom:1px solid var(--line);margin-bottom:.4rem}
+.ctrl{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+button{font-family:var(--sans);font-size:.88rem;background:var(--panel2);color:var(--fg);border:1px solid var(--line);padding:.5rem 1.1rem;border-radius:5px;cursor:pointer;transition:all .15s}
+button:hover:not(:disabled){border-color:var(--faint);background:var(--line)}
+button:disabled{opacity:.35;cursor:default}
+button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+#play{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+.count{font-family:var(--mono);font-size:.82rem;color:var(--faint);margin-left:auto}
+.narr{margin:.7rem 0 0;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:0 8px 8px 0;padding:.85rem 1.1rem;min-height:56px;display:flex;align-items:center}
+.narr.good{border-left-color:var(--green);background:var(--green-bg)}
+.narr p{margin:0;font-size:.94rem}
+.narr b{font-family:var(--mono);font-weight:500}
+.hint{font-size:.78rem;color:var(--faint);margin:.5rem 0 1.1rem}
+.hint kbd{font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:.05rem .35rem;font-size:.9em}
+
+.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:1rem;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:1rem}
+.card h2{font-family:var(--mono);font-size:.72rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0;padding:.7rem .9rem;border-bottom:1px solid var(--line);background:var(--panel2)}
+.body{padding:1rem .9rem}
+
+svg{display:block;width:100%;height:auto}
+.edge{stroke:var(--line);stroke-width:1.5}
+.nd circle{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;transition:all .2s}
+.nd text{fill:var(--dim);font-family:var(--mono);font-size:15px;transition:fill .2s}
+.nd.done circle{fill:var(--blue-bg);stroke:var(--blue)}
+.nd.done text{fill:var(--blue)}
+.nd.cur circle{fill:var(--amber-bg);stroke:var(--amber);stroke-width:2.5}
+.nd.cur text{fill:var(--amber)}
+.nd.prev circle{fill:var(--green-bg);stroke:var(--green);stroke-width:2.5}
+.nd.prev text{fill:var(--green)}
+
+.order{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;font-family:var(--mono);font-size:.9rem}
+.ochip{padding:.25rem .7rem;border-radius:4px;background:var(--panel2);border:1px solid var(--line);color:var(--faint);transition:all .2s}
+.ochip.done{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
+.ochip.cur{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+
+.chain{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;min-height:44px;font-family:var(--mono);font-size:1rem}
+.cchip{padding:.32rem .85rem;border-radius:5px;background:var(--blue-bg);border:1px solid var(--blue);color:var(--blue);transition:all .2s}
+.cchip.head{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+.arr{color:var(--faint);font-size:.85rem}
+.emptyc{color:var(--faint);font-family:var(--mono);font-size:.85rem}
+
+.pv{font-family:var(--mono);font-size:.95rem;color:var(--dim);line-height:2}
+.pv .lbl{color:var(--faint);font-size:.78rem;display:inline-block;min-width:11em}
+.pv .val{color:var(--green)}
+.pv .was{color:var(--faint);text-decoration:line-through}
+
+pre{margin:0;font-family:var(--mono);font-size:.79rem;line-height:1.95;overflow-x:auto}
+.ln{display:block;padding:0 .9rem 0 0;border-left:2px solid transparent;white-space:pre;transition:background .15s}
+.ln .no{display:inline-block;width:2em;text-align:right;color:var(--faint);margin-right:1em;user-select:none}
+.ln.on{background:var(--amber-bg);border-left-color:var(--amber)}
+.ln.on .no{color:var(--amber)}
+.kw{color:#c58fd8}.ty{color:#6aa9e0}.st{color:#8fb87a}.cm{color:var(--faint);font-style:italic}
+
+.notes{margin-top:2.5rem;border-top:1px solid var(--line);padding-top:1.75rem}
+.notes h3{font-family:var(--disp);font-size:1.05rem;font-weight:500;margin:0 0 .6rem}
+.notes p{color:var(--dim);font-size:.92rem;margin:0 0 1rem;max-width:70ch}
+.notes code{font-family:var(--mono);font-size:.88em;color:var(--blue);background:var(--panel2);padding:.1rem .35rem;border-radius:3px}
+.notes strong{color:var(--fg);font-weight:500}
+.notes .box{font-family:var(--mono);font-size:.86rem;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:.8rem 1rem;margin:0 0 1rem;line-height:1.9}
+
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Flatten — prev 指针，倒着把链建出来</h1>
+  <p class="sub">按 <code>右 → 左 → 根</code> 走，每处理一个节点就把它<strong>插到链头</strong>。全程不需要找尾巴。</p>
+</header>
+
+<div class="stickybar">
+  <div class="ctrl">
+    <button id="prev">← 上一步</button>
+    <button id="next">下一步 →</button>
+    <button id="play">自动播放</button>
+    <button id="reset">重来</button>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="narr" id="narr"><p></p></div>
+</div>
+<p class="hint">键盘 <kbd>←</kbd> <kbd>→</kbd> 单步，<kbd>空格</kbd> 播放／暂停</p>
+
+<div class="grid">
+  <div class="card" style="margin:0">
+    <h2>树</h2>
+    <div class="body">
+      <svg viewBox="0 0 500 300" role="img" aria-label="示例二叉树">
+        <line class="edge" x1="250" y1="60" x2="152" y2="132"/>
+        <line class="edge" x1="250" y1="60" x2="368" y2="132"/>
+        <line class="edge" x1="140" y1="170" x2="82" y2="222"/>
+        <line class="edge" x1="140" y1="170" x2="198" y2="222"/>
+        <line class="edge" x1="380" y1="170" x2="428" y2="222"/>
+        <g class="nd" id="n1"><circle cx="250" cy="45" r="24"/><text x="250" y="45" text-anchor="middle" dominant-baseline="central">1</text></g>
+        <g class="nd" id="n2"><circle cx="140" cy="148" r="24"/><text x="140" y="148" text-anchor="middle" dominant-baseline="central">2</text></g>
+        <g class="nd" id="n5"><circle cx="380" cy="148" r="24"/><text x="380" y="148" text-anchor="middle" dominant-baseline="central">5</text></g>
+        <g class="nd" id="n3"><circle cx="70" cy="240" r="24"/><text x="70" y="240" text-anchor="middle" dominant-baseline="central">3</text></g>
+        <g class="nd" id="n4"><circle cx="210" cy="240" r="24"/><text x="210" y="240" text-anchor="middle" dominant-baseline="central">4</text></g>
+        <g class="nd" id="n6"><circle cx="440" cy="240" r="24"/><text x="440" y="240" text-anchor="middle" dominant-baseline="central">6</text></g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="card" style="margin:0">
+    <h2>代码</h2>
+    <div class="body"><pre id="code"></pre></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>处理顺序（右 → 左 → 根，正好是 preorder 的逆序）</h2>
+  <div class="body"><div class="order" id="order"></div></div>
+</div>
+
+<div class="card">
+  <h2>prev[0] — 已建好那条链的头</h2>
+  <div class="body"><div class="pv" id="pv"></div></div>
+</div>
+
+<div class="card">
+  <h2>已经建好的链</h2>
+  <div class="body"><div class="chain" id="chain"></div></div>
+</div>
+
+<div class="notes">
+  <h3>为什么完全不用找尾巴</h3>
+  <p><strong>正着建链</strong>（从 1 开始往后接）：接完 2 想接 3，得先知道 2 那段的尾巴在哪。尾巴藏在子树深处，要么现找（<code>O(n²)</code>），要么让递归返回。</p>
+  <p><strong>倒着建链</strong>（从 6 开始往前插）：手上永远只需要「当前链的头」，把新节点插到它前面就行。而头就是 <code>prev[0]</code>，白送的。</p>
+  <div class="box">
+    6　　　　　　　　　　prev = 6<br>
+    5 → 6　　　　　　　 prev = 5<br>
+    4 → 5 → 6　　　　　prev = 4<br>
+    3 → 4 → 5 → 6　　 prev = 3<br>
+    2 → 3 → 4 → 5 → 6　prev = 2<br>
+    1 → 2 → 3 → 4 → 5 → 6　✓
+  </div>
+
+  <h3>为什么是右 → 左 → 根</h3>
+  <p>目标顺序是 preorder：<code>根 → 左 → 右</code>，也就是 <code>1,2,3,4,5,6</code>。</p>
+  <p>倒着建，就要倒着走。把 preorder 完全反过来，就是 <code>右 → 左 → 根</code>，处理顺序变成 <code>6,5,4,3,2,1</code>。每个节点插到链头，最后读出来正好是正序。</p>
+
+  <h3>三行核心</h3>
+  <div class="box">
+    root.right = prev[0];　<span style="color:var(--faint)">// 我接到「刚处理完那个」前面</span><br>
+    root.left = null;<br>
+    prev[0] = root;　　　　<span style="color:var(--faint)">// 我成为新的「刚处理完那个」</span>
+  </div>
+  <p>每一步都是 <code>O(1)</code>，总共 <code>O(n)</code>。</p>
+
+  <h3>为什么 prev 要用 <code>TreeNode[]</code> 而不是 <code>TreeNode</code></h3>
+  <p>Java 的参数是值传递。写成 <code>TreeNode prev</code> 的话，函数里 <code>prev = root</code> 只改了自己那份复印件，传不回上层。包一层数组，改的是<strong>数组里的内容</strong>，所有层共用同一个数组对象，改动就都看得见了。跟 <code>int[] gMax</code> 是同一个技巧。</p>
+</div>
+
+</div>
+
+<script>
+const CODE=[
+ ['<span class="kw">private</span> <span class="ty">void</span> helper(<span class="ty">TreeNode</span> root, <span class="ty">TreeNode</span>[] prev) {',null],
+ ['    <span class="kw">if</span> (root == <span class="st">null</span>) <span class="kw">return</span>;',null],
+ ['    helper(root.right, prev);   <span class="cm">// 先右</span>',null],
+ ['    helper(root.left,  prev);   <span class="cm">// 再左</span>',null],
+ ['    root.right = prev[<span class="st">0</span>];       <span class="cm">// 插到链头</span>',4],
+ ['    root.left  = <span class="st">null</span>;',4],
+ ['    prev[<span class="st">0</span>]  = root;          <span class="cm">// 我成为新的链头</span>',4],
+ ['}',null]
+];
+const ORDER=[6,5,4,3,2,1];
+const KEYS=[1,2,5,3,4,6];
+
+const S=[{cur:null,prev:null,chain:[],done:[],line:null,
+  msg:'起点：<b>prev[0] = null</b>，链是空的。按 <b>右 → 左 → 根</b> 递归下去，最先被处理的会是最右下角的 <b>6</b>。'}];
+let chain=[],prevV=null;
+ORDER.forEach((k,ix)=>{
+  const was=prevV;
+  chain=[k].concat(chain);
+  prevV=k;
+  S.push({cur:k,prev:k,was,chain:chain.slice(),done:ORDER.slice(0,ix+1),line:4,
+    good:ix===ORDER.length-1,
+    msg:`处理 <b>${k}</b>：<b>${k}.right = prev[0] = ${was===null?'null':was}</b>，插到链头；然后 <b>prev[0] = ${k}</b>。`
+        +(ix===ORDER.length-1?'　链建完了 ✓':'')});
+});
+
+let i=0,timer=null;
+const $=id=>document.getElementById(id);
+$('code').innerHTML=CODE.map((c,n)=>`<span class="ln" data-l="${c[1]}"><span class="no">${n+1}</span>${c[0]}</span>`).join('');
+
+function draw(){
+  const s=S[i];
+  document.querySelectorAll('.ln').forEach(l=>l.classList.toggle('on', s.line!==null && l.dataset.l==String(s.line)));
+  KEYS.forEach(k=>{
+    const g=$('n'+k); g.className.baseVal='nd';
+    if(s.done.includes(k)) g.classList.add('done');
+    if(s.cur===k) g.classList.add('cur');
+  });
+  $('order').innerHTML=ORDER.map(k=>{
+    let c='ochip';
+    if(s.cur===k) c+=' cur';
+    else if(s.done.includes(k)) c+=' done';
+    return `<span class="${c}">${k}</span>`;
+  }).join('<span class="arr">→</span>');
+
+  $('pv').innerHTML= s.cur===null
+    ? `<div><span class="lbl">prev[0]</span><span class="val">null</span></div>`
+    : `<div><span class="lbl">这一步之前 prev[0]</span><span class="was">${s.was===null?'null':s.was}</span></div>`
+     +`<div><span class="lbl">这一步之后 prev[0]</span><span class="val">${s.prev}</span></div>`;
+
+  $('chain').innerHTML = s.chain.length
+    ? s.chain.map((k,ix)=>`<span class="cchip${ix===0?' head':''}">${k}</span>`).join('<span class="arr">→</span>')
+    : '<span class="emptyc">空</span>';
+
+  const n=$('narr'); n.className='narr'+(s.good?' good':'');
+  n.querySelector('p').innerHTML=s.msg;
+  $('count').textContent=`${i+1} / ${S.length}`;
+  $('prev').disabled=i===0; $('next').disabled=i===S.length-1;
+}
+function go(d){i=Math.max(0,Math.min(S.length-1,i+d));draw();if(i===S.length-1)stop()}
+function stop(){clearInterval(timer);timer=null;$('play').textContent='自动播放'}
+$('next').onclick=()=>go(1); $('prev').onclick=()=>go(-1);
+$('reset').onclick=()=>{stop();i=0;draw()};
+$('play').onclick=()=>{
+  if(timer){stop();return}
+  if(i===S.length-1)i=0;
+  $('play').textContent='暂停';
+  timer=setInterval(()=>{if(i>=S.length-1){stop();return}go(1)},1300);
+};
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'){e.preventDefault();go(1)}
+  if(e.key==='ArrowLeft'){e.preventDefault();go(-1)}
+  if(e.key===' '){e.preventDefault();$('play').click()}
+});
+draw();
+</script>
+</body>
+</html>
