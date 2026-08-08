@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>215 Reconstruct — levelorder 为什么要真的分组</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#12141a; --panel:#191c24; --panel2:#1f2430; --line:#2a2f3c;
+  --fg:#d7dbe4; --dim:#828a9c; --faint:#5a6274;
+  --amber:#e8a33d; --amber-bg:#3a2c14;
+  --blue:#6aa9e0; --blue-bg:#16293c;
+  --green:#5cba7d; --green-bg:#153021;
+  --rose:#d97a7a; --rose-bg:#341c1e;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --disp:'Space Grotesk',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:2.5rem 1.5rem 4rem}
+header{border-bottom:1px solid var(--line);padding-bottom:1.3rem;margin-bottom:1.2rem}
+h1{font-family:var(--disp);font-weight:700;font-size:1.5rem;letter-spacing:-.02em;margin:0 0 .35rem}
+.sub{color:var(--dim);font-size:.9rem;margin:0}
+.sub code{font-family:var(--mono);color:var(--blue)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:1rem}
+.card h2{font-family:var(--mono);font-size:.72rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0;padding:.7rem .9rem;border-bottom:1px solid var(--line);background:var(--panel2)}
+.body{padding:1rem .9rem}
+
+/* contrast panel */
+.seq{font-family:var(--mono);font-size:.95rem;display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;margin-bottom:.55rem}
+.seq .tag{color:var(--faint);font-size:.78rem;min-width:5.5em;display:inline-block}
+.tk{padding:.22rem .6rem;border-radius:4px;background:var(--panel2);border:1px solid var(--line);color:var(--dim)}
+.tk.l{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
+.tk.r{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.tk.rt{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+.verdict{font-size:.82rem;color:var(--faint);margin:.15rem 0 .9rem;padding-left:5.85em}
+.verdict.bad{color:var(--rose)}
+.verdict.ok{color:var(--green)}
+
+.stickybar{position:sticky;top:0;z-index:20;background:var(--ink);padding:.75rem 0 .9rem;border-bottom:1px solid var(--line);margin-bottom:.4rem}
+.ctrl{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+button{font-family:var(--sans);font-size:.88rem;background:var(--panel2);color:var(--fg);border:1px solid var(--line);padding:.5rem 1.1rem;border-radius:5px;cursor:pointer;transition:all .15s}
+button:hover:not(:disabled){border-color:var(--faint);background:var(--line)}
+button:disabled{opacity:.35;cursor:default}
+button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+#play{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+.count{font-family:var(--mono);font-size:.82rem;color:var(--faint);margin-left:auto}
+.narr{margin:.7rem 0 0;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:0 8px 8px 0;padding:.85rem 1.1rem;min-height:58px;display:flex;align-items:center}
+.narr.good{border-left-color:var(--green);background:var(--green-bg)}
+.narr p{margin:0;font-size:.94rem}
+.narr b{font-family:var(--mono);font-weight:500}
+.hint{font-size:.78rem;color:var(--faint);margin:.5rem 0 1.1rem}
+.hint kbd{font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:.05rem .35rem;font-size:.9em}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start}
+.row{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;min-height:36px;font-family:var(--mono);font-size:.95rem;margin-bottom:.55rem}
+.row .tag{color:var(--faint);font-size:.78rem;min-width:5em;display:inline-block}
+.tk.cur{background:var(--amber-bg);border-color:var(--amber);color:var(--amber);font-weight:500}
+.tk.gone{opacity:.25;text-decoration:line-through}
+.tk.dim{opacity:.35}
+.emptyc{color:var(--faint);font-size:.84rem}
+
+.calc{font-family:var(--mono);font-size:.9rem;color:var(--dim);line-height:2}
+.calc .hl{color:var(--fg)}
+.calc .lb{color:var(--blue)}
+.calc .rb{color:var(--green)}
+
+svg{display:block;width:100%;height:auto}
+.edge{stroke:var(--line);stroke-width:1.6;transition:opacity .2s}
+.nd circle{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;transition:all .2s}
+.nd text{fill:var(--faint);font-family:var(--mono);font-size:14px;transition:fill .2s}
+.nd.on circle{fill:var(--blue-bg);stroke:var(--blue)}
+.nd.on text{fill:var(--blue)}
+.nd.new circle{fill:var(--amber-bg);stroke:var(--amber);stroke-width:2.5}
+.nd.new text{fill:var(--amber)}
+.nd.off circle{opacity:.16}
+.nd.off text{opacity:.2}
+
+pre{margin:0;font-family:var(--mono);font-size:.78rem;line-height:1.9;overflow-x:auto}
+.ln{display:block;padding:0 .9rem 0 0;border-left:2px solid transparent;white-space:pre;transition:background .15s}
+.ln .no{display:inline-block;width:2em;text-align:right;color:var(--faint);margin-right:1em;user-select:none}
+.ln.on{background:var(--amber-bg);border-left-color:var(--amber)}
+.ln.on .no{color:var(--amber)}
+.kw{color:#c58fd8}.ty{color:#6aa9e0}.st{color:#8fb87a}.cm{color:var(--faint);font-style:italic}
+
+.notes{margin-top:2.5rem;border-top:1px solid var(--line);padding-top:1.75rem}
+.notes h3{font-family:var(--disp);font-size:1.05rem;font-weight:500;margin:0 0 .6rem}
+.notes p{color:var(--dim);font-size:.92rem;margin:0 0 1rem;max-width:70ch}
+.notes code{font-family:var(--mono);font-size:.88em;color:var(--blue);background:var(--panel2);padding:.1rem .35rem;border-radius:3px}
+.notes strong{color:var(--fg);font-weight:500}
+.notes table{border-collapse:collapse;font-size:.86rem;margin-bottom:1rem;width:100%}
+.notes td,.notes th{border:1px solid var(--line);padding:.45rem .7rem;text-align:left}
+.notes th{background:var(--panel2);color:var(--faint);font-weight:500;font-size:.78rem}
+.notes td{color:var(--dim)}
+
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Reconstruct with Levelorder — 为什么不能切下标</h1>
+  <p class="sub">同一棵树的三种序列。<code>pre</code> 和 <code>post</code> 里子树是连成一段的，<code>level</code> 不是。</p>
+</header>
+
+<div class="card">
+  <h2>症结：子树的元素连不连续</h2>
+  <div class="body">
+    <div class="seq"><span class="tag">tree</span>
+      <span style="color:var(--faint);font-size:.85rem">10 的左子树 = {5, 2, 7}，右子树 = {15, 20}</span></div>
+    <div class="seq"><span class="tag">pre</span>
+      <span class="tk rt">10</span><span class="tk l">5</span><span class="tk l">2</span><span class="tk l">7</span><span class="tk r">15</span><span class="tk r">20</span></div>
+    <div class="verdict ok">左子树占 [1,3]，右子树占 [4,5] — 各是连续一段，两个下标就能表示 ✓</div>
+    <div class="seq"><span class="tag">post</span>
+      <span class="tk l">2</span><span class="tk l">7</span><span class="tk l">5</span><span class="tk r">20</span><span class="tk r">15</span><span class="tk rt">10</span></div>
+    <div class="verdict ok">左子树占 [0,2]，右子树占 [3,4] — 同样连续 ✓</div>
+    <div class="seq"><span class="tag">level</span>
+      <span class="tk rt">10</span><span class="tk l">5</span><span class="tk r">15</span><span class="tk l">2</span><span class="tk l">7</span><span class="tk r">20</span></div>
+    <div class="verdict bad">左子树散在 1、3、4，右子树散在 2、5 — <b>被隔断了</b>，下标范围表达不了 ✗</div>
+  </div>
+</div>
+
+<div class="stickybar">
+  <div class="ctrl">
+    <button id="prev">← 上一步</button>
+    <button id="next">下一步 →</button>
+    <button id="play">自动播放</button>
+    <button id="reset">重来</button>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="narr" id="narr"><p></p></div>
+</div>
+<p class="hint">键盘 <kbd>←</kbd> <kbd>→</kbd> 单步，<kbd>空格</kbd> 播放／暂停</p>
+
+<div class="card">
+  <h2>当前这次递归调用</h2>
+  <div class="body">
+    <div class="row"><span class="tag">level 表</span><span id="lvl"></span></div>
+    <div class="row"><span class="tag">root</span><span id="rt"></span></div>
+    <div class="row"><span class="tag">left 表</span><span id="lft"></span></div>
+    <div class="row"><span class="tag">right 表</span><span id="rgt"></span></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card" style="margin:0">
+    <h2>判断依据：在 inorder 里的位置</h2>
+    <div class="body">
+      <div class="seq" style="margin-bottom:.8rem"><span class="tag">in</span><span id="inrow"></span></div>
+      <div class="calc" id="calc"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin:0">
+    <h2>已建好的树</h2>
+    <div class="body">
+      <svg viewBox="0 0 470 250" role="img" aria-label="重建中的二叉树">
+        <g id="edges"></g>
+        <g id="nodes"></g>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>代码</h2>
+  <div class="body"><pre id="code"></pre></div>
+</div>
+
+<div class="notes">
+  <h3>三题唯一的差别：子问题怎么表示</h3>
+  <table>
+    <tr><th></th><th>找根</th><th>分左右</th><th>子问题怎么表示</th><th>TC</th></tr>
+    <tr><td>213 pre</td><td><code>pre[preLeft]</code></td><td>切下标</td><td>下标范围</td><td>O(n)</td></tr>
+    <tr><td>214 post</td><td><code>post[postRight]</code></td><td>切下标</td><td>下标范围</td><td>O(n)</td></tr>
+    <tr><td>215 level</td><td><code>level.remove(0)</code></td><td>逐个判归属</td><td><strong>新建两个 List</strong></td><td>O(n²)</td></tr>
+  </table>
+  <p><strong>inorder 的角色三题完全一样</strong>——都是「告诉我谁在左边谁在右边」。只是 213/214 能靠它算出长度、切一刀就完事，215 只能拿它去逐个查位置分组。</p>
+
+  <h3>为什么 remove(0) 就是根</h3>
+  <p>level order 的性质：<strong>父节点一定排在所有子节点前面</strong>。所以在「属于这棵子树的那些元素」里，最先出现的必然是这棵子树的根。取完删掉，剩下的就是左右子树的元素。</p>
+
+  <h3>为什么分组后还是 level order</h3>
+  <p>因为是<strong>按原 List 的顺序</strong>遍历再 add 的，相对次序没变。所以 <code>left</code> 和 <code>right</code> 两个新表内部仍然是层序，递归下去可以继续用同样的办法取根。</p>
+
+  <h3>代价</h3>
+  <p>每层都要新建 List 并遍历一遍当前所有元素，所以是 <code>O(n²)</code> 时间、<code>O(n²)</code> 空间；pre/post 那两题是 <code>O(n)</code>。<strong>这就是「不连续」的代价</strong>，也是这题被标成困难的唯一原因——思路没更难，只是数据结构从「一对下标」退化成了「真的一份集合」。</p>
+</div>
+
+</div>
+
+<script>
+const IN=[2,5,7,10,15,20];
+const LEVEL=[10,5,15,2,7,20];
+const inMap={}; IN.forEach((v,i)=>inMap[v]=i);
+const POS={10:[235,35],5:[125,120],15:[350,120],2:[60,205],7:[195,205],20:[425,205]};
+const EDGES=[[10,5],[10,15],[5,2],[5,7],[15,20]];
+
+const CODE=[
+ ['<span class="kw">private</span> <span class="ty">TreeNode</span> helper(<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; level, <span class="ty">Map</span>&lt;<span class="ty">Integer</span>,<span class="ty">Integer</span>&gt; inMap) {',null],
+ ['    <span class="kw">if</span> (level.isEmpty()) <span class="kw">return</span> <span class="st">null</span>;',1],
+ ['    <span class="ty">TreeNode</span> root = <span class="kw">new</span> <span class="ty">TreeNode</span>(level.remove(<span class="st">0</span>));   <span class="cm">// 头一个就是根</span>',2],
+ ['    <span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; left = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;(), right = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();',3],
+ ['    <span class="kw">for</span> (<span class="ty">int</span> num : level) {',4],
+ ['        <span class="kw">if</span> (inMap.get(num) &lt; inMap.get(root.key)) left.add(num);',4],
+ ['        <span class="kw">else</span> right.add(num);',4],
+ ['    }',4],
+ ['    root.left  = helper(left,  inMap);',5],
+ ['    root.right = helper(right, inMap);',6],
+ ['    <span class="kw">return</span> root;',7],
+ ['}',null]
+];
+
+const S=[];
+const built=[], edgesOn=[];
+function rec(list,label,parent,side){
+  if(list.length===0){
+    S.push({label,lvl:[],root:null,left:[],right:[],line:1,
+      msg:`<b>${label}</b>：表是空的 → 返回 null（${parent!==null?`${parent} 没有${side==='L'?'左':'右'}孩子`:''}）`,
+      built:built.slice(),edges:edgesOn.slice()});
+    return;
+  }
+  S.push({label,lvl:list.slice(),root:null,left:[],right:[],line:2,
+    msg:`<b>${label}</b>：表里第一个是 <b>${list[0]}</b> —— level order 里父亲永远排在孩子前面，所以它就是这棵子树的根。`,
+    built:built.slice(),edges:edgesOn.slice()});
+
+  const root=list[0], rest=list.slice(1);
+  built.push(root);
+  if(parent!==null) edgesOn.push(parent+'-'+root);
+  S.push({label,lvl:rest.slice(),root,left:[],right:[],line:2,gone:root,
+    msg:`取出 <b>${root}</b> 当根并从表里删掉，剩下 <b>[${rest.join(', ')}]</b> 全是它的子孙。`,
+    built:built.slice(),edges:edgesOn.slice(),newNode:root});
+
+  const L=[],Rr=[];
+  rest.forEach(num=>{
+    const goLeft=inMap[num]<inMap[root];
+    (goLeft?L:Rr).push(num);
+    S.push({label,lvl:rest.slice(),root,left:L.slice(),right:Rr.slice(),line:4,cur:num,
+      cmp:{num,ni:inMap[num],ri:inMap[root],goLeft},
+      msg:`<b>${num}</b> 在 inorder 里的位置是 ${inMap[num]}，根 <b>${root}</b> 是 ${inMap[root]} → ${inMap[num]<inMap[root]?'排在根左边，进 <b>left</b>':'排在根右边，进 <b>right</b>'}`,
+      built:built.slice(),edges:edgesOn.slice()});
+  });
+
+  S.push({label,lvl:rest.slice(),root,left:L.slice(),right:Rr.slice(),line:5,
+    msg:`分完了：left = <b>[${L.join(', ')}]</b>，right = <b>[${Rr.join(', ')}]</b>。两个表内部仍是层序（按原顺序挑出来的），可以继续递归。`,
+    built:built.slice(),edges:edgesOn.slice()});
+
+  rec(L,`helper([${L.join(', ')}])`,root,'L');
+  rec(Rr,`helper([${Rr.join(', ')}])`,root,'R');
+}
+rec(LEVEL.slice(),`helper([${LEVEL.join(', ')}])`,null,null);
+S.push({label:'done',lvl:[],root:null,left:[],right:[],line:7,good:true,
+  msg:'全部建完，树还原成功 ✓',built:built.slice(),edges:edgesOn.slice()});
+
+let i=0,timer=null;
+const $=id=>document.getElementById(id);
+$('code').innerHTML=CODE.map((c,n)=>`<span class="ln" data-l="${c[1]}"><span class="no">${n||''}</span>${c[0]}</span>`).join('');
+
+function chips(arr,extra){
+  if(!arr.length) return '<span class="emptyc">空</span>';
+  return arr.map(v=>`<span class="tk ${extra&&extra===v?'cur':''}">${v}</span>`).join('');
+}
+
+function draw(){
+  const s=S[i];
+  document.querySelectorAll('.ln').forEach(l=>l.classList.toggle('on', s.line!==null && l.dataset.l==String(s.line)));
+
+  $('lvl').innerHTML = s.gone!==undefined
+    ? `<span class="tk gone">${s.gone}</span>`+chips(s.lvl,s.cur)
+    : chips(s.lvl,s.cur);
+  $('rt').innerHTML = s.root!==null?`<span class="tk rt">${s.root}</span>`:'<span class="emptyc">—</span>';
+  $('lft').innerHTML = s.left.length?s.left.map(v=>`<span class="tk l">${v}</span>`).join(''):'<span class="emptyc">空</span>';
+  $('rgt').innerHTML = s.right.length?s.right.map(v=>`<span class="tk r">${v}</span>`).join(''):'<span class="emptyc">空</span>';
+
+  $('inrow').innerHTML=IN.map(v=>{
+    let c='tk';
+    if(s.cmp&&s.cmp.num===v) c+=' cur';
+    else if(s.root===v) c+=' rt';
+    return `<span class="${c}">${v}</span>`;
+  }).join('');
+
+  $('calc').innerHTML = s.cmp
+    ? `<div>inMap[<span class="hl">${s.cmp.num}</span>] = ${s.cmp.ni}　　inMap[根 <span class="hl">${s.cmp.ri===undefined?'':s.root}</span>] = ${s.cmp.ri}</div>
+       <div>${s.cmp.ni} ${s.cmp.goLeft?'&lt;':'&gt;'} ${s.cmp.ri} → 归 <span class="${s.cmp.goLeft?'lb':'rb'}">${s.cmp.goLeft?'left':'right'}</span></div>`
+    : '<span class="emptyc">—</span>';
+
+  $('nodes').innerHTML=Object.keys(POS).map(k=>{
+    const [x,y]=POS[k]; const kn=+k;
+    let cls='nd';
+    if(s.newNode===kn) cls+=' new';
+    else if(s.built.includes(kn)) cls+=' on';
+    else cls+=' off';
+    return `<g class="${cls}"><circle cx="${x}" cy="${y}" r="22"/>
+      <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central">${k}</text></g>`;
+  }).join('');
+  $('edges').innerHTML=EDGES.map(([a,b])=>{
+    const on=s.edges.includes(a+'-'+b);
+    const [x1,y1]=POS[a],[x2,y2]=POS[b];
+    const dx=x2-x1,dy=y2-y1,d=Math.hypot(dx,dy);
+    return `<line class="edge" x1="${x1+dx/d*22}" y1="${y1+dy/d*22}" x2="${x2-dx/d*22}" y2="${y2-dy/d*22}" style="opacity:${on?1:.12}"/>`;
+  }).join('');
+
+  const n=$('narr'); n.className='narr'+(s.good?' good':'');
+  n.querySelector('p').innerHTML=s.msg;
+  $('count').textContent=`${i+1} / ${S.length}`;
+  $('prev').disabled=i===0; $('next').disabled=i===S.length-1;
+}
+function go(d){i=Math.max(0,Math.min(S.length-1,i+d));draw();if(i===S.length-1)stop()}
+function stop(){clearInterval(timer);timer=null;$('play').textContent='自动播放'}
+$('next').onclick=()=>go(1); $('prev').onclick=()=>go(-1);
+$('reset').onclick=()=>{stop();i=0;draw()};
+$('play').onclick=()=>{
+  if(timer){stop();return}
+  if(i===S.length-1)i=0;
+  $('play').textContent='暂停';
+  timer=setInterval(()=>{if(i>=S.length-1){stop();return}go(1)},1100);
+};
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'){e.preventDefault();go(1)}
+  if(e.key==='ArrowLeft'){e.preventDefault();go(-1)}
+  if(e.key===' '){e.preventDefault();$('play').click()}
+});
+draw();
+</script>
+</body>
+</html>
