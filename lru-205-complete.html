@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🗄️ LRU Cache 205 · 全套图解</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px 16px 70px;background:#f6f6f4;color:#222;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.7}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:23px;text-align:center;margin:0 0 4px}
+  .sub{text-align:center;font-size:13.5px;color:#888;margin:0 0 20px}
+  h3{font-size:15.5px;margin:24px 0 10px;color:#333}
+  p{margin:0 0 11px;font-size:14.5px;color:#555}
+  p b{color:#222}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:.9em;background:#f0eee8;padding:1px 5px;border-radius:4px}
+
+  /* tabs */
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:22px}
+  .tabs button{font:inherit;font-size:13.5px;padding:8px 15px;border:1px solid #ddd9d0;border-radius:20px;
+    background:#fff;color:#666;cursor:pointer;transition:all .2s}
+  .tabs button:hover{border-color:#b8b5ac;color:#333}
+  .tabs button.on{background:#4272c4;border-color:#4272c4;color:#fff;font-weight:600}
+  .tab{display:none}
+  .tab.show{display:block}
+
+  /* controls */
+  .ctrl{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+  .ctrl button{font:inherit;font-size:14px;padding:8px 17px;border:none;border-radius:8px;
+    background:#4272c4;color:#fff;cursor:pointer;box-shadow:0 2px 0 #2f5695;transition:transform .1s,box-shadow .1s}
+  .ctrl button:active{transform:translateY(2px);box-shadow:0 0 0 #2f5695}
+  .ctrl button.alt{background:#8a8a84;box-shadow:0 2px 0 #5f5f59}
+  .cases{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+  .cases button{font:inherit;font-size:13px;padding:6px 13px;border:1px solid #ddd9d0;border-radius:18px;
+    background:#fff;color:#777;cursor:pointer;transition:all .2s}
+  .cases button.on{background:#fdf6dd;border-color:#e0c76a;color:#8a6408;font-weight:600}
+  .stepno{text-align:center;font-size:12.5px;color:#a5a29a;margin-bottom:10px;font-family:ui-monospace,Menlo,monospace}
+  .cline{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:15px;font-weight:600;
+    color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;border-radius:9px;
+    padding:9px 15px;margin:0 auto 16px;max-width:560px;min-height:44px}
+  .cline.plain{color:#8a8a84;background:#f2f0ea;border-color:#e0ddd4;font-weight:400}
+  .cline.skip{color:#a09d95;background:#f7f6f2;border-color:#e6e3da;font-style:italic}
+
+  /* scene */
+  .scene{position:relative;background:linear-gradient(180deg,#fdfdfb,#f2f0ea);border:1px solid #e4e2db;
+    border-radius:13px;padding:20px 18px 22px;margin-bottom:14px;box-shadow:0 2px 9px rgba(0,0,0,.05);overflow-x:auto}
+  .wires{position:absolute;inset:0;pointer-events:none;width:100%;height:100%}
+  .lbl{font-size:11.5px;color:#a5a29a;font-family:ui-monospace,Menlo,monospace;margin-bottom:9px}
+  .maprow{display:flex;gap:12px;flex-wrap:wrap;position:relative;z-index:2;min-height:36px;align-items:center;min-width:min-content}
+  .chip{background:#fff;border:2px solid #cfd8e6;border-radius:9px;padding:7px 13px;cursor:pointer;
+    font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:#4a5a70;transition:all .3s;
+    box-shadow:0 2px 0 -1px #e3e7ee}
+  .chip b{color:#1c4a8a;font-size:14px}
+  .chip.on{background:#e4efff;border-color:#4272c4;transform:translateY(-3px)}
+  .chip.cut{background:#fdeded;border-color:#e8b4b4;color:#c08a8a;opacity:.5;text-decoration:line-through}
+  .chip.added{background:#eef8e6;border-color:#a8d18c;color:#2c6614}
+  .chip.bad{background:#f7f2ff;border-color:#b79ce0;color:#5b3f8f}
+  .gap{height:74px}
+  .listrow{display:flex;align-items:center;gap:2px;position:relative;z-index:2;min-height:98px;min-width:min-content}
+  .node{min-width:108px;background:#fff;border:2px solid #d8d5cc;border-radius:11px;padding:9px 11px;
+    font-family:ui-monospace,Menlo,monospace;text-align:center;position:relative;cursor:pointer;
+    box-shadow:0 3px 0 -1px #e5e2d9,0 6px 13px rgba(0,0,0,.08);transition:all .42s cubic-bezier(.4,0,.2,1)}
+  .node .kv{font-size:9.5px;color:#a5a29a}
+  .node .kk{color:#8a6408;font-weight:700;font-size:13.5px}
+  .node .vv{color:#222;font-weight:700;font-size:16px;margin:1px 0 3px}
+  .node .pt{font-size:9.5px;color:#b8b5ac;border-top:1px dashed #e6e3da;padding-top:3px}
+  .node .cap{position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:9px;
+    padding:2px 8px;border-radius:20px;color:#fff;white-space:nowrap}
+  .cap.h{background:#4272c4} .cap.t{background:#c39a1e} .cap.o{background:#8a5cc4} .cap.n{background:#4a9c2e}
+  .node.on{border-color:#4272c4;background:linear-gradient(170deg,#f2f8ff,#e2eefc);transform:translateY(-4px)}
+  .node.target{border-color:#c39a1e;background:linear-gradient(170deg,#fffaee,#fdf2d6)}
+  .node.lifted{transform:translateY(-34px);border-color:#c39a1e;background:linear-gradient(170deg,#fffaee,#fdf2d6);
+    box-shadow:0 3px 0 -1px #e7d296,0 16px 26px rgba(160,120,20,.22)}
+  .node.orphan{border-color:#8a5cc4;background:linear-gradient(170deg,#f7f2ff,#ece0fb)}
+  .node.fresh{border-color:#4a9c2e;background:linear-gradient(170deg,#f1faea,#dcf0cd);transform:translateY(-4px)}
+  .node.dim{opacity:.45}
+  .lk{color:#c2bfb6;font-family:ui-monospace,Menlo,monospace;font-size:14px;letter-spacing:-2px;padding:0 1px}
+  .nul{color:#c6c3ba;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;padding:0 4px}
+  .floatz{margin-top:16px;padding-top:13px;border-top:1px dashed #ddd9cf}
+  .floatz .lbl{color:#8a5cc4}
+  .none{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:#c6c3ba}
+  .hvars{display:flex;gap:16px;margin-top:14px;padding-top:12px;border-top:1px dashed #ddd9cf;
+    font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#8a8780;flex-wrap:wrap}
+  .hvars span b{color:#4272c4}
+
+  .say{background:#fff;border:1px solid #e4e2db;border-radius:10px;padding:14px 17px;min-height:80px;
+    font-size:14.3px;color:#444;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:20px}
+  .say b{color:#222} .say .em{color:#a02622;font-weight:600} .say .ok{color:#2c6614;font-weight:600}
+
+  .panel{background:#fff;border:1px solid #e4e2db;border-radius:12px;padding:17px 21px;margin-bottom:15px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .warn{background:#fff4f4;border:1px solid #f0c9c9;border-radius:10px;padding:13px 17px;margin-bottom:14px}
+  .warn p{margin:0;color:#7d3b3b;font-size:14.3px} .warn p b{color:#a02622} .warn p+p{margin-top:7px}
+  .good{background:#f2f9ec;border:1px solid #cbe4b6;border-radius:10px;padding:13px 17px;margin-bottom:14px}
+  .good p{margin:0;color:#3f6b26;font-size:14.3px} .good p b{color:#2c6614}
+  .meta{background:#f7f5ff;border:1px solid #ddd4ee;border-radius:10px;padding:13px 17px;margin-bottom:14px}
+  .meta p{margin:0;color:#5b3f8f;font-size:14.3px} .meta p b{color:#432c6e}
+
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin-bottom:12px}
+  th,td{padding:8px 11px;text-align:left;border-bottom:1px solid #eceae4}
+  th{background:#f5f4f0;font-weight:600;color:#333;font-size:12.5px}
+  td.api{font-family:ui-monospace,Menlo,monospace;color:#1c4a8a;white-space:nowrap}
+  td.y{color:#2c6614;font-weight:600} td.n{color:#c53b3b}
+
+  pre{background:#26261f;color:#e6e3d8;border-radius:11px;padding:15px 0;margin:0 0 13px;
+    overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.3px;line-height:1.75}
+  pre .ln{display:block;padding:0 19px;white-space:pre;border-left:4px solid transparent;transition:background .3s}
+  pre .ln.on{background:#4b4526;border-left-color:#e2bd45;color:#fff9e2}
+  pre .ln.cm{color:#8a8a7a}
+  .cpbar{display:flex;justify-content:flex-end;margin-bottom:6px}
+  .cpbar button{font:inherit;font-size:12.5px;padding:5px 13px;border:1px solid #d8d5cd;border-radius:7px;
+    background:#fff;color:#555;cursor:pointer}
+
+  .setup{display:flex;gap:11px;justify-content:center;flex-wrap:wrap;align-items:flex-start;margin-bottom:6px}
+  .field{display:flex;flex-direction:column;gap:3px}
+  .field label{font-size:11.5px;color:#999}
+  input,textarea{font:inherit;font-size:13.5px;font-family:ui-monospace,Menlo,monospace;padding:7px 9px;
+    border:1px solid #d8d5cd;border-radius:8px;background:#fff;resize:vertical}
+  #pgcap{width:66px} #pgops{width:200px;height:112px;line-height:1.55}
+  .setup button{font:inherit;font-size:13.5px;padding:8px 15px;border:1px solid #d8d5cd;border-radius:8px;
+    background:#fff;cursor:pointer;margin-top:17px}
+  .err{text-align:center;font-size:12.5px;color:#c0392b;min-height:20px;margin-bottom:12px}
+  footer{text-align:center;font-size:12.5px;color:#a5a29a;margin-top:34px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🗄️ LRU Cache 205 · 全套图解</h1>
+<p class="sub">head = 最新，tail = 最老（按官方答案）　·　左右方向键可翻步</p>
+
+<div class="tabs" id="tabs"></div>
+
+<!-- ============ 1 结构总览 ============ -->
+<div class="tab" id="t-struct">
+  <div class="panel">
+    <p><b>两套指针，盖在同一批方框上。</b>map 按标签指，链表按先后指 —— 指的都是同一批对象，没有任何东西被复制过第二份。</p>
+    <p>点 map 的条目或方框，看它们怎么对应。</p>
+  </div>
+  <div class="scene" id="sc-struct">
+    <svg class="wires"></svg>
+    <div class="lbl">HashMap&lt;K, Node&gt; · 目录（本身无序，画成一排只是为了看清指向）</div>
+    <div class="maprow"></div>
+    <div class="gap"></div>
+    <div class="lbl">双向链表 · 队伍</div>
+    <div class="listrow"></div>
+    <div class="floatz" style="display:none"><div class="lbl"></div><div class="listrow2"></div></div>
+    <div class="hvars"></div>
+  </div>
+  <div class="say" id="say-struct"></div>
+  <div class="panel">
+    <h3>map 存的不是"位置"</h3>
+    <p>链表<b>没有下标、没有"第几个"</b>。map 存的是那个方框<b>本身在内存的哪儿</b>（一个引用）。拿到引用，<code>prev</code> 和 <code>next</code> 就在手上了 —— 它在队伍里排第几，没人关心也没地方记。</p>
+    <h3>如果 map 只存 value 会怎样</h3>
+    <table>
+      <tr><th style="width:180px">写法</th><th>后果</th></tr>
+      <tr><td class="api">Map&lt;K, Node&gt; ✓</td><td class="y">直接把方框交给你，prev/next 立刻可用 → 摘和挂都是 O(1)</td></tr>
+      <tr><td class="api">Map&lt;K, V&gt; ✗</td><td class="n">只给内容，不知道是哪个方框，得从 head 一个个走过去比对 → O(n)</td></tr>
+    </table>
+    <p><b>一个字的差别，决定了整道题成不成立。</b></p>
+  </div>
+</div>
+
+<!-- ============ 2 remove ============ -->
+<div class="tab" id="t-remove">
+  <div class="panel">
+    <p><b>remove(node)</b>：给我一个方框，我把它<b>从链表和 map 里都拿掉</b>。不管它当时在哪儿。</p>
+  </div>
+  <div class="cases" id="cs-remove"></div>
+  <div class="ctrl" data-demo="remove"></div>
+  <div class="stepno"></div><div class="cline"></div>
+  <div class="scene" id="sc-remove">
+    <svg class="wires"></svg>
+    <div class="lbl">HashMap</div><div class="maprow"></div>
+    <div class="gap"></div>
+    <div class="lbl">双向链表</div><div class="listrow"></div>
+    <div class="floatz"><div class="lbl">已经不在链表里、但被 node 变量抓着的方框</div><div class="listrow2"></div></div>
+    <div class="hvars"></div>
+  </div>
+  <div class="say"></div>
+  <div class="cpbar"><button onclick="copyCode('remove')">复制这段代码</button></div>
+  <pre id="code-remove"></pre>
+  <div class="warn">
+    <p><b>这四个 if 不能写成 if-else。</b>它们问的是四个完全不同的问题，可以同时成立好几个。</p>
+    <p>反例：链表只剩一个节点时，<code>node == head</code> 和 <code>node == tail</code> 同时为真。写成 else 的话，执行完第三个就跳出去了 —— <b>tail 还攥着一个已经被摘掉的方框</b>，下次淘汰直接崩。</p>
+  </div>
+  <div class="panel">
+    <h3>为什么 <code>node.next</code> 不会 NPE</h3>
+    <p><b>点号左边</b>那个东西不能是 null，右边随便。</p>
+    <p><code>node.prev.next = node.next</code> —— 左边的 <code>node.prev</code> 不能是 null（所以要判断），右边的 <code>node.next</code> 只是被<b>读出来</b>，是 null 也照样赋过去，完全合法。</p>
+    <h3>撕目录 ≠ 毁掉方框</h3>
+    <p><code>map.remove(7)</code> 撕掉的是<b>箭头</b>，方框还好好在那儿 —— 就像撕掉图书馆目录卡上的一行，<b>书没被烧掉</b>。方框要等到<b>没有任何东西指着它</b>时才会被垃圾回收。</p>
+  </div>
+</div>
+
+<!-- ============ 3 append ============ -->
+<div class="tab" id="t-append">
+  <div class="panel">
+    <p><b>append(node)</b>：给我一个方框，我<b>挂到 head 那端</b>，并记进 map。</p>
+  </div>
+  <div class="cases" id="cs-append"></div>
+  <div class="ctrl" data-demo="append"></div>
+  <div class="stepno"></div><div class="cline"></div>
+  <div class="scene" id="sc-append">
+    <svg class="wires"></svg>
+    <div class="lbl">HashMap</div><div class="maprow"></div>
+    <div class="gap"></div>
+    <div class="lbl">双向链表</div><div class="listrow"></div>
+    <div class="floatz"><div class="lbl">手上待挂的方框</div><div class="listrow2"></div></div>
+    <div class="hvars"></div>
+  </div>
+  <div class="say"></div>
+  <div class="cpbar"><button onclick="copyCode('append')">复制这段代码</button></div>
+  <pre id="code-append"></pre>
+  <div class="warn">
+    <p><b>那三句的顺序不能乱。</b>先执行 <code>head = node</code> 的话，旧头就找不着了，后面两句会接到自己身上，链表直接断。</p>
+  </div>
+</div>
+
+<!-- ============ 4 get ============ -->
+<div class="tab" id="t-get">
+  <div class="panel">
+    <p><b>get(key)</b>：查得到就返回内容，<b>并且挪到 head</b>；查不到返回 null，什么都不动。</p>
+  </div>
+  <div class="cases" id="cs-get"></div>
+  <div class="ctrl" data-demo="get"></div>
+  <div class="stepno"></div><div class="cline"></div>
+  <div class="scene" id="sc-get">
+    <svg class="wires"></svg>
+    <div class="lbl">HashMap</div><div class="maprow"></div>
+    <div class="gap"></div>
+    <div class="lbl">双向链表</div><div class="listrow"></div>
+    <div class="floatz"><div class="lbl">手上的方框</div><div class="listrow2"></div></div>
+    <div class="hvars"></div>
+  </div>
+  <div class="say"></div>
+  <div class="cpbar"><button onclick="copyCode('get')">复制这段代码</button></div>
+  <pre id="code-get"></pre>
+  <div class="warn">
+    <p><b>读操作对链表来说仍然是写操作。</b>取东西也算"碰过"，不挪的话它还停在老位置，下次淘汰可能把刚用过的踢掉。</p>
+    <p>漏掉这两行，LRU 就退化成 <b>FIFO</b>（只看进来的先后，不看用过没有）。</p>
+  </div>
+</div>
+
+<!-- ============ 5 set ============ -->
+<div class="tab" id="t-set">
+  <div class="panel">
+    <p><b>set(key, value)</b>：三种情况分头处理，<b>最后统一 append</b>。</p>
+    <table>
+      <tr><th style="width:190px">情况</th><th>做什么</th></tr>
+      <tr><td>1. 标签已经在里面</td><td>改 value，<code>remove</code> 摘下来</td></tr>
+      <tr><td>2. 不在，还有空位</td><td><code>new</code> 一个新方框</td></tr>
+      <tr><td>3. 不在，满了</td><td>拿 tail，<code>remove</code> 摘掉，<code>update</code> 改写<b>（复用）</b></td></tr>
+    </table>
+    <p>三条路走完都要挂到 head，所以 <code>append(node)</code> <b>提到分支外面</b> —— 两个分支写同一句话，那句话就该提出去。</p>
+  </div>
+  <div class="cases" id="cs-set"></div>
+  <div class="ctrl" data-demo="set"></div>
+  <div class="stepno"></div><div class="cline"></div>
+  <div class="scene" id="sc-set">
+    <svg class="wires"></svg>
+    <div class="lbl">HashMap</div><div class="maprow"></div>
+    <div class="gap"></div>
+    <div class="lbl">双向链表</div><div class="listrow"></div>
+    <div class="floatz"><div class="lbl">手上的方框</div><div class="listrow2"></div></div>
+    <div class="hvars"></div>
+  </div>
+  <div class="say"></div>
+  <div class="cpbar"><button onclick="copyCode('set')">复制这段代码</button></div>
+  <pre id="code-set"></pre>
+  <div class="warn">
+    <p><b>case 3 必须先 remove 再 update。</b><code>remove</code> 里执行的是 <code>map.remove(node.key)</code>，要用<b>旧的 key</b> 去删。先 update 改了 key 再 remove，旧那条就<b>永远删不掉</b>，map 只增不减。</p>
+  </div>
+  <div class="meta">
+    <p><b>「复用」复用的是那个 Node 对象本身</b> —— 同一块内存，撕掉旧标签贴新的，换掉里面的东西，再挂回去。不是拆掉一个柜子再造一个新的，而是把旧柜子清空、换个标签继续用。</p>
+  </div>
+</div>
+
+<!-- ============ 6 完整演练 ============ -->
+<div class="tab" id="t-play">
+  <div class="panel">
+    <p>把一串操作从头跑到尾。可以改容量和操作序列。</p>
+    <p><b>试试看：</b>把 <code>get 1</code> 那行删掉再跑，被淘汰的会从 key 2 变成 key 1 —— 这就是「get 也要更新顺序」的意义。</p>
+  </div>
+  <div class="setup">
+    <div class="field"><label for="pgcap">limit</label><input id="pgcap" type="number" min="1" value="2"></div>
+    <div class="field"><label for="pgops">操作序列（一行一条）</label><textarea id="pgops">set 1 1
+set 2 2
+get 1
+set 3 3
+get 2
+set 4 4
+get 1
+get 3</textarea></div>
+    <button onclick="buildPlay()">重新生成</button>
+  </div>
+  <div class="err" id="pgerr"></div>
+  <div class="ctrl" data-demo="play"></div>
+  <div class="stepno"></div><div class="cline"></div>
+  <div class="scene" id="sc-play">
+    <svg class="wires"></svg>
+    <div class="lbl">HashMap</div><div class="maprow"></div>
+    <div class="gap"></div>
+    <div class="lbl">双向链表</div><div class="listrow"></div>
+    <div class="floatz"><div class="lbl">手上的方框</div><div class="listrow2"></div></div>
+    <div class="hvars"></div>
+  </div>
+  <div class="say"></div>
+</div>
+
+<!-- ============ 7 完整代码 ============ -->
+<div class="tab" id="t-code">
+  <div class="cpbar"><button onclick="copyCode('full')" id="cpfull">复制全部代码</button></div>
+  <pre id="code-full"></pre>
+  <div class="good">
+    <p><b>抄之前先自问三句：</b>为什么 map 存 Node 不存 V？为什么 get 也要 remove + append？为什么 case 3 复用 tail 而不是 new 一个？</p>
+  </div>
+  <div class="panel">
+    <h3>字段名要全文统一</h3>
+    <p>Node 里声明 <code>prev</code>，那 remove / append 里也得写 <code>prev</code>。写成 <code>pre</code> 又在别处用 <code>prev</code>，直接编译不过。</p>
+    <h3>没用 dummy 哨兵的代价</h3>
+    <p>这份答案没有虚拟头尾节点，所以 <code>remove</code> 里有四个边界判断、<code>append</code> 里有 <code>head == null</code> 特判。用 dummy 双哨兵能把这些全消掉 —— 两种都对，知道差别就好。</p>
+  </div>
+</div>
+
+<footer>Time: O(1) for all operations · Space: O(limit)</footer>
+</div>
+
+<script>
+/* ---------- 通用场景渲染 ---------- */
+function paint(sceneId, st){
+  const sc=document.getElementById(sceneId);
+  const mr=sc.querySelector(".maprow"), lr=sc.querySelector(".listrow"),
+        fz=sc.querySelector(".floatz"), l2=sc.querySelector(".listrow2"),
+        hv=sc.querySelector(".hvars");
+
+  mr.innerHTML=(st.map||[]).map(m=>
+    `<div class="chip ${m.cls||""}" data-k="${m.k}"><b>${m.k}</b> → 方框</div>`).join("")
+    || '<span class="none">（空）</span>';
+
+  const L=st.list||[];
+  let h='<span class="nul">null</span><span class="lk">⇄</span>';
+  h+= L.length ? L.map((n,i)=>{
+        const isH=i===0,isT=i===L.length-1;
+        let cap="";
+        if(n.cap) cap=`<span class="cap ${n.cap.c}">${n.cap.t}</span>`;
+        else if(isH&&isT) cap='<span class="cap h">head = tail</span>';
+        else if(isH) cap='<span class="cap h">head 最新</span>';
+        else if(isT) cap='<span class="cap t">tail 最老</span>';
+        return `<div class="node ${n.cls||""}" data-k="${n.k}">${cap}
+          <div class="kv">key</div><div class="kk">${n.k}</div>
+          <div class="vv">${n.v}</div><div class="pt">prev ⇄ next</div></div>`;
+      }).join('<span class="lk">⇄</span>')
+    : '<span class="none">　（链表为空）　</span>';
+  h+='<span class="lk">⇄</span><span class="nul">null</span>';
+  lr.innerHTML=h;
+
+  if(fz){
+    if(st.hand){
+      fz.style.display="";
+      l2.innerHTML=`<div class="node ${st.hand.cls||"orphan"}" data-k="${st.hand.k}">
+        <span class="cap ${st.hand.capc||"o"}">${st.hand.capt||"node 变量抓着"}</span>
+        <div class="kv">key</div><div class="kk">${st.hand.k}</div>
+        <div class="vv">${st.hand.v}</div><div class="pt">${st.hand.pt||"prev = null · next = null"}</div></div>`;
+    }else if(st.showHand===false){ fz.style.display="none"; }
+    else { fz.style.display=""; l2.innerHTML='<span class="none">（没有）</span>'; }
+  }
+
+  if(hv){
+    const hk=L.length?L[0].k:"null", tk=L.length?L[L.length-1].k:"null";
+    hv.innerHTML=`<span>head → <b>${hk===null?"null":(L.length?"key "+hk:"null")}</b></span>
+      <span>tail → <b>${L.length?"key "+tk:"null"}</b></span>
+      <span>map.size() = <b>${(st.map||[]).filter(m=>m.cls!=="cut").length}</b></span>`;
+  }
+  drawWires(sc, st);
+}
+
+function drawWires(sc, st){
+  const svg=sc.querySelector(".wires"); if(!svg) return;
+  const sb=sc.getBoundingClientRect();
+  svg.setAttribute("viewBox",`0 0 ${sb.width} ${sb.height}`);
+  let d="";
+  sc.querySelectorAll(".chip").forEach(chip=>{
+    if(chip.classList.contains("cut")) return;
+    const k=chip.dataset.k;
+    const node=sc.querySelector(`.node[data-k="${k}"]`);
+    if(!node) return;
+    const a=chip.getBoundingClientRect(), b=node.getBoundingClientRect();
+    const x1=a.left-sb.left+a.width/2, y1=a.bottom-sb.top;
+    const x2=b.left-sb.left+b.width/2, y2=b.top-sb.top;
+    const my=(y1+y2)/2;
+    const hot=chip.classList.contains("on")||chip.classList.contains("added");
+    const bad=chip.classList.contains("bad");
+    const col=bad?"#8a5cc4":(hot?"#4272c4":"#d6d3ca");
+    d+=`<path d="M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}" fill="none"
+        stroke="${col}" stroke-width="${(hot||bad)?2.5:1.4}"
+        stroke-dasharray="${(hot||bad)?"none":"5 4"}" marker-end="url(#mk${bad?"B":(hot?"H":"N")})"/>`;
+  });
+  (st&&st.arcs||[]).forEach(arc=>{
+    const A=sc.querySelector(`.node[data-k="${arc.from}"]`), B=sc.querySelector(`.node[data-k="${arc.to}"]`);
+    if(!A||!B) return;
+    const ra=A.getBoundingClientRect(), rb=B.getBoundingClientRect();
+    const up=arc.dir!=="bwd";
+    const x1=ra.left-sb.left+ra.width/2, x2=rb.left-sb.left+rb.width/2;
+    const y=(up?ra.top-sb.top:ra.bottom-sb.top);
+    const cy=up?y-40:y+40;
+    d+=`<path d="M ${x1} ${y} Q ${(x1+x2)/2} ${cy}, ${x2} ${y}" fill="none"
+        stroke="#4a9c2e" stroke-width="2.6" marker-end="url(#mkG)"/>`;
+    d+=`<text x="${(x1+x2)/2}" y="${up?cy+2:cy+4}" text-anchor="middle"
+        font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#2c6614">${arc.label||""}</text>`;
+  });
+  svg.innerHTML=`<defs>
+    <marker id="mkN" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#d6d3ca"/></marker>
+    <marker id="mkH" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#4272c4"/></marker>
+    <marker id="mkB" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#8a5cc4"/></marker>
+    <marker id="mkG" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#4a9c2e"/></marker>
+  </defs>`+d;
+}
+
+/* ---------- 代码片段 ---------- */
+const SNIP={
+remove:`private Node<K, V> remove(Node<K, V> node) {
+  map.remove(node.key);            // ① 目录里划掉，靠节点自己存的 key
+  if (node.prev != null) {
+    node.prev.next = node.next;    // ② 前面那个跳过我
+  }
+  if (node.next != null) {
+    node.next.prev = node.prev;    // ③ 后面那个跳过我
+  }
+  if (node == head) {
+    head = head.next;              // ④ 我是头，head 往后挪
+  }
+  if (node == tail) {
+    tail = tail.prev;              // ⑤ 我是尾，tail 往前挪
+  }
+  node.next = node.prev = null;    // ⑥ 自己的两根线也剪断
+  return node;
+}`,
+append:`private Node<K, V> append(Node<K, V> node) {
+  map.put(node.key, node);         // ① 目录里记上
+  if (head == null) {
+    head = tail = node;            // ② 链表原本是空的
+  } else {
+    node.next = head;              // ③ 这三句顺序不能乱
+    head.prev = node;              // ④
+    head = node;                   // ⑤
+  }
+  return node;
+}`,
+get:`public V get(K key) {
+  Node<K, V> node = map.get(key);
+  if (node == null) {
+    return null;                   // 查不到，什么都不动
+  }
+  remove(node);                    // 取了也算碰过
+  append(node);                    // 所以要挪到 head
+  return node.value;
+}`,
+set:`public void set(K key, V value) {
+  Node<K, V> node = null;
+  if (map.containsKey(key)) {      // 1. 已经在里面
+    node = map.get(key);
+    node.value = value;
+    remove(node);
+  } else if (map.size() < limit) { // 2. 不在，还有空位
+    node = new Node<K, V>(key, value);
+  } else {                         // 3. 不在，满了：复用 tail
+    node = tail;
+    remove(node);
+    node.update(key, value);
+  }
+  append(node);                    // 三条路都要挂到 head
+}`};
+
+const FULL=`public class Solution<K, V> {
+  static class Node<K, V> {
+    Node<K, V> next;
+    Node<K, V> prev;               // 注意是 prev，全文要统一
+    K key;
+    V value;
+
+    Node(K key, V value) {
+      this.key = key;
+      this.value = value;
+    }
+
+    void update(K key, V value) {  // 复用节点时用：撕掉旧标签，换上新的
+      this.key = key;
+      this.value = value;
+    }
+  }
+
+  private final int limit;         // 格子总数
+  private Node<K, V> head;         // 最新那端
+  private Node<K, V> tail;         // 最老那端，下一个被淘汰
+  private Map<K, Node<K, V>> map;  // 标签 -> 节点，存的是 Node 不是 V
+
+  public Solution(int limit) {
+    this.limit = limit;
+    this.map = new HashMap<K, Node<K, V>>();
+  }
+
+${SNIP.set.split("\n").map(l=>"  "+l).join("\n")}
+
+${SNIP.get.split("\n").map(l=>"  "+l).join("\n")}
+
+${SNIP.remove.split("\n").map(l=>"  "+l).join("\n")}
+
+${SNIP.append.split("\n").map(l=>"  "+l).join("\n")}
+}`;
+
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function paintCode(id, src, on){
+  document.getElementById(id).innerHTML=src.split("\n").map((ln,i)=>{
+    const cm=ln.trim().startsWith("//");
+    return `<span class="ln${(on||[]).includes(i)?" on":""}${cm?" cm":""}">${esc(ln)||" "}</span>`;
+  }).join("");
+}
+function copyCode(which){
+  const txt = which==="full"?FULL:SNIP[which];
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn=event.target; const old=btn.textContent;
+    btn.textContent="已复制 ✓"; setTimeout(()=>btn.textContent=old,1500);
+  });
+}
+
+/* ---------- 各 demo 的步骤 ---------- */
+const M=(ks,over)=>ks.map(k=>({k,cls:(over&&over[k])||""}));
+
+const DEMOS={};
+
+/* remove */
+function removeSteps(which){
+  const base=[{k:1,v:11},{k:7,v:77},{k:9,v:99}];
+  let list, tgt, label;
+  if(which==="mid"){ list=base.slice(); tgt=7; label="摘中间的 key 7"; }
+  else if(which==="head"){ list=base.slice(); tgt=1; label="摘头 key 1"; }
+  else if(which==="tail"){ list=base.slice(); tgt=9; label="摘尾 key 9"; }
+  else { list=[{k:7,v:77}]; tgt=7; label="链表只剩一个，摘 key 7"; }
+
+  const i=list.findIndex(n=>n.k===tgt);
+  const prevK=i>0?list[i-1].k:null, nextK=i<list.length-1?list[i+1].k:null;
+  const keys=list.map(n=>n.k);
+  const T=n=>n.k===tgt?{...n,cls:"target"}:n;
+  const S=[];
+  S.push({code:`remove(node)  ·  ${label}`,plain:true,
+    map:M(keys),list:list.map(T),showHand:false,on:[0],
+    say:`要摘掉 <b>key ${tgt}</b>。它被两套指针指着：map 的箭头、以及前后邻居的 prev / next。<b>两套都得断。</b>`});
+  S.push({code:"map.remove(node.key);",
+    map:M(keys,{[tgt]:"cut"}),list:list.map(T),showHand:false,on:[1],
+    say:`目录里那条撕掉了。<span class="em">但方框还在</span> —— 撕掉的只是箭头，就像撕掉图书馆目录卡上的一行，书没被烧掉。`});
+  const lifted=list.map(n=>n.k===tgt?{...n,cls:"lifted"}:n);
+  S.push({code:prevK!==null?"if (node.prev != null) node.prev.next = node.next;":"if (node.prev != null)  →  不成立，跳过",
+    plain:prevK===null,skip:prevK===null,
+    map:M(keys,{[tgt]:"cut"}),list:lifted,showHand:false,on:[2,3],
+    arcs:prevK!==null&&nextK!==null?[{from:prevK,to:nextK,dir:"fwd",label:`key${prevK}.next → key${nextK}`}]:[],
+    say:prevK!==null
+      ? `我前面是 key ${prevK} → 让它跳过我，<b>next 直接指向 ${nextK!==null?"key "+nextK:"null"}</b>。`
+      : `我前面没人（<code>node.prev</code> 是 null）→ <b>这个 if 不成立，跳过</b>。硬做的话 <code>null.next</code> 会 NPE。`});
+  S.push({code:nextK!==null?"if (node.next != null) node.next.prev = node.prev;":"if (node.next != null)  →  不成立，跳过",
+    plain:nextK===null,skip:nextK===null,
+    map:M(keys,{[tgt]:"cut"}),list:lifted,showHand:false,on:[4,5],
+    arcs:[...(prevK!==null&&nextK!==null?[{from:prevK,to:nextK,dir:"fwd",label:`key${prevK}.next → key${nextK}`}]:[]),
+          ...(nextK!==null&&prevK!==null?[{from:nextK,to:prevK,dir:"bwd",label:`key${nextK}.prev → key${prevK}`}]:[])],
+    say:nextK!==null
+      ? `我后面是 key ${nextK} → 让它跳过我，<b>prev 直接指回 ${prevK!==null?"key "+prevK:"null"}</b>。<br>两句做完，前后两位手拉手，我被架空了。`
+      : `我后面没人 → <b>跳过</b>。`});
+  const isH=i===0, isT=i===list.length-1;
+  S.push({code:isH?"if (node == head) head = head.next;":"if (node == head)  →  不成立，跳过",
+    plain:!isH,skip:!isH,
+    map:M(keys,{[tgt]:"cut"}),list:lifted,showHand:false,on:[6,7],
+    say:isH?`我就是 head。<b>head 这个变量必须手动往后挪一格</b>，否则它还指着一个已经出队的方框。`
+           :`我不是 head，head 变量不用动。`});
+  S.push({code:isT?"if (node == tail) tail = tail.prev;":"if (node == tail)  →  不成立，跳过",
+    plain:!isT,skip:!isT,
+    map:M(keys,{[tgt]:"cut"}),list:lifted,showHand:false,on:[8,9],
+    say:isT?`我就是 tail。<b>tail 变量往前挪一格。</b>${isH?'<br><span class="em">注意：这一步和上一步同时成立</span> —— 这就是四个 if 不能写成 if-else 的原因。':""}`
+           :`我不是 tail，tail 变量不用动。`});
+  const rest=list.filter(n=>n.k!==tgt);
+  S.push({code:"node.next = node.prev = null;",
+    map:M(keys.filter(k=>k!==tgt)),list:rest,
+    hand:{k:tgt,v:list[i].v},on:[10],
+    say:`前面几句是让<b>邻居不再指向我</b>，这句是让<b>我不再指向邻居</b>。<br>现在这个方框谁也不连着了 —— 除了 <code>node</code> 这个局部变量还抓着，所以还没被回收。`});
+  S.push({code:"return node;",
+    map:M(keys.filter(k=>k!==tgt)),list:rest,hand:{k:tgt,v:list[i].v},on:[11],
+    say:`把它交回给调用者。<b>如果是 case 3，接下来就会 <code>update</code> 改写它再挂回去（复用）；如果只是单纯淘汰，方法一结束这只手松开，它就被垃圾回收了。</b>`});
+  return S;
+}
+DEMOS.remove={scene:"sc-remove",code:"code-remove",src:SNIP.remove,
+  cases:[["mid","摘中间"],["head","摘头"],["tail","摘尾"],["only","只剩一个"]],
+  build:removeSteps, cur:0, cs:"mid"};
+
+/* append */
+function appendSteps(which){
+  const empty = which==="empty";
+  const list = empty?[]:[{k:1,v:11},{k:7,v:77}];
+  const keys = list.map(n=>n.k);
+  const nd={k:9,v:99};
+  const S=[];
+  S.push({code:`append(node)  ·  ${empty?"链表原本是空的":"链表里已经有节点"}`,plain:true,
+    map:M(keys),list:list.slice(),hand:{k:nd.k,v:nd.v,cls:"orphan",capt:"手上待挂的方框"},on:[0],
+    say:`手上有一个方框 key ${nd.k}，要把它挂到 <b>head 那端</b>（最新）。`});
+  S.push({code:"map.put(node.key, node);",
+    map:[...M(keys),{k:nd.k,cls:"added"}],list:list.slice(),
+    hand:{k:nd.k,v:nd.v,cls:"fresh",capc:"n",capt:"已记进 map"},on:[1],
+    say:`先在目录里记上：<b>key ${nd.k} → 这个方框</b>。注意这时它<b>还没进链表</b>。`});
+  if(empty){
+    S.push({code:"if (head == null) head = tail = node;",
+      map:[...M(keys),{k:nd.k,cls:"added"}],list:[{...nd,cls:"fresh"}],showHand:false,on:[2,3],
+      say:`链表原本是空的，所以这个方框<b>既是 head 也是 tail</b>。<br><code>head = tail = node</code> 是链式赋值，从右往左：先 <code>tail = node</code>，再 <code>head = tail</code>。`});
+  }else{
+    S.push({code:"if (head == null)  →  不成立，走 else",plain:true,skip:true,
+      map:[...M(keys),{k:nd.k,cls:"added"}],list:list.slice(),
+      hand:{k:nd.k,v:nd.v,cls:"fresh",capc:"n",capt:"已记进 map"},on:[2],
+      say:`链表非空，走 else 那三句。`});
+    S.push({code:"node.next = head;",
+      map:[...M(keys),{k:nd.k,cls:"added"}],list:list.slice(),
+      hand:{k:nd.k,v:nd.v,cls:"fresh",capc:"n",capt:"next 已指向旧 head"},on:[5],
+      say:`新方框的 next 指向<b>旧的 head（key ${list[0].k}）</b>。`});
+    S.push({code:"head.prev = node;",
+      map:[...M(keys),{k:nd.k,cls:"added"}],list:list.slice(),
+      hand:{k:nd.k,v:nd.v,cls:"fresh",capc:"n",capt:"两边已互指"},on:[6],
+      say:`旧 head 回指新方框。两句做完，<b>它俩已经手拉手了</b>，但 head 变量还指着旧的。`});
+    S.push({code:"head = node;",
+      map:[...M(keys),{k:nd.k,cls:"added"}],list:[{...nd,cls:"fresh"},...list],showHand:false,on:[7],
+      say:`head 变量移到新方框上，正式入队。<br><span class="em">这三句顺序不能乱</span> —— 先执行 <code>head = node</code> 的话，旧 head 就找不着了。`});
+  }
+  S.push({code:"return node;",
+    map:[...M(keys),{k:nd.k,cls:"added"}],
+    list:empty?[{...nd,cls:"fresh"}]:[{...nd,cls:"fresh"},...list],showHand:false,on:[9],
+    say:`挂完了。<b>目录记上了、队伍进去了</b>，两套指针都到位。`});
+  return S;
+}
+DEMOS.append={scene:"sc-append",code:"code-append",src:SNIP.append,
+  cases:[["normal","链表非空"],["empty","链表为空"]],
+  build:appendSteps, cur:0, cs:"normal"};
+
+/* get */
+function getSteps(which){
+  const list=[{k:1,v:11},{k:7,v:77},{k:9,v:99}];
+  const keys=list.map(n=>n.k);
+  const hit = which!=="miss";
+  const K = hit?9:5;
+  const S=[];
+  S.push({code:`get(${K})`,plain:true,map:M(keys),list:list.slice(),showHand:false,on:[0],
+    say:`要取 <b>key ${K}</b> 的内容。`});
+  if(!hit){
+    S.push({code:"Node<K,V> node = map.get(key);",
+      map:M(keys),list:list.slice(),showHand:false,on:[1],
+      say:`目录里查 key ${K} —— <b>没有这条</b>，返回 null。`});
+    S.push({code:"if (node == null) return null;",
+      map:M(keys),list:list.slice(),showHand:false,on:[2,3],
+      say:`直接 return null。<b>链表一个指针都不动</b> —— 查不到的东西谈不上"碰过"。`});
+    return S;
+  }
+  S.push({code:"Node<K,V> node = map.get(key);",
+    map:M(keys,{[K]:"on"}),list:list.map(n=>n.k===K?{...n,cls:"on"}:n),showHand:false,on:[1],
+    say:`目录直接把<b>那个方框</b>交到手上 —— 不是"告诉你它排第几"，而是给你这个对象。<br><span class="ok">拿到的瞬间 prev / next 就在手上了，全程没有遍历链表。</span>`});
+  S.push({code:"if (node == null)  →  不成立",plain:true,skip:true,
+    map:M(keys,{[K]:"on"}),list:list.map(n=>n.k===K?{...n,cls:"on"}:n),showHand:false,on:[2],
+    say:`查到了，往下走。`});
+  const rest=list.filter(n=>n.k!==K);
+  S.push({code:"remove(node);",
+    map:M(keys.filter(k=>k!==K)),list:rest,hand:{k:K,v:list.find(n=>n.k===K).v},on:[4,5],
+    say:`从当前位置摘出来（顺带从 map 划掉）。<b>remove 不认头也不认尾</b> —— 传给它哪个方框，它就摘哪个。`});
+  S.push({code:"append(node);",
+    map:[{k:K,cls:"added"},...M(keys.filter(k=>k!==K))],
+    list:[{k:K,v:list.find(n=>n.k===K).v,cls:"fresh"},...rest],showHand:false,on:[6],
+    say:`挂回 head 那端（顺带记回 map）。<br><span class="em">这一步是 LRU 的灵魂</span>：取东西也算碰过。漏掉它，LRU 就退化成 FIFO。`});
+  S.push({code:"return node.value;",
+    map:[{k:K,cls:"added"},...M(keys.filter(k=>k!==K))],
+    list:[{k:K,v:list.find(n=>n.k===K).v,cls:"fresh"},...rest],showHand:false,on:[7],
+    say:`返回 <b>${list.find(n=>n.k===K).v}</b>。现在 key ${K} 是最新的，最久没碰的变成了 key ${rest[rest.length-1].k}。`});
+  return S;
+}
+DEMOS.get={scene:"sc-get",code:"code-get",src:SNIP.get,
+  cases:[["hit","查得到"],["miss","查不到"]],
+  build:getSteps, cur:0, cs:"hit"};
+
+/* set */
+function setSteps(which){
+  const S=[];
+  if(which==="update"){
+    const list=[{k:1,v:11},{k:7,v:77}], keys=[1,7];
+    S.push({code:"set(7, 777)  ·  case 1：标签已经在里面",plain:true,
+      map:M(keys),list:list.slice(),showHand:false,on:[0,1],
+      say:`limit = 2，现在装着 key1 和 key7。要 <code>set(7, 777)</code> —— <b>7 已经在里面了，这是一次更新。</b>`});
+    S.push({code:"if (map.containsKey(key))  →  成立",
+      map:M(keys,{7:"on"}),list:list.map(n=>n.k===7?{...n,cls:"on"}:n),showHand:false,on:[2,3],
+      say:`目录里有 7 → 走 case 1。<code>node = map.get(7)</code> 拿到那个方框。`});
+    S.push({code:"node.value = value;",
+      map:M(keys,{7:"on"}),list:list.map(n=>n.k===7?{...n,v:777,cls:"fresh"}:n),showHand:false,on:[4],
+      say:`内容从 77 改成 <b>777</b>。<b>key 不变，格子数量不变，不淘汰任何东西。</b>`});
+    S.push({code:"remove(node);",
+      map:M([1]),list:[{k:1,v:11}],hand:{k:7,v:777},on:[5],
+      say:`从当前位置摘出来，准备挂到 head。`});
+    S.push({code:"append(node);   ← 在三个分支外面",
+      map:[{k:7,cls:"added"},{k:1}],list:[{k:7,v:777,cls:"fresh"},{k:1,v:11}],showHand:false,on:[12],
+      say:`挂回 head。<b>更新也算"碰过"</b>，所以 key7 现在是最新的。`});
+    return S;
+  }
+  if(which==="new"){
+    const list=[{k:1,v:11}], keys=[1];
+    S.push({code:"set(7, 77)  ·  case 2：不在，还有空位",plain:true,
+      map:M(keys),list:list.slice(),showHand:false,on:[0,1],
+      say:`limit = 2，现在只装了 key1，<b>还有一个空位</b>。要 <code>set(7, 77)</code>。`});
+    S.push({code:"if (map.containsKey(key))  →  不成立",plain:true,skip:true,
+      map:M(keys),list:list.slice(),showHand:false,on:[2],
+      say:`目录里没有 7，往下看。`});
+    S.push({code:"else if (map.size() < limit)  →  1 < 2 成立",
+      map:M(keys),list:list.slice(),showHand:false,on:[6],
+      say:`<code>map.size()</code> 就是<b>现在装了几条</b>。1 < 2，还有空位 → 走 case 2。`});
+    S.push({code:"node = new Node<K, V>(key, value);",
+      map:M(keys),list:list.slice(),hand:{k:7,v:77,cls:"fresh",capc:"n",capt:"刚 new 出来"},on:[7],
+      say:`造一个全新的方框。<b>这时它还没进 map、也没进链表</b> —— 只是被 <code>node</code> 变量抓着。<br>注意 case 2 <b>不需要 remove</b>，因为它本来就不在链表里。`});
+    S.push({code:"append(node);   ← 在三个分支外面",
+      map:[{k:7,cls:"added"},{k:1}],list:[{k:7,v:77,cls:"fresh"},{k:1,v:11}],showHand:false,on:[12],
+      say:`挂到 head 并记进 map。<b>两套指针一起到位。</b>`});
+    return S;
+  }
+  // evict
+  const list=[{k:1,v:11},{k:7,v:77}], keys=[1,7];
+  S.push({code:"set(9, 99)  ·  case 3：不在，满了",plain:true,
+    map:M(keys),list:list.slice(),showHand:false,on:[0,1],
+    say:`limit = 2，已经满了。要 <code>set(9, 99)</code> —— 9 不在里面，<b>得先腾一个位置。</b>`});
+  S.push({code:"两个条件都不成立  →  走 else",plain:true,skip:true,
+    map:M(keys),list:list.slice(),showHand:false,on:[2,6],
+    say:`目录里没有 9；<code>map.size()</code> = 2，不小于 limit = 2 → 走 case 3。`});
+  S.push({code:"node = tail;",
+    map:M(keys),list:list.map(n=>n.k===7?{...n,cls:"target"}:n),showHand:false,on:[9],
+    say:`让 <code>node</code> 指向 tail 那个方框（key 7，最久没碰过的）。<b>此刻什么都还没变</b> —— 只是多了一个变量指着它。`});
+  S.push({code:"remove(node);",
+    map:M([1]),list:[{k:1,v:11}],hand:{k:7,v:77},on:[10],
+    say:`摘出来，同时 <code>map.remove(node.key)</code> —— 这时 <b>node.key 还是 7</b>，删对了。<br>现在它<b>孤零零悬着</b>：不在链表、不在 map，但 <code>node</code> 还抓着，所以没被回收。`});
+  S.push({code:"node.update(key, value);",
+    map:M([1]),list:[{k:1,v:11}],hand:{k:9,v:99,cls:"fresh",capc:"n",capt:"同一个方框，改写后"},on:[11],
+    say:`把这个孤儿<b>改造</b>成新的：key 7→9，value 77→99。<br><span class="ok">同一个对象、同一块内存</span> —— 没有 new。这就是「复用」。<br><span class="em">顺序陷阱：必须先 remove 再 update</span>，反了的话 <code>map.remove(9)</code> 会让 7 那条永远删不掉。`});
+  S.push({code:"append(node);   ← 在三个分支外面",
+    map:[{k:9,cls:"added"},{k:1}],list:[{k:9,v:99,cls:"fresh"},{k:1,v:11}],showHand:false,on:[12],
+    say:`挂回 head，<code>map.put(node.key, node)</code> —— 这时 key 已经是 9 了，记的是 9 那条。<br><b>全程只有一个方框，它换了个身份继续服役。</b>`});
+  return S;
+}
+DEMOS.set={scene:"sc-set",code:"code-set",src:SNIP.set,
+  cases:[["update","1 已存在（更新）"],["new","2 有空位（新建）"],["evict","3 满了（复用）"]],
+  build:setSteps, cur:0, cs:"evict"};
+
+/* playground */
+function playSteps(limit, ops){
+  const S=[],list=[];
+  const snap=()=>list.map(n=>({k:n.k,v:n.v}));
+  const mp=()=>list.map(n=>({k:n.k}));
+  S.push({code:`new Solution(${limit})`,plain:true,map:[],list:[],showHand:false,
+    say:`新建一个 limit = ${limit} 的 cache。链表空，map 空，head 和 tail 都是 null。`});
+  for(const o of ops){
+    if(o.t==="set"){
+      const i=list.findIndex(n=>n.k===o.k), full=list.length>=limit;
+      if(i>=0){
+        const nd=list.splice(i,1)[0]; nd.v=o.v; list.unshift(nd);
+        S.push({code:`set(${o.k}, ${o.v})`,map:mp(),list:snap().map(n=>n.k===o.k?{...n,cls:"fresh"}:n),showHand:false,
+          say:`<b>case 1</b>：key ${o.k} 已经在里面 → 内容改成 ${o.v}，挪到 head。不淘汰任何东西。`});
+      }else if(!full){
+        list.unshift({k:o.k,v:o.v});
+        S.push({code:`set(${o.k}, ${o.v})`,map:mp(),list:snap().map(n=>n.k===o.k?{...n,cls:"fresh"}:n),showHand:false,
+          say:`<b>case 2</b>：key ${o.k} 不在，<code>map.size()</code> 还没到 limit → new 一个新方框，挂到 head。`});
+      }else{
+        const old=list[list.length-1];
+        S.push({code:`set(${o.k}, ${o.v})  ·  先淘汰`,map:mp(),
+          list:snap().map(n=>n.k===old.k?{...n,cls:"target"}:n),showHand:false,
+          say:`<b>case 3</b>：key ${o.k} 不在，而且满了 → tail 是 key ${old.k}（最久没碰过），<b>摘掉它并从 map 删除</b>。`});
+        list.pop(); list.unshift({k:o.k,v:o.v});
+        S.push({code:`set(${o.k}, ${o.v})  ·  复用后挂回`,map:mp(),
+          list:snap().map(n=>n.k===o.k?{...n,cls:"fresh"}:n),showHand:false,
+          say:`那个方框被 <code>update</code> 改写成 key ${o.k} / value ${o.v}，再挂回 head。<b>没有 new 新对象。</b>`});
+      }
+    }else{
+      const i=list.findIndex(n=>n.k===o.k);
+      if(i<0){
+        S.push({code:`get(${o.k})  →  null`,map:mp(),list:snap(),showHand:false,
+          say:`map 里没有 key ${o.k} → 返回 <b>null</b>，链表一个指针都不动。`});
+      }else{
+        const nd=list.splice(i,1)[0]; list.unshift(nd);
+        S.push({code:`get(${o.k})  →  ${nd.v}`,map:mp(),
+          list:snap().map(n=>n.k===o.k?{...n,cls:"on"}:n),showHand:false,
+          say:`查到了，返回 <b>${nd.v}</b>，并<b>挪到 head</b>（读也算碰过）。现在最久没碰的是 key ${list[list.length-1].k}。`});
+      }
+    }
+  }
+  S.push({code:"跑完了",plain:true,map:mp(),list:snap(),showHand:false,
+    say:`左边是刚碰过的，右边是最久没碰的 —— 下次要淘汰，淘汰的就是最右边那个。`});
+  return S;
+}
+DEMOS.play={scene:"sc-play",code:null,src:null,cases:null,build:null,cur:0,cs:null,steps:null};
+
+/* ---------- 通用驱动 ---------- */
+function stepsOf(name){
+  const d=DEMOS[name];
+  if(name==="play") return d.steps||[];
+  if(!d._cache||d._cacheKey!==d.cs){ d._cache=d.build(d.cs); d._cacheKey=d.cs; }
+  return d._cache;
+}
+function renderDemo(name){
+  const d=DEMOS[name], S=stepsOf(name);
+  if(!S.length) return;
+  const s=S[Math.min(d.cur,S.length-1)];
+  const sec=document.getElementById("t-"+(name==="play"?"play":name));
+  paint(d.scene, s);
+  sec.querySelector(".stepno").textContent=`步骤 ${d.cur} / ${S.length-1}`;
+  const cl=sec.querySelector(".cline");
+  cl.textContent=s.code; cl.className="cline"+(s.plain?" plain":"")+(s.skip?" skip":"");
+  sec.querySelector(".say").innerHTML=s.say;
+  if(d.code) paintCode(d.code, d.src, s.on);
+}
+function mkCtrl(name){
+  const el=document.querySelector(`.ctrl[data-demo="${name}"]`);
+  el.innerHTML=`<button data-a="next">▶ 下一步</button>
+    <button data-a="play" data-pb>⚡ 自动</button>
+    <button class="alt" data-a="prev">◀ 上一步</button>
+    <button class="alt" data-a="reset">↺ 重置</button>`;
+  el.addEventListener("click",e=>{
+    const a=e.target.dataset.a; if(!a) return;
+    const d=DEMOS[name], S=stepsOf(name);
+    if(a==="next"){ d.cur<S.length-1?d.cur++:stopP(name); }
+    if(a==="prev"&&d.cur>0) d.cur--;
+    if(a==="reset"){ stopP(name); d.cur=0; }
+    if(a==="play"){ d.timer?stopP(name):startP(name); return renderDemo(name); }
+    renderDemo(name);
+  });
+}
+function startP(name){
+  const d=DEMOS[name];
+  document.querySelector(`.ctrl[data-demo="${name}"] [data-pb]`).textContent="⏸ 暂停";
+  d.timer=setInterval(()=>{
+    const S=stepsOf(name);
+    if(d.cur<S.length-1){ d.cur++; renderDemo(name); } else stopP(name);
+  },2300);
+}
+function stopP(name){
+  const d=DEMOS[name]; if(!d.timer) return;
+  clearInterval(d.timer); d.timer=null;
+  const b=document.querySelector(`.ctrl[data-demo="${name}"] [data-pb]`); if(b) b.textContent="⚡ 自动";
+}
+function mkCases(name,holderId){
+  const d=DEMOS[name]; if(!d.cases) return;
+  const el=document.getElementById(holderId);
+  el.innerHTML=d.cases.map(([v,t])=>`<button data-v="${v}" class="${v===d.cs?"on":""}">${t}</button>`).join("");
+  el.addEventListener("click",e=>{
+    const v=e.target.dataset.v; if(!v) return;
+    stopP(name); d.cs=v; d.cur=0;
+    el.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+    renderDemo(name);
+  });
+}
+
+/* 结构总览 */
+const SNODES=[{k:3,v:33},{k:1,v:11},{k:7,v:77}];
+let ssel=null;
+function renderStruct(){
+  paint("sc-struct",{
+    map:SNODES.map(n=>({k:n.k,cls:ssel===n.k?"on":""})),
+    list:SNODES.map(n=>({...n,cls:ssel===n.k?"on":""})),
+    showHand:false});
+  const say=document.getElementById("say-struct");
+  if(ssel===null){
+    say.innerHTML='这三个方框就是全部的数据。map 里的每一条、以及方框之间的 prev / next 箭头，<b>指的都是同一批方框</b> —— 没有任何东西被复制过第二份。';
+  }else{
+    const i=SNODES.findIndex(n=>n.k===ssel);
+    const pos=i===0?"队伍最前面（head，最新）":(i===SNODES.length-1?"队伍最后面（tail，最老）":"队伍中间");
+    say.innerHTML=`<b>map.get(${ssel})</b> 立刻把这个方框交到你手上 —— 不是告诉你"它排第 ${i+1} 个"，而是<b>直接给你这个对象</b>。<br>
+      拿到之后 <code>node.prev</code> 和 <code>node.next</code> 就在手上，所以摘它只要两句指针赋值。<span class="em">整个过程没有遍历链表。</span><br>
+      它现在在${pos}，但这个信息 <b>map 并不知道，也不需要知道</b>。`;
+  }
+}
+document.getElementById("sc-struct").addEventListener("click",e=>{
+  const el=e.target.closest(".chip,.node"); if(!el) return;
+  const k=+el.dataset.k; ssel = ssel===k?null:k; renderStruct();
+});
+
+/* playground build */
+function buildPlay(){
+  stopP("play");
+  const cap=parseInt(document.getElementById("pgcap").value,10), err=document.getElementById("pgerr");
+  if(!Number.isInteger(cap)||cap<1||cap>5){ err.textContent="limit 填 1 到 5 之间"; return; }
+  const ops=[];
+  for(const raw of document.getElementById("pgops").value.split("\n")){
+    const line=raw.trim(); if(!line) continue;
+    const p=line.split(/[\s,()]+/).filter(Boolean), t=(p[0]||"").toLowerCase();
+    if(t==="get"&&Number.isFinite(+p[1])) ops.push({t:"get",k:+p[1]});
+    else if((t==="set"||t==="put")&&Number.isFinite(+p[1])&&Number.isFinite(+p[2])) ops.push({t:"set",k:+p[1],v:+p[2]});
+    else { err.textContent=`这一行看不懂：「${line}」　格式：set 1 1　或　get 1`; return; }
+  }
+  if(!ops.length){ err.textContent="至少写一条操作"; return; }
+  err.textContent="";
+  DEMOS.play.steps=playSteps(cap,ops); DEMOS.play.cur=0; renderDemo("play");
+}
+
+/* tabs */
+const TABS=[["struct","结构总览"],["remove","remove()"],["append","append()"],
+            ["get","get()"],["set","set()"],["play","完整演练"],["code","完整代码"]];
+let curTab="struct";
+document.getElementById("tabs").innerHTML=TABS.map(([id,t])=>
+  `<button data-t="${id}" class="${id===curTab?"on":""}">${t}</button>`).join("");
+document.getElementById("tabs").addEventListener("click",e=>{
+  const t=e.target.dataset.t; if(!t) return;
+  Object.keys(DEMOS).forEach(stopP);
+  curTab=t;
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
+  document.querySelectorAll(".tab").forEach(s=>s.classList.toggle("show",s.id==="t-"+t));
+  if(t==="struct") renderStruct();
+  else if(DEMOS[t]) renderDemo(t);
+});
+
+/* init */
+["remove","append","get","set","play"].forEach(mkCtrl);
+mkCases("remove","cs-remove"); mkCases("append","cs-append");
+mkCases("get","cs-get"); mkCases("set","cs-set");
+paintCode("code-full",FULL,[]);
+document.getElementById("t-struct").classList.add("show");
+renderStruct();
+["remove","append","get","set"].forEach(renderDemo);
+buildPlay();
+window.addEventListener("resize",()=>{
+  if(curTab==="struct") renderStruct(); else if(DEMOS[curTab]) renderDemo(curTab);
+});
+document.addEventListener("keydown",e=>{
+  if(["INPUT","TEXTAREA"].includes(e.target.tagName)) return;
+  if(!DEMOS[curTab]) return;
+  if(e.key==="ArrowRight"){ const S=stepsOf(curTab); if(DEMOS[curTab].cur<S.length-1){DEMOS[curTab].cur++;renderDemo(curTab);} e.preventDefault(); }
+  if(e.key==="ArrowLeft"){ if(DEMOS[curTab].cur>0){DEMOS[curTab].cur--;renderDemo(curTab);} e.preventDefault(); }
+});
+</script>
+</body>
+</html>
