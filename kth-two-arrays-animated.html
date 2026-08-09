@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔍 两个有序数组找第K小 · 二分法动画</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:24px 16px 60px;background:#f7f7f5;color:#222;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.7;
+  }
+  .wrap{max-width:900px;margin:0 auto}
+  h1{font-size:24px;text-align:center;margin:0 0 20px}
+
+  .controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+  .controls button{
+    font:inherit;font-size:15px;padding:9px 20px;border:none;border-radius:8px;
+    background:#4a7fd4;color:#fff;cursor:pointer;transition:background .15s,transform .1s;
+  }
+  .controls button:hover{background:#3b6ab8}
+  .controls button:active{transform:scale(.97)}
+  .controls button.alt{background:#6c757d}
+  .controls button.alt:hover{background:#5a6268}
+
+  .status{text-align:center;font-size:19px;font-weight:600;margin-bottom:4px}
+  .stepno{text-align:center;font-size:14px;color:#777;margin-bottom:14px}
+  .hint{
+    text-align:center;font-size:14px;color:#555;background:#fff;
+    border:1px solid #e2e0da;border-radius:8px;padding:12px 16px;margin-bottom:8px;min-height:66px;
+  }
+  .legend{text-align:center;font-size:13px;color:#888;margin-bottom:24px}
+
+  .setup{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px}
+  .field{display:flex;flex-direction:column;gap:3px}
+  .field label{font-size:12px;color:#888}
+  input{font:inherit;font-size:14px;font-family:ui-monospace,Menlo,monospace;padding:7px 10px;
+        border:1px solid #d8d5cd;border-radius:8px;background:#fff}
+  #inA,#inB{width:190px} #inK{width:66px}
+  .setup button{font:inherit;font-size:14px;padding:8px 16px;border:1px solid #d8d5cd;
+                border-radius:8px;background:#fff;cursor:pointer}
+  .setup button:hover{background:#f0eee8}
+  .err{text-align:center;font-size:13px;color:#c0392b;min-height:22px;margin-bottom:18px}
+
+  .block{margin-bottom:22px}
+  .caption{font-size:14px;color:#666;margin-bottom:7px;font-weight:600}
+  .cells{display:flex;gap:6px;flex-wrap:wrap}
+  .cell{
+    min-width:54px;height:54px;padding:0 6px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;background:#fff;border:2px solid #ddd;
+    border-radius:8px;font-family:ui-monospace,Menlo,monospace;
+    transition:background .3s,border-color .3s,color .3s,opacity .3s;
+  }
+  .cell .v{font-size:16px;font-weight:700}
+  .cell .i{font-size:10px;color:#aaa}
+  .cell.gone{opacity:.35;border-style:dashed;background:transparent}
+  .cell.gone .v{text-decoration:line-through}
+  .cell.pick{background:#dbeafe;border-color:#4a7fd4;color:#1e4e8c}
+  .cell.cut{background:#fde2e2;border-color:#d9534f;color:#a02622}
+  .cell.ans{background:#d9f0d0;border-color:#4a9c2e;color:#2d6b16}
+  .cell.pick .i,.cell.cut .i,.cell.ans .i{color:inherit;opacity:.6}
+  .empty{font-family:ui-monospace,Menlo,monospace;font-size:14px;color:#aaa;padding:16px 0}
+
+  pre.code{
+    background:#2d2d2a;color:#e8e6df;border-radius:10px;padding:14px 0;margin:0;
+    overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.85;
+  }
+  pre.code .ln{display:block;padding:0 18px;white-space:pre;border-left:4px solid transparent;transition:background .3s,border-color .3s}
+  pre.code .ln.on{background:#4a4527;border-left-color:#e8c34a;color:#fff8dc}
+
+  .mc{display:inline-block;min-width:40px;padding:6px 8px;margin:0 4px 4px 0;text-align:center;
+      font-family:ui-monospace,Menlo,monospace;font-size:13px;background:#fff;
+      border:1px solid #ddd;border-radius:6px}
+  .mc.hit{background:#d9f0d0;border-color:#4a9c2e;color:#2d6b16;font-weight:700}
+
+  .why{background:#fff;border:1px solid #e2e0da;border-radius:10px;padding:18px 20px;margin-top:28px}
+  .why h2{font-size:16px;margin:0 0 10px}
+  .why h2:not(:first-child){margin-top:20px}
+  .why p{margin:0 0 10px;font-size:14.5px;color:#555}
+  .why b{color:#222}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:.92em;background:#f0eee8;padding:1px 5px;border-radius:4px}
+  footer{text-align:center;font-size:13px;color:#999;margin-top:26px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>🔍 两个有序数组找第K小 · 二分法动画</h1>
+
+  <div class="controls">
+    <button onclick="next()">▶ 下一步</button>
+    <button onclick="play()" id="playbtn">⚡ 自动</button>
+    <button class="alt" onclick="prev()">◀ 上一步</button>
+    <button class="alt" onclick="reset()">↺ 重置</button>
+  </div>
+
+  <div class="status" id="status">还要找第 6 小</div>
+  <div class="stepno" id="stepno">步骤 0 / 0</div>
+  <div class="hint" id="hint">点击"下一步"开始！</div>
+  <div class="legend">蓝色=本轮取出来比较的元素，红色=这一批被排除，划掉=已排除，绿色=最终答案</div>
+
+  <div class="setup">
+    <div class="field"><label for="inA">数组 A（逗号分隔，自动排序）</label><input id="inA" value="2, 5, 7, 10, 13"></div>
+    <div class="field"><label for="inB">数组 B</label><input id="inB" value="1, 3, 4, 13, 20, 29"></div>
+    <div class="field"><label for="inK">k</label><input id="inK" type="number" min="1" value="6"></div>
+    <button onclick="apply()">重新生成</button>
+  </div>
+  <div class="err" id="err"></div>
+
+  <div class="block">
+    <div class="caption">数组 A（已排好序）</div>
+    <div class="cells" id="rowA"></div>
+  </div>
+
+  <div class="block">
+    <div class="caption">数组 B（已排好序）</div>
+    <div class="cells" id="rowB"></div>
+  </div>
+
+  <div class="block">
+    <div class="caption">代码 · 高亮行就是当前这一步在执行的</div>
+    <pre class="code" id="code"></pre>
+  </div>
+
+  <div class="block">
+    <div class="caption">验证 · 合并后的完整顺序，绿色是第 k 个</div>
+    <div id="merged"></div>
+  </div>
+
+  <div class="why">
+    <h2>核心思想</h2>
+    <p>双指针每走一步只能确认掉 1 个数，所以是 O(k)。二分换了个问法：<b>能不能一次性证明某一批数全都不是答案？</b>能——每轮从两个数组各取第 k/2 个来比，<b>小的那一边的前 k/2 个整体出局</b>。</p>
+
+    <h2>为什么可以整体丢掉</h2>
+    <p>假设 <code>A[k/2-1] &lt; B[k/2-1]</code>。要当第 k 小，前面必须有 k−1 个数比它小。A 里比它小的最多 k/2−1 个；B 里比它小的也最多 k/2−1 个，因为 <code>B[k/2-1]</code> 都已经比它大了。加起来最多 <b>k−2 个，凑不够 k−1</b>。所以它和它前面那些全部出局。</p>
+    <p>丢掉的是<b>小的那一边</b>，不是小的那个元素。这一步最容易记反。</p>
+
+    <h2>长度不够怎么办</h2>
+    <p>某一边取不出第 k/2 个时，把它当成 <code>Integer.MAX_VALUE</code>。这样比较必然丢长的那边——用一个哨兵值让原逻辑自动走对方向，不用额外写分支。试试把 A 改成 <code>1</code>，B 保持很长，就能看到 ∞ 出现。</p>
+
+    <h2>两个最容易写错的地方</h2>
+    <p><code>amid = al + k/2 - 1</code>。k/2 是<b>个数</b>，第 k/2 个元素的下标要再减 1。</p>
+    <p>递归传 <code>k - k/2</code>，不是 <code>k/2</code>。k 为奇数时两者不等（k=5 时 k/2=2，k−k/2=3），写成 k/2 会在奇数上错。把 k 改成 5 跑一遍就看到了。</p>
+  </div>
+
+  <footer>时间 O(log k) · 空间 O(log k)（递归栈），改成迭代可降到 O(1)</footer>
+</div>
+
+<script>
+const CODE=[
+ "public int kth(int[] a, int[] b, int k) {",
+ "    return kth(a, 0, b, 0, k);",
+ "}",
+ "",
+ "private int kth(int[] a, int al, int[] b, int bl, int k) {",
+ "    if (al >= a.length) return b[bl + k - 1];",
+ "    if (bl >= b.length) return a[al + k - 1];",
+ "    if (k == 1) return Math.min(a[al], b[bl]);",
+ "",
+ "    int amid = al + k / 2 - 1;",
+ "    int bmid = bl + k / 2 - 1;",
+ "    int aval = amid >= a.length ? Integer.MAX_VALUE : a[amid];",
+ "    int bval = bmid >= b.length ? Integer.MAX_VALUE : b[bmid];",
+ "",
+ "    if (aval <= bval) {",
+ "        return kth(a, amid + 1, b, bl, k - k / 2);",
+ "    } else {",
+ "        return kth(a, al, b, bmid + 1, k - k / 2);",
+ "    }",
+ "}"
+];
+const L={exA:[5],exB:[6],k1:[7],mid:[9,10,11,12],cutA:[14,15],cutB:[16,17]};
+
+let A=[],B=[],K=6,steps=[],cur=0,timer=null;
+const el=id=>document.getElementById(id);
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function buildSteps(a,b,k0){
+  const out=[],f=v=>v===Infinity?"∞":v;
+  out.push({al:0,bl:0,k:k0,lines:[],
+    text:`要在 A 和 B 合起来的 ${a.length+b.length} 个数里找第 ${k0} 小。双指针要老实走 ${k0} 步；二分的目标是每轮直接砍掉 k/2 个候选。`});
+  let al=0,bl=0,k=k0,g=0;
+  while(g++<64){
+    if(al>=a.length){out.push({al,bl,k,lines:L.exA,ansSide:"B",ansIdx:bl+k-1,
+      text:`A 里没有候选了 → 答案就是 B 里从 bl 起的第 ${k} 个：${b[bl+k-1]}`});break;}
+    if(bl>=b.length){out.push({al,bl,k,lines:L.exB,ansSide:"A",ansIdx:al+k-1,
+      text:`B 里没有候选了 → 答案就是 A 里从 al 起的第 ${k} 个：${a[al+k-1]}`});break;}
+    if(k===1){const tA=a[al]<=b[bl];
+      out.push({al,bl,k,lines:L.k1,ansSide:tA?"A":"B",ansIdx:tA?al:bl,
+        text:`k = 1，到底了。取两边最前面里更小的：min(${a[al]}, ${b[bl]}) = ${Math.min(a[al],b[bl])}`});break;}
+    const h=Math.floor(k/2),am=al+h-1,bm=bl+h-1;
+    const av=am>=a.length?Infinity:a[am], bv=bm>=b.length?Infinity:b[bm];
+    out.push({al,bl,k,amid:am,bmid:bm,aval:av,bval:bv,lines:L.mid,
+      text:`k = ${k}，各取 k/2 = ${h} 个。A 这边第 ${h} 个是 ${f(av)}（下标 ${am}），B 这边第 ${h} 个是 ${f(bv)}（下标 ${bm}）。下标写 left + k/2 − 1，因为 k/2 是个数不是位置。`});
+    const dA=av<=bv,nk=k-h;
+    out.push({al,bl,k,amid:am,bmid:bm,aval:av,bval:bv,cut:dA?"A":"B",lines:dA?L.cutA:L.cutB,
+      text:`${f(av)} ${dA?"≤":">"} ${f(bv)} → ${dA?"A":"B"} 的前 ${h} 个整体出局。它们前面最多 ${h-1} 个，另一边比它小的也最多 ${h-1} 个，凑不够 ${k-1} 个。k 变成 ${k} − ${h} = ${nk}。`});
+    if(dA) al=am+1; else bl=bm+1;
+    k=nk;
+  }
+  return out;
+}
+
+function cells(arr,left,mid,cutting,ansIdx){
+  if(!arr.length) return '<span class="empty">（空数组）</span>';
+  return arr.map((v,i)=>{
+    let c="cell";
+    if(i<left)c+=" gone";
+    else if(ansIdx===i)c+=" ans";
+    else if(cutting&&mid!==undefined&&i<=mid)c+=" cut";
+    else if(mid!==undefined&&i===mid)c+=" pick";
+    return `<div class="${c}"><span class="v">${v}</span><span class="i">${i}</span></div>`;
+  }).join("");
+}
+
+function render(){
+  const s=steps[cur];
+  el("rowA").innerHTML=cells(A,s.al,s.amid,s.cut==="A",s.ansSide==="A"?s.ansIdx:undefined);
+  el("rowB").innerHTML=cells(B,s.bl,s.bmid,s.cut==="B",s.ansSide==="B"?s.ansIdx:undefined);
+  el("status").textContent=s.ansSide
+    ? `🎉 答案是 ${s.ansSide==="A"?A[s.ansIdx]:B[s.ansIdx]}`
+    : `还要找第 ${s.k} 小　·　已排除 ${s.al+s.bl} 个`;
+  el("stepno").textContent=`步骤 ${cur} / ${steps.length-1}`;
+  el("hint").textContent=s.text;
+  el("code").innerHTML=CODE.map((ln,i)=>
+    `<span class="ln${s.lines.includes(i)?" on":""}">${esc(ln)||" "}</span>`).join("");
+}
+function renderMerged(){
+  const m=[...A,...B].sort((x,y)=>x-y);
+  el("merged").innerHTML=m.map((v,i)=>`<span class="mc${i===K-1?" hit":""}">${v}</span>`).join("");
+}
+function next(){cur<steps.length-1?(cur++,render()):stop();}
+function prev(){if(cur>0){cur--;render();}}
+function reset(){stop();cur=0;render();}
+function stop(){if(timer){clearInterval(timer);timer=null;el("playbtn").textContent="⚡ 自动";}}
+function play(){if(timer)return stop();el("playbtn").textContent="⏸ 暂停";timer=setInterval(next,1800);}
+
+function parse(s){return s.split(/[,\s]+/).filter(Boolean).map(Number).filter(Number.isFinite).sort((x,y)=>x-y);}
+function apply(){
+  stop();
+  const a=parse(el("inA").value),b=parse(el("inB").value),k=parseInt(el("inK").value,10);
+  const e=el("err");
+  if(!a.length&&!b.length){e.textContent="两个数组不能都为空";return;}
+  if(!Number.isInteger(k)||k<1||k>a.length+b.length){
+    e.textContent=`k 必须是 1 到 ${a.length+b.length} 之间的整数`;return;}
+  e.textContent="";
+  A=a;B=b;K=k;
+  el("inA").value=a.join(", ");el("inB").value=b.join(", ");
+  steps=buildSteps(A,B,K);cur=0;render();renderMerged();
+}
+apply();
+document.addEventListener("keydown",ev=>{
+  if(ev.key==="ArrowRight"){next();ev.preventDefault();}
+  if(ev.key==="ArrowLeft"){prev();ev.preventDefault();}
+});
+</script>
+</body>
+</html>
