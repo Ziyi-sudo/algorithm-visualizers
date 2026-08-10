@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🥊 Boyer-Moore 投票法 · Majority Number I</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:26px 16px 70px;background:#f6f6f4;color:#222;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.72}
+  .wrap{max-width:900px;margin:0 auto}
+  h1{font-size:23px;text-align:center;margin:0 0 4px}
+  .sub{text-align:center;font-size:14px;color:#888;margin:0 0 8px}
+  .core{text-align:center;font-size:15px;color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;
+    border-radius:9px;padding:11px 16px;margin:0 auto 24px;max-width:600px}
+  .core b{color:#6b4c05}
+  h2{font-size:17px;margin:34px 0 12px;padding-bottom:8px;border-bottom:2px solid #e4e2db}
+  p{margin:0 0 11px;font-size:14.5px;color:#555}
+  p b{color:#222}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:.9em;background:#f0eee8;padding:1px 5px;border-radius:4px}
+
+  .ctrl{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+  .ctrl button{font:inherit;font-size:14.5px;padding:9px 19px;border:none;border-radius:9px;
+    background:#4272c4;color:#fff;cursor:pointer;box-shadow:0 2px 0 #2f5695;transition:transform .1s,box-shadow .1s}
+  .ctrl button:active{transform:translateY(2px);box-shadow:0 0 0 #2f5695}
+  .ctrl button.alt{background:#8a8a84;box-shadow:0 2px 0 #5f5f59}
+
+  .setup{display:flex;gap:11px;justify-content:center;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px}
+  .field{display:flex;flex-direction:column;gap:3px}
+  .field label{font-size:11.5px;color:#999}
+  input{font:inherit;font-size:14px;font-family:ui-monospace,Menlo,monospace;padding:7px 10px;
+    border:1px solid #d8d5cd;border-radius:8px;background:#fff;width:330px}
+  .setup button{font:inherit;font-size:13.5px;padding:8px 15px;border:1px solid #d8d5cd;
+    border-radius:8px;background:#fff;cursor:pointer}
+  .presets{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:8px 0 6px}
+  .presets button{font:inherit;font-size:12.5px;padding:5px 12px;border:1px solid #ddd9d0;border-radius:18px;
+    background:#fff;color:#777;cursor:pointer}
+  .presets button:hover{border-color:#b8b5ac;color:#333}
+  .err{text-align:center;font-size:12.5px;color:#c0392b;min-height:20px;margin-bottom:12px}
+
+  .stepno{text-align:center;font-size:12.5px;color:#a5a29a;margin-bottom:10px;font-family:ui-monospace,Menlo,monospace}
+  .cline{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:15px;font-weight:600;
+    color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;border-radius:9px;
+    padding:9px 15px;margin:0 auto 16px;max-width:560px;min-height:44px}
+  .cline.plain{color:#8a8a84;background:#f2f0ea;border-color:#e0ddd4;font-weight:400}
+
+  .stage{background:linear-gradient(180deg,#fdfdfb,#f2f0ea);border:1px solid #e4e2db;border-radius:13px;
+    padding:22px 18px;margin-bottom:14px;box-shadow:0 2px 9px rgba(0,0,0,.05);overflow-x:auto}
+  .arr{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:22px;min-width:min-content}
+  .cell{width:50px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:#fff;border:2px solid #ddd9d0;border-radius:9px;font-family:ui-monospace,Menlo,monospace;
+    transition:all .35s;box-shadow:0 2px 0 -1px #e8e5dc}
+  .cell .v{font-size:18px;font-weight:700}
+  .cell .i{font-size:9.5px;color:#b3b0a7}
+  .cell.done{opacity:.42}
+  .cell.now{border-color:#4272c4;background:#e8f1ff;color:#1c4a8a;transform:translateY(-6px) scale(1.06);
+    box-shadow:0 3px 0 -1px #b6cdec,0 10px 18px rgba(40,90,160,.24)}
+  .cell.now .i{color:#5b82c4}
+  .cell.same{border-color:#4a9c2e;background:#e9f6de;color:#2c6614}
+  .cell.diff{border-color:#d9534f;background:#fbe6e6;color:#a02622}
+  .cell.swap{border-color:#c39a1e;background:#fdf3d8;color:#8a6408}
+
+  .duel{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;align-items:stretch}
+  .box{background:#fff;border:2px solid #e0ddd4;border-radius:12px;padding:14px 20px;text-align:center;
+    min-width:180px;box-shadow:0 2px 0 -1px #e8e5dc;transition:all .35s}
+  .box .lab{font-size:12px;color:#a5a29a;margin-bottom:3px}
+  .box .big{font-size:32px;font-weight:700;font-family:ui-monospace,Menlo,monospace;line-height:1.2}
+  .box.cand{border-color:#c39a1e;background:linear-gradient(170deg,#fffdf6,#fdf3d8)}
+  .box.cand .big{color:#8a6408}
+  .box.cnt .big{color:#333}
+  .box.cnt.zero{border-color:#d9534f;background:#fdeded}
+  .box.cnt.zero .big{color:#a02622}
+  .hearts{margin-top:5px;font-size:15px;letter-spacing:2px;color:#d9534f;min-height:22px}
+
+  .say{background:#fff;border:1px solid #e4e2db;border-radius:10px;padding:14px 17px;min-height:82px;
+    font-size:14.4px;color:#444;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:22px}
+  .say b{color:#222} .say .g{color:#2c6614;font-weight:600} .say .r{color:#a02622;font-weight:600}
+  .say .y{color:#8a6408;font-weight:600}
+
+  pre{background:#26261f;color:#e6e3d8;border-radius:11px;padding:15px 0;margin:0 0 14px;
+    overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.8px;line-height:1.78}
+  pre .ln{display:block;padding:0 19px;white-space:pre;border-left:4px solid transparent;transition:background .3s}
+  pre .ln.on{background:#4b4526;border-left-color:#e2bd45;color:#fff9e2}
+  pre .ln.cm{color:#8a8a7a}
+
+  .panel{background:#fff;border:1px solid #e4e2db;border-radius:12px;padding:17px 21px;margin-bottom:15px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .warn{background:#fff4f4;border:1px solid #f0c9c9;border-radius:10px;padding:13px 17px;margin-bottom:14px}
+  .warn p{margin:0;color:#7d3b3b;font-size:14.3px} .warn p b{color:#a02622} .warn p+p{margin-top:7px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin-bottom:10px}
+  th,td{padding:8px 11px;text-align:left;border-bottom:1px solid #eceae4}
+  th{background:#f5f4f0;font-weight:600;color:#333;font-size:12.5px}
+  td.m{font-family:ui-monospace,Menlo,monospace}
+  footer{text-align:center;font-size:12.5px;color:#a5a29a;margin-top:32px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🥊 Boyer-Moore 投票法</h1>
+<p class="sub">Majority Number I · 找出现次数超过一半的那个数</p>
+<div class="core"><b>核心一句话：同时删掉两个不同的元素，多数元素不会变。</b><br>
+多数占了一半以上，每次消掉一对（一个多数 + 一个非多数），多数那边永远消不完。</div>
+
+<div class="setup">
+  <div class="field"><label for="seq">数组（逗号分隔，可以是数字或字母）</label><input id="seq" value="B, A, A, A, A, A, C, D, A"></div>
+  <button onclick="apply()">重新生成</button>
+</div>
+<div class="presets">
+  <button onclick="preset('B,A,A,A,A,A,C,D,A')">讲义例子</button>
+  <button onclick="preset('1,2,1,2,1')">刚好过半</button>
+  <button onclick="preset('3,3,4,2,4,4,2,4,4')">擂主换两次</button>
+  <button onclick="preset('5,5,5,5,5')">全一样</button>
+  <button onclick="preset('1,2,3,4,5')">⚠️ 根本没有多数</button>
+</div>
+<div class="err" id="err"></div>
+
+<div class="ctrl">
+  <button onclick="next()">▶ 下一步</button>
+  <button onclick="play()" id="playbtn">⚡ 自动</button>
+  <button class="alt" onclick="prev()">◀ 上一步</button>
+  <button class="alt" onclick="reset()">↺ 重置</button>
+</div>
+
+<div class="stepno" id="stepno">步骤 0 / 0</div>
+<div class="cline" id="cline">（还没开始）</div>
+
+<div class="stage">
+  <div class="arr" id="arr"></div>
+  <div class="duel">
+    <div class="box cand" id="bcand">
+      <div class="lab">candidate · 当前擂主</div>
+      <div class="big" id="cand">—</div>
+    </div>
+    <div class="box cnt" id="bcnt">
+      <div class="lab">count · 擂主还剩几条命</div>
+      <div class="big" id="cnt">—</div>
+      <div class="hearts" id="hearts"></div>
+    </div>
+  </div>
+</div>
+
+<div class="say" id="say">点「下一步」开始。<b>把 candidate 想成擂台上的擂主，count 是它的血量。</b>来一个自己人加一滴血，来一个敌人扣一滴血 —— 血扣光了就换人上台。</div>
+
+<h2>代码</h2>
+<pre id="code"></pre>
+
+<h2>为什么这样就一定对</h2>
+<div class="panel">
+  <p><code>count--</code> 那一句，实质就是<b>把一个 candidate 和一个非 candidate 一起消掉</b> —— 这正是「删掉两个不同的元素」。</p>
+  <p>多数元素占了一半以上，也就是说<b>它比其他所有元素加起来还多</b>。每消掉一对最多消耗掉多数元素一个，而其他元素总共不够跟它一一配对 —— 所以消到最后，<b>站在台上的一定是它</b>。</p>
+  <p>擂主中途可以被换掉好几次（试试「擂主换两次」那个例子），但只要多数元素真的存在，<b>最后留下的一定是它</b>。</p>
+</div>
+
+<h2>⚠️ 讲义标了 Attention 的那一条</h2>
+<div class="warn">
+  <p><b>Majority I 保证了一定存在超过 50% 的数</b>，所以一遍扫完可以直接返回。</p>
+  <p>如果题目<b>不保证存在</b>，第一遍拿到的只是一个「候选」，<b>必须第二遍扫回去数一遍</b>，确认它真的超过一半。点上面「根本没有多数」那个例子看看 —— 算法照样会吐出一个数，但那个数是错的。</p>
+  <p><b>Majority II 和 III 都需要这第二遍。</b>漏掉它是这类题最常见的错。</p>
+</div>
+
+<h2>三种解法的取舍</h2>
+<div class="panel">
+  <table>
+    <tr><th style="width:150px">方法</th><th style="width:130px">时间</th><th style="width:110px">空间</th><th>特点</th></tr>
+    <tr><td>排序后看中间</td><td class="m">O(n log n)</td><td class="m">O(1)</td><td>最直观</td></tr>
+    <tr><td>HashMap 计数</td><td class="m">O(n)</td><td class="m">O(n)</td><td>最好想，面试说得出口</td></tr>
+    <tr><td><b>Boyer-Moore</b></td><td class="m">O(n)</td><td class="m"><b>O(1)</b></td><td>最优，但要能讲清为什么对</td></tr>
+  </table>
+  <p><b>能说出三种并给出取舍，比只会一种强。</b></p>
+</div>
+
+<footer>Time: O(n) · Space: O(1)</footer>
+</div>
+
+<script>
+const CODE=[
+"public int majority(int[] array) {",
+"  // Assumptions: array is not null and is not empty.",
+"  // majority number guarantees to exist.",
+"  int candidate = array[0];",
+"  int count = 1;",
+"  for (int i = 1; i < array.length; i++) {",
+"    if (count == 0) {",
+"      count++;                    // 等价于 count = 1",
+"      candidate = array[i];       // 血空了，换擂主",
+"    } else if (candidate == array[i]) {",
+"      count++;                    // 自己人，加血",
+"    } else {",
+"      count--;                    // 敌人，同归于尽一个",
+"    }",
+"  }",
+"  return candidate;",
+"}"
+];
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+let ARR=[],steps=[],cur=0,timer=null;
+const el=id=>document.getElementById(id);
+
+function build(arr){
+  const S=[];
+  S.push({i:-1,cand:arr[0],cnt:1,on:[3,4],
+    text:`起点：让第一个元素 <b>${arr[0]}</b> 当擂主，血量 1。接下来从下标 1 开始一个个比。`});
+  let cand=arr[0],cnt=1;
+  for(let i=1;i<arr.length;i++){
+    const x=arr[i];
+    let kind,on,txt;
+    if(cnt===0){
+      cand=x;cnt=1;kind="swap";on=[6,7,8];
+      txt=`血量已经是 0 了 → <span class="y">换擂主</span>，<b>${x}</b> 上台，血量重置为 1。<br>擂主中途被换掉很正常 —— 只要多数元素真的存在，它最后一定能站住。`;
+    }else if(cand===x){
+      cnt++;kind="same";on=[9,10];
+      txt=`<b>${x}</b> 和擂主一样 → <span class="g">自己人，加一滴血</span>，血量 ${cnt-1} → ${cnt}。`;
+    }else{
+      cnt--;kind="diff";on=[11,12];
+      txt=`<b>${x}</b> 和擂主 <b>${cand}</b> 不一样 → <span class="r">同归于尽一个</span>，血量 ${cnt+1} → ${cnt}。<br>这一句就是「<b>删掉两个不同的元素</b>」那个动作。`;
+    }
+    S.push({i,cand,cnt,kind,on,text:txt});
+  }
+  // 验证
+  const freq={};arr.forEach(x=>freq[x]=(freq[x]||0)+1);
+  const real=freq[cand]||0, half=arr.length/2;
+  S.push({i:arr.length,cand,cnt,on:[15],done:true,ok:real>half,real,half:arr.length,
+    text: real>half
+      ? `扫完了，返回 <b>${cand}</b>。它实际出现了 ${real} 次，数组长度 ${arr.length} —— <span class="g">${real} > ${arr.length}/2，确实是多数元素 ✓</span>`
+      : `扫完了，算法吐出 <b>${cand}</b>。但它实际只出现了 ${real} 次，<span class="r">${real} 不超过 ${arr.length}/2 —— 这个数组根本没有多数元素，结果是错的。</span><br>这就是为什么<b>题目不保证存在时，必须第二遍扫回去验证</b>。`});
+  return S;
+}
+
+function render(){
+  const s=steps[cur];
+  el("arr").innerHTML=ARR.map((v,i)=>{
+    let c="";
+    if(i<s.i) c="done";
+    else if(i===s.i) c="now "+(s.kind||"");
+    return `<div class="cell ${c}"><span class="v">${v}</span><span class="i">${i}</span></div>`;
+  }).join("");
+  el("cand").textContent=s.cand;
+  el("cnt").textContent=s.cnt;
+  el("hearts").textContent="♥".repeat(Math.max(0,Math.min(s.cnt,12)));
+  el("bcnt").classList.toggle("zero",s.cnt===0);
+  el("stepno").textContent=`步骤 ${cur} / ${steps.length-1}`;
+  const cl=el("cline");
+  cl.textContent = s.i<0 ? "int candidate = array[0];  int count = 1;"
+    : (s.done ? "return candidate;"
+    : (s.kind==="swap" ? "count == 0  →  换擂主"
+    : (s.kind==="same" ? "candidate == array[i]  →  count++"
+    : "else  →  count--")));
+  cl.className="cline"+(s.i<0||s.done?" plain":"");
+  el("say").innerHTML=s.text;
+  el("code").innerHTML=CODE.map((ln,i)=>{
+    const cm=ln.trim().startsWith("//");
+    return `<span class="ln${(s.on||[]).includes(i)?" on":""}${cm?" cm":""}">${esc(ln)||" "}</span>`;
+  }).join("");
+}
+function next(){cur<steps.length-1?(cur++,render()):stop();}
+function prev(){if(cur>0){cur--;render();}}
+function reset(){stop();cur=0;render();}
+function stop(){if(timer){clearInterval(timer);timer=null;el("playbtn").textContent="⚡ 自动";}}
+function play(){if(timer)return stop();el("playbtn").textContent="⏸ 暂停";timer=setInterval(next,1500);}
+function preset(s){el("seq").value=s.split(",").join(", ");apply();}
+function apply(){
+  stop();
+  const raw=el("seq").value.split(/[,\s、]+/).filter(Boolean);
+  const err=el("err");
+  if(raw.length<1){err.textContent="至少填一个元素";return;}
+  if(raw.length>20){err.textContent="最多 20 个，太长看不清";return;}
+  err.textContent="";
+  ARR=raw;steps=build(ARR);cur=0;render();
+}
+apply();
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT")return;
+  if(e.key==="ArrowRight"){next();e.preventDefault();}
+  if(e.key==="ArrowLeft"){prev();e.preventDefault();}
+});
+</script>
+</body>
+</html>
