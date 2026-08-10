@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🥊🥊 Majority Number II · 两个擂台 + 第二遍验证</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:26px 16px 70px;background:#f6f6f4;color:#222;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.72}
+  .wrap{max-width:920px;margin:0 auto}
+  h1{font-size:23px;text-align:center;margin:0 0 4px}
+  .sub{text-align:center;font-size:14px;color:#888;margin:0 0 8px}
+  .core{text-align:center;font-size:14.5px;color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;
+    border-radius:9px;padding:11px 16px;margin:0 auto 22px;max-width:640px}
+  .core b{color:#6b4c05}
+  h2{font-size:17px;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #e4e2db}
+  p{margin:0 0 11px;font-size:14.5px;color:#555}
+  p b{color:#222}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:.9em;background:#f0eee8;padding:1px 5px;border-radius:4px}
+
+  .setup{display:flex;gap:11px;justify-content:center;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px}
+  .field{display:flex;flex-direction:column;gap:3px}
+  .field label{font-size:11.5px;color:#999}
+  input{font:inherit;font-size:14px;font-family:ui-monospace,Menlo,monospace;padding:7px 10px;
+    border:1px solid #d8d5cd;border-radius:8px;background:#fff;width:320px}
+  .setup button{font:inherit;font-size:13.5px;padding:8px 15px;border:1px solid #d8d5cd;
+    border-radius:8px;background:#fff;cursor:pointer}
+  .presets{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:8px 0 6px}
+  .presets button{font:inherit;font-size:12.5px;padding:5px 12px;border:1px solid #ddd9d0;border-radius:18px;
+    background:#fff;color:#777;cursor:pointer}
+  .presets button:hover{border-color:#b8b5ac;color:#333}
+  .err{text-align:center;font-size:12.5px;color:#c0392b;min-height:20px;margin-bottom:10px}
+
+  .ctrl{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+  .ctrl button{font:inherit;font-size:14.5px;padding:9px 19px;border:none;border-radius:9px;
+    background:#4272c4;color:#fff;cursor:pointer;box-shadow:0 2px 0 #2f5695;transition:transform .1s,box-shadow .1s}
+  .ctrl button:active{transform:translateY(2px);box-shadow:0 0 0 #2f5695}
+  .ctrl button.alt{background:#8a8a84;box-shadow:0 2px 0 #5f5f59}
+
+  .phase{text-align:center;font-size:13px;font-weight:600;margin-bottom:6px}
+  .phase .p1{color:#4272c4} .phase .p2{color:#8a5cc4}
+  .stepno{text-align:center;font-size:12.5px;color:#a5a29a;margin-bottom:10px;font-family:ui-monospace,Menlo,monospace}
+  .cline{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:14.5px;font-weight:600;
+    color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;border-radius:9px;
+    padding:9px 15px;margin:0 auto 16px;max-width:620px;min-height:44px}
+  .cline.plain{color:#8a8a84;background:#f2f0ea;border-color:#e0ddd4;font-weight:400}
+
+  .stage{background:linear-gradient(180deg,#fdfdfb,#f2f0ea);border:1px solid #e4e2db;border-radius:13px;
+    padding:22px 18px;margin-bottom:14px;box-shadow:0 2px 9px rgba(0,0,0,.05);overflow-x:auto}
+  .arr{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:22px;min-width:min-content}
+  .cell{width:50px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:#fff;border:2px solid #ddd9d0;border-radius:9px;font-family:ui-monospace,Menlo,monospace;
+    transition:all .34s;box-shadow:0 2px 0 -1px #e8e5dc}
+  .cell .v{font-size:18px;font-weight:700}
+  .cell .i{font-size:9.5px;color:#b3b0a7}
+  .cell.done{opacity:.4}
+  .cell.now{border-color:#4272c4;background:#e8f1ff;color:#1c4a8a;transform:translateY(-6px) scale(1.06);
+    box-shadow:0 3px 0 -1px #b6cdec,0 10px 18px rgba(40,90,160,.24)}
+  .cell.a{border-color:#c39a1e;background:#fdf3d8;color:#8a6408}
+  .cell.b{border-color:#4a9c2e;background:#e9f6de;color:#2c6614}
+  .cell.diff{border-color:#d9534f;background:#fbe6e6;color:#a02622}
+  .cell.swap{border-color:#8a5cc4;background:#f2ebfc;color:#5b3f8f}
+  .cell.tagA{border-color:#c39a1e;background:#fdf3d8;color:#8a6408;opacity:1}
+  .cell.tagB{border-color:#4a9c2e;background:#e9f6de;color:#2c6614;opacity:1}
+
+  .duel{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+  .box{background:#fff;border:2px solid #e0ddd4;border-radius:12px;padding:13px 22px;text-align:center;
+    min-width:190px;box-shadow:0 2px 0 -1px #e8e5dc;transition:all .34s}
+  .box .lab{font-size:11.5px;color:#a5a29a;margin-bottom:2px}
+  .box .big{font-size:30px;font-weight:700;font-family:ui-monospace,Menlo,monospace;line-height:1.15}
+  .box .cnt{font-size:13px;color:#777;margin-top:3px;font-family:ui-monospace,Menlo,monospace}
+  .box .cnt b{font-size:17px;color:#333}
+  .box.A{border-color:#e0c76a;background:linear-gradient(170deg,#fffdf6,#fdf6e2)}
+  .box.A .big{color:#8a6408}
+  .box.B{border-color:#a8d18c;background:linear-gradient(170deg,#f9fdf6,#eef8e6)}
+  .box.B .big{color:#2c6614}
+  .box.empty{opacity:.5;border-style:dashed}
+  .box.empty .big{color:#c0bdb4}
+  .box.hot{transform:translateY(-5px);box-shadow:0 3px 0 -1px #ddd,0 12px 20px rgba(0,0,0,.13)}
+
+  .say{background:#fff;border:1px solid #e4e2db;border-radius:10px;padding:14px 17px;min-height:86px;
+    font-size:14.4px;color:#444;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:20px}
+  .say b{color:#222} .say .g{color:#2c6614;font-weight:600} .say .r{color:#a02622;font-weight:600}
+  .say .y{color:#8a6408;font-weight:600} .say .p{color:#5b3f8f;font-weight:600}
+
+  .resbar{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:17px;margin-bottom:20px;
+    color:#555;min-height:30px}
+  .resbar b{color:#2c6614;font-size:20px}
+
+  pre{background:#26261f;color:#e6e3d8;border-radius:11px;padding:15px 0;margin:0 0 14px;
+    overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.76}
+  pre .ln{display:block;padding:0 19px;white-space:pre;border-left:4px solid transparent;transition:background .3s}
+  pre .ln.on{background:#4b4526;border-left-color:#e2bd45;color:#fff9e2}
+  pre .ln.cm{color:#8a8a7a}
+
+  .panel{background:#fff;border:1px solid #e4e2db;border-radius:12px;padding:17px 21px;margin-bottom:15px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .warn{background:#fff4f4;border:1px solid #f0c9c9;border-radius:10px;padding:13px 17px;margin-bottom:14px}
+  .warn p{margin:0;color:#7d3b3b;font-size:14.3px} .warn p b{color:#a02622} .warn p+p{margin-top:7px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin-bottom:10px}
+  th,td{padding:8px 11px;text-align:left;border-bottom:1px solid #eceae4}
+  th{background:#f5f4f0;font-weight:600;color:#333;font-size:12.5px}
+  td.m{font-family:ui-monospace,Menlo,monospace}
+  footer{text-align:center;font-size:12.5px;color:#a5a29a;margin-top:32px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🥊🥊 Majority Number II</h1>
+<p class="sub">找出所有出现次数 &gt; 1/3 的数 · 两个擂台 + 必须的第二遍验证</p>
+<div class="core"><b>为什么是两个擂台？</b>如果有三个数都超过 L/3，加起来就 &gt; L，比整个数组还长 —— 不可能。<br>
+所以答案<b>最多两个</b>。<b>要找 &gt; 1/K 的，就留 K−1 个擂台。</b></div>
+
+<div class="setup">
+  <div class="field"><label for="seq">数组（逗号分隔）</label><input id="seq" value="1, 2, 1, 2, 1"></div>
+  <button onclick="apply()">重新生成</button>
+</div>
+<div class="presets">
+  <button onclick="preset('1,2,1,2,1')">例一 → [1,2]</button>
+  <button onclick="preset('1,2,1,2,3,3,1')">例二 → [1]</button>
+  <button onclick="preset('1,2,2,3,1,3')">⚠️ 例三 → []</button>
+  <button onclick="preset('4,4,4,1,2,3,4')">只有一个答案</button>
+  <button onclick="preset('7,7,7,7')">全一样</button>
+</div>
+<div class="err" id="err"></div>
+
+<div class="ctrl">
+  <button onclick="next()">▶ 下一步</button>
+  <button onclick="play()" id="playbtn">⚡ 自动</button>
+  <button class="alt" onclick="prev()">◀ 上一步</button>
+  <button class="alt" onclick="reset()">↺ 重置</button>
+</div>
+
+<div class="phase" id="phase"></div>
+<div class="stepno" id="stepno">步骤 0 / 0</div>
+<div class="cline" id="cline">（还没开始）</div>
+
+<div class="stage">
+  <div class="arr" id="arr"></div>
+  <div class="duel">
+    <div class="box A" id="boxA">
+      <div class="lab">numA · 1 号擂主</div>
+      <div class="big" id="candA">—</div>
+      <div class="cnt" id="cA"></div>
+    </div>
+    <div class="box B" id="boxB">
+      <div class="lab">numB · 2 号擂主</div>
+      <div class="big" id="candB">—</div>
+      <div class="cnt" id="cB"></div>
+    </div>
+  </div>
+</div>
+
+<div class="resbar" id="resbar"></div>
+<div class="say" id="say">点「下一步」开始。<b>两个擂台各自有擂主和血量。</b>来的元素先看是不是某个擂主的自己人，不是的话看有没有空台，都没有就<b>三个一起消</b>。</div>
+
+<h2>代码</h2>
+<pre id="code"></pre>
+
+<h2>五个分支的顺序不能换</h2>
+<div class="panel">
+  <p>必须<b>先问"是不是已经在台上"，再问"有没有空台"</b>。</p>
+  <p>反过来的话：数组 <code>{1, 1}</code>，第一个 1 上了 A 台；第二个 1 来了，如果先检查"B 台空着"，它就会跑去占 B 台 —— <b>同一个数占了两个擂台</b>，后面全乱。</p>
+  <p>最后那句 <code>countA--; countB--;</code> 就是<b>「删掉三个互不相同的元素」</b>：一个 numA、一个 numB、一个当前的 x，三个一起消失。跟 Majority I 的 <code>count--</code>（一次删两个）是同一个动作，只是这里一次删三个。</p>
+</div>
+
+<h2>⚠️ 为什么第二遍不能省</h2>
+<div class="warn">
+  <p><b>Majority II 的题目没有保证一定存在。</b>点上面「例三」看看 —— <code>{1,2,2,3,1,3}</code> 每个数都只出现 2 次，<code>2 > 6/3</code> 不成立，正确答案是<b>空列表</b>。</p>
+  <p>但第一遍的投票<b>照样会吐出两个候选</b>。不回去数一遍，就会把垃圾当答案返回。</p>
+  <p><b>投票法只保证「如果答案存在，我能找到它」，不保证「我找到的一定是答案」。</b></p>
+</div>
+
+<h2>官方答案里两个容易忽略的细节</h2>
+<div class="panel">
+  <p><b>① <code>numA</code> 和 <code>numB</code> 都初始化成 <code>array[0]</code>。</b>看着奇怪，但因为判断"台上有没有人"靠的是 <code>count == 0</code> 而不是候选值本身，所以初值撞车没关系。这样写省掉了 <code>Integer</code> + null 判断。</p>
+  <p><b>② 第二个 if 里的 <code>numA != numB</code> 是去重。</b>某些输入下两个擂主可能是同一个数（比如全一样的数组），不判的话结果会重复添加两次。</p>
+  <p><b>③ <code>len = array.length / 3</code> 用整数除法，判断写 <code>> len</code>。</b>长度 5 → len=1，需要 ≥2 次；长度 6 → len=2，需要 ≥3 次。整除在这里刚好是对的。</p>
+</div>
+
+<h2>I 和 II 的对应关系</h2>
+<div class="panel">
+  <table>
+    <tr><th style="width:150px"></th><th>Majority I</th><th>Majority II</th><th>Majority III</th></tr>
+    <tr><td>找什么</td><td class="m">&gt; 1/2</td><td class="m">&gt; 1/3</td><td class="m">&gt; 1/K</td></tr>
+    <tr><td>几个擂台</td><td class="m">1</td><td class="m">2</td><td class="m"><b>K−1</b></td></tr>
+    <tr><td>一次消几个</td><td class="m">2</td><td class="m">3</td><td class="m"><b>K</b></td></tr>
+    <tr><td>要第二遍吗</td><td>不用（题目保证存在）</td><td><b>必须</b></td><td><b>必须</b></td></tr>
+  </table>
+  <p>III 就是把"两个变量"换成一个 <code>Map&lt;Integer, Integer&gt;</code> 装 K−1 个候选，逻辑一模一样。</p>
+</div>
+
+<footer>Time: O(n) · Space: O(1)</footer>
+</div>
+
+<script>
+const CODE=[
+"public List<Integer> majority(int[] array) {",
+"  List<Integer> res = new ArrayList<>();",
+"  if (array == null || array.length == 0) return res;",
+"",
+"  int numA = array[0], numB = array[0];   // 两个擂主",
+"  int countA = 0, countB = 0;             // 靠 count 判断台上有没有人",
+"",
+"  for (int i = 0; i < array.length; i++) {",
+"    if (numA == array[i]) {",
+"      countA++;                           // A 台上是自己人",
+"    } else if (numB == array[i]) {",
+"      countB++;                           // B 台上是自己人",
+"    } else if (countA == 0) {",
+"      numA = array[i]; countA++;          // A 台空着，上台",
+"    } else if (countB == 0) {",
+"      numB = array[i]; countB++;          // B 台空着，上台",
+"    } else {",
+"      countA--; countB--;                 // 三个互不相同，一起消",
+"    }",
+"  }",
+"",
+"  int len = array.length / 3;             // 第二遍：验证",
+"  int appearA = 0, appearB = 0;",
+"  for (int i = 0; i < array.length; i++) {",
+"    if (array[i] == numA) appearA++;",
+"    if (array[i] == numB) appearB++;",
+"  }",
+"  if (appearA > len) res.add(numA);",
+"  if (appearB > len && numA != numB) res.add(numB);",
+"",
+"  Collections.sort(res);",
+"  return res;",
+"}"
+];
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+let ARR=[],steps=[],cur=0,timer=null;
+const el=id=>document.getElementById(id);
+
+function build(arr){
+  const S=[];
+  let nA=arr[0],nB=arr[0],cA=0,cB=0;
+  S.push({ph:1,i:-1,nA,nB,cA,cB,on:[4,5],
+    text:`两个擂主都先设成 <b>array[0] = ${arr[0]}</b>，血量都是 0。<br>看着奇怪，但判断"台上有没有人"靠的是 <code>count == 0</code>，<b>不是看擂主的值</b>，所以初值撞车没关系。`});
+  for(let i=0;i<arr.length;i++){
+    const x=arr[i]; let kind,on,txt;
+    if(nA===x){ cA++; kind="a"; on=[7,8];
+      txt=`<b>${x}</b> 和 A 台擂主一样 → <span class="y">A 加一滴血</span>，countA ${cA-1} → ${cA}。`; }
+    else if(nB===x){ cB++; kind="b"; on=[9,10];
+      txt=`<b>${x}</b> 和 B 台擂主一样 → <span class="g">B 加一滴血</span>，countB ${cB-1} → ${cB}。`; }
+    else if(cA===0){ nA=x; cA=1; kind="swap"; on=[11,12];
+      txt=`<b>${x}</b> 两个擂主都不是。A 台血量是 0（<span class="p">台上没人</span>）→ ${x} 上 A 台，血量 1。`; }
+    else if(cB===0){ nB=x; cB=1; kind="swap"; on=[13,14];
+      txt=`<b>${x}</b> 两个擂主都不是，A 台有人。B 台血量是 0（<span class="p">台上没人</span>）→ ${x} 上 B 台，血量 1。`; }
+    else { cA--; cB--; kind="diff"; on=[15,16];
+      txt=`<b>${x}</b> 跟两个擂主都不一样，两个台上又都有人 → <span class="r">三个互不相同的一起消掉</span>：一个 ${nA}、一个 ${nB}、还有这个 ${x}。<br>countA ${cA+1}→${cA}，countB ${cB+1}→${cB}。`; }
+    S.push({ph:1,i,nA,nB,cA,cB,kind,on,text:txt});
+  }
+  // 第二遍
+  const len=Math.floor(arr.length/3);
+  S.push({ph:2,i:-1,nA,nB,cA,cB,on:[20,21],vA:0,vB:0,len,
+    text:`第一遍结束，拿到两个<b>候选</b>：${nA} 和 ${nB}。<br><span class="r">注意：这只是候选，还不是答案。</span>题目没保证一定存在，必须回去数一遍。<br>门槛 <code>len = ${arr.length} / 3 = ${len}</code>，要<b>严格大于 ${len}</b> 才算。`});
+  let vA=0,vB=0;
+  for(let i=0;i<arr.length;i++){
+    if(arr[i]===nA) vA++;
+    if(arr[i]===nB) vB++;
+    S.push({ph:2,i,nA,nB,cA,cB,on:[23,24],vA,vB,len,count:true,
+      text:`数到 <b>${arr[i]}</b>：${arr[i]===nA?`是候选 A → appearA = ${vA}`:""}${arr[i]===nA&&arr[i]===nB?"，":""}${arr[i]===nB&&arr[i]!==nA?`是候选 B → appearB = ${vB}`:""}${arr[i]!==nA&&arr[i]!==nB?"两个候选都不是，跳过":""}`});
+  }
+  const res=[];
+  const okA=vA>len, okB=vB>len&&nA!==nB;
+  if(okA) res.push(nA);
+  if(okB) res.push(nB);
+  res.sort((a,b)=>a-b);
+  S.push({ph:2,i:arr.length,nA,nB,cA,cB,on:[26,27],vA,vB,len,res,done:true,
+    text:`候选 A = ${nA} 出现 ${vA} 次，${okA?`<span class="g">${vA} > ${len} ✓ 收进结果</span>`:`<span class="r">${vA} 不大于 ${len} ✗ 淘汰</span>`}<br>
+      候选 B = ${nB} 出现 ${vB} 次，${nA===nB?`<span class="r">但它和 A 是同一个数，去重后不再添加</span>`:(vB>len?`<span class="g">${vB} > ${len} ✓ 收进结果</span>`:`<span class="r">${vB} 不大于 ${len} ✗ 淘汰</span>`)}<br>
+      最终返回 <b>[${res.join(", ")}]</b>${res.length===0?`　—— <span class="r">这个数组根本没有超过 1/3 的数，第二遍把两个垃圾候选都拦下了。</span>`:""}`});
+  return S;
+}
+
+function render(){
+  const s=steps[cur];
+  el("arr").innerHTML=ARR.map((v,i)=>{
+    let c="";
+    if(s.ph===1){
+      if(i<s.i) c="done";
+      else if(i===s.i) c="now "+(s.kind||"");
+    }else{
+      if(s.count||s.done){
+        if(i<=s.i||s.done){
+          if(v===s.nA) c="tagA"; else if(v===s.nB) c="tagB"; else c="done";
+        }
+        if(i===s.i&&!s.done) c+=" now";
+      }else c="done";
+    }
+    return `<div class="cell ${c}"><span class="v">${v}</span><span class="i">${i}</span></div>`;
+  }).join("");
+
+  el("candA").textContent=s.nA;
+  el("candB").textContent=s.nB;
+  if(s.ph===1){
+    el("cA").innerHTML=`countA = <b>${s.cA}</b>`;
+    el("cB").innerHTML=`countB = <b>${s.cB}</b>`;
+    el("boxA").className="box A"+(s.cA===0?" empty":"")+(s.kind==="a"?" hot":"");
+    el("boxB").className="box B"+(s.cB===0?" empty":"")+(s.kind==="b"?" hot":"");
+    el("resbar").innerHTML="";
+  }else{
+    el("cA").innerHTML=`出现 <b>${s.vA}</b> 次　门槛 &gt; ${s.len}`;
+    el("cB").innerHTML=`出现 <b>${s.vB}</b> 次　门槛 &gt; ${s.len}`;
+    el("boxA").className="box A"+(s.done&&!(s.vA>s.len)?" empty":"");
+    el("boxB").className="box B"+(s.done&&!(s.vB>s.len&&s.nA!==s.nB)?" empty":"");
+    el("resbar").innerHTML=s.done?`返回 <b>[${s.res.join(", ")}]</b>`:"";
+  }
+
+  el("phase").innerHTML=s.ph===1
+    ? '<span class="p1">第一遍 · 投票选候选</span>'
+    : '<span class="p2">第二遍 · 回去数一遍验证</span>';
+  el("stepno").textContent=`步骤 ${cur} / ${steps.length-1}`;
+  const cl=el("cline");
+  let t;
+  if(s.ph===1){
+    t = s.i<0 ? "int numA = array[0], numB = array[0];  countA = countB = 0;"
+      : (s.kind==="a"?"numA == array[i]  →  countA++"
+      : (s.kind==="b"?"numB == array[i]  →  countB++"
+      : (s.kind==="swap"?"count == 0  →  上台"
+      : "else  →  countA--;  countB--;")));
+  }else{
+    t = s.done ? "if (appearA > len) ...   if (appearB > len && numA != numB) ..."
+      : (s.count?"if (array[i] == numA) appearA++;   if (array[i] == numB) appearB++;"
+      : "int len = array.length / 3;");
+  }
+  cl.textContent=t;
+  cl.className="cline"+((s.i<0||s.done)?" plain":"");
+  el("say").innerHTML=s.text;
+  el("code").innerHTML=CODE.map((ln,i)=>{
+    const cm=ln.trim().startsWith("//")||ln.includes("//");
+    return `<span class="ln${(s.on||[]).includes(i)?" on":""}">${esc(ln)||" "}</span>`;
+  }).join("");
+}
+function next(){cur<steps.length-1?(cur++,render()):stop();}
+function prev(){if(cur>0){cur--;render();}}
+function reset(){stop();cur=0;render();}
+function stop(){if(timer){clearInterval(timer);timer=null;el("playbtn").textContent="⚡ 自动";}}
+function play(){if(timer)return stop();el("playbtn").textContent="⏸ 暂停";timer=setInterval(next,1500);}
+function preset(s){el("seq").value=s.split(",").join(", ");apply();}
+function apply(){
+  stop();
+  const raw=el("seq").value.split(/[,\s、]+/).filter(Boolean).map(Number).filter(Number.isFinite);
+  const err=el("err");
+  if(raw.length<1){err.textContent="至少填一个元素";return;}
+  if(raw.length>12){err.textContent="最多 12 个，太长步骤会很多";return;}
+  err.textContent="";
+  ARR=raw;steps=build(ARR);cur=0;render();
+}
+apply();
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT")return;
+  if(e.key==="ArrowRight"){next();e.preventDefault();}
+  if(e.key==="ArrowLeft"){prev();e.preventDefault();}
+});
+</script>
+</body>
+</html>
