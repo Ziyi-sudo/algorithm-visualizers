@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🪟 398 滑动窗口 · 官方答案逐步</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:26px 16px 70px;background:#f6f6f4;color:#222;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.72}
+  .wrap{max-width:940px;margin:0 auto}
+  h1{font-size:23px;text-align:center;margin:0 0 4px}
+  .sub{text-align:center;font-size:14px;color:#888;margin:0 0 8px}
+  .core{text-align:center;font-size:14.5px;color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;
+    border-radius:9px;padding:11px 16px;margin:0 auto 22px;max-width:660px}
+  .core b{color:#6b4c05}
+  h2{font-size:17px;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #e4e2db}
+  p{margin:0 0 11px;font-size:14.5px;color:#555}
+  p b{color:#222}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:.9em;background:#f0eee8;padding:1px 5px;border-radius:4px}
+
+  .setup{display:flex;gap:11px;justify-content:center;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px}
+  .field{display:flex;flex-direction:column;gap:3px}
+  .field label{font-size:11.5px;color:#999}
+  input{font:inherit;font-size:15px;font-family:ui-monospace,Menlo,monospace;padding:7px 10px;
+    border:1px solid #d8d5cd;border-radius:8px;background:#fff;letter-spacing:1px}
+  #sIn{width:110px} #lIn{width:250px}
+  .setup button{font:inherit;font-size:13.5px;padding:8px 15px;border:1px solid #d8d5cd;
+    border-radius:8px;background:#fff;cursor:pointer}
+  .presets{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:8px 0 6px}
+  .presets button{font:inherit;font-size:12.5px;padding:5px 12px;border:1px solid #ddd9d0;border-radius:18px;
+    background:#fff;color:#777;cursor:pointer}
+  .presets button:hover{border-color:#b8b5ac;color:#333}
+  .err{text-align:center;font-size:12.5px;color:#c0392b;min-height:20px;margin-bottom:10px}
+
+  .ctrl{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+  .ctrl button{font:inherit;font-size:14.5px;padding:9px 19px;border:none;border-radius:9px;
+    background:#4272c4;color:#fff;cursor:pointer;box-shadow:0 2px 0 #2f5695;transition:transform .1s,box-shadow .1s}
+  .ctrl button:active{transform:translateY(2px);box-shadow:0 0 0 #2f5695}
+  .ctrl button.alt{background:#8a8a84;box-shadow:0 2px 0 #5f5f59}
+
+  .stepno{text-align:center;font-size:12.5px;color:#a5a29a;margin-bottom:10px;font-family:ui-monospace,Menlo,monospace}
+  .cline{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:14.5px;font-weight:600;
+    color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;border-radius:9px;
+    padding:9px 15px;margin:0 auto 16px;max-width:640px;min-height:44px}
+  .cline.plain{color:#8a8a84;background:#f2f0ea;border-color:#e0ddd4;font-weight:400}
+
+  .stage{background:linear-gradient(180deg,#fdfdfb,#f2f0ea);border:1px solid #e4e2db;border-radius:13px;
+    padding:22px 18px;margin-bottom:14px;box-shadow:0 2px 9px rgba(0,0,0,.05);overflow-x:auto}
+  .lbl{font-size:11.5px;color:#a5a29a;font-family:ui-monospace,Menlo,monospace;margin-bottom:9px}
+  .arr{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:20px;min-width:min-content}
+  .cell{width:46px;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:#fff;border:2px solid #ddd9d0;border-radius:9px;font-family:ui-monospace,Menlo,monospace;
+    transition:all .32s;box-shadow:0 2px 0 -1px #e8e5dc;position:relative}
+  .cell .v{font-size:17px;font-weight:700}
+  .cell .i{font-size:9.5px;color:#b3b0a7}
+  .cell.out{opacity:.32}
+  .cell.win{border-color:#7fa9e4;background:#eaf3ff;color:#1c4a8a}
+  .cell.win .i{color:#5b82c4}
+  .cell.hit{border-color:#4a9c2e;background:#e4f4d8;color:#2c6614}
+  .cell.enter{border-color:#c39a1e;background:#fdf3d8;color:#8a6408;transform:translateY(-6px);
+    box-shadow:0 3px 0 -1px #e7d296,0 10px 18px rgba(160,120,20,.22)}
+  .cell.leave{border-color:#d9534f;background:#fbe6e6;color:#a02622;transform:translateY(6px);opacity:.8}
+  .cell .tag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:9px;
+    padding:1px 7px;border-radius:20px;color:#fff;white-space:nowrap}
+  .tag.in{background:#c39a1e} .tag.out2{background:#c05353}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:11px;margin-bottom:18px}
+  .stat{background:#fff;border:1px solid #e0ddd4;border-radius:10px;padding:11px 14px}
+  .stat .lab{font-size:11.5px;color:#a5a29a;margin-bottom:2px}
+  .stat .val{font-size:20px;font-weight:700;font-family:ui-monospace,Menlo,monospace}
+  .stat.ok{border-color:#a8d18c;background:#f4fbee}
+  .stat.ok .val{color:#2c6614}
+
+  .maprow{display:flex;gap:9px;flex-wrap:wrap;min-height:44px;align-items:center;
+    padding-top:14px;border-top:1px dashed #ddd9cf}
+  .kv{font-family:ui-monospace,Menlo,monospace;font-size:14px;padding:7px 13px;border-radius:8px;
+    border:2px solid #ddd9cf;background:#fff;color:#555;transition:all .32s}
+  .kv b{font-size:16px}
+  .kv.zero{background:#e9f6de;border-color:#7fbf58;color:#2c6614}
+  .kv.neg{background:#f2ebfc;border-color:#b79ce0;color:#5b3f8f}
+  .kv.touch{transform:translateY(-4px);box-shadow:0 6px 12px rgba(0,0,0,.12)}
+
+  .say{background:#fff;border:1px solid #e4e2db;border-radius:10px;padding:14px 17px;min-height:88px;
+    font-size:14.4px;color:#444;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:20px}
+  .say b{color:#222} .say .g{color:#2c6614;font-weight:600} .say .r{color:#a02622;font-weight:600}
+  .say .y{color:#8a6408;font-weight:600} .say .p{color:#5b3f8f;font-weight:600}
+  .resbar{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:17px;margin-bottom:18px;
+    color:#666;min-height:30px}
+  .resbar b{color:#2c6614;font-size:20px}
+
+  pre{background:#26261f;color:#e6e3d8;border-radius:11px;padding:15px 0;margin:0 0 14px;
+    overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.3px;line-height:1.76}
+  pre .ln{display:block;padding:0 19px;white-space:pre;border-left:4px solid transparent;transition:background .3s}
+  pre .ln.on{background:#4b4526;border-left-color:#e2bd45;color:#fff9e2}
+
+  .panel{background:#fff;border:1px solid #e4e2db;border-radius:12px;padding:17px 21px;margin-bottom:15px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .warn{background:#fff4f4;border:1px solid #f0c9c9;border-radius:10px;padding:13px 17px;margin-bottom:14px}
+  .warn p{margin:0;color:#7d3b3b;font-size:14.3px} .warn p b{color:#a02622} .warn p+p{margin-top:7px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin-bottom:10px}
+  th,td{padding:8px 11px;text-align:left;border-bottom:1px solid #eceae4}
+  th{background:#f5f4f0;font-weight:600;color:#333;font-size:12.5px}
+  td.m{font-family:ui-monospace,Menlo,monospace}
+  footer{text-align:center;font-size:12.5px;color:#a5a29a;margin-top:32px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🪟 398 滑动窗口 · 官方答案</h1>
+<p class="sub">Find All Anagrams Of Short String In A Long String</p>
+<div class="core"><b>核心：窗口右移一格，只有两个字符变了</b> —— 左边掉出去一个，右边进来一个。<br>
+中间那 k−2 个一动没动，凭什么每次都重数一遍？</div>
+
+<div class="setup">
+  <div class="field"><label for="sIn">s（短的，模式串）</label><input id="sIn" value="ab"></div>
+  <div class="field"><label for="lIn">l（长的，被搜索）</label><input id="lIn" value="abcbac"></div>
+  <button onclick="apply()">重新生成</button>
+</div>
+<div class="presets">
+  <button onclick="preset('ab','abcbac')">题目例子 → [0,3]</button>
+  <button onclick="preset('aab','aaabba')">有重复字符</button>
+  <button onclick="preset('abc','xxxxx')">一个都找不到</button>
+  <button onclick="preset('aa','aaaa')">全部命中</button>
+  <button onclick="preset('ab','abab')">连续命中</button>
+</div>
+<div class="err" id="err"></div>
+
+<div class="ctrl">
+  <button onclick="next()">▶ 下一步</button>
+  <button onclick="play()" id="playbtn">⚡ 自动</button>
+  <button class="alt" onclick="prev()">◀ 上一步</button>
+  <button class="alt" onclick="reset()">↺ 重置</button>
+</div>
+
+<div class="stepno" id="stepno">步骤 0 / 0</div>
+<div class="cline" id="cline">（还没开始）</div>
+
+<div class="stage">
+  <div class="lbl" id="llbl">l · 蓝色是当前窗口</div>
+  <div class="arr" id="arr"></div>
+  <div class="stats">
+    <div class="stat" id="stMatch"><div class="lab">match / map.size()</div><div class="val" id="vMatch">0 / 0</div></div>
+    <div class="stat"><div class="lab">窗口范围</div><div class="val" id="vWin">—</div></div>
+    <div class="stat"><div class="lab">已找到</div><div class="val" id="vFound">0</div></div>
+  </div>
+  <div class="lbl" style="margin-top:4px">map · 每个字符「还需要几个」（绿色 = 正好配平，紫色 = 窗口里多了）</div>
+  <div class="maprow" id="maprow"></div>
+</div>
+
+<div class="resbar" id="resbar"></div>
+<div class="say" id="say">点「下一步」开始。<b>重点盯 map 里的数字什么时候跨过 0</b> —— 只有跨越 0 的那一刻，match 才会动。</div>
+
+<h2>三个最容易写错的地方</h2>
+<div class="warn">
+  <p><b>① 判断用的是「更新前」的 count，不是更新后的。</b></p>
+  <p><code>map.put(tmp, count - 1); if (count == 1) match++;</code> —— <code>count</code> 是<b>减之前</b>的值。进的时候 1→0 才叫「刚配平」，出的时候 0→1 才叫「刚失配」。</p>
+  <p>0→−1 和 −1→0 都<b>不动 match</b>。只有<b>跨越 0 这条线</b>的那一刻才动。</p>
+</div>
+<div class="warn">
+  <p><b>② map 里的值可以是负数。</b>窗口里某个字符多了，计数就变成负的。</p>
+  <p>这在 O(n·k) 那版里是非法状态（一发现 0 就 return false），<b>滑窗版允许超标</b> —— 因为它知道多出来的迟早会从左边滑出去。</p>
+  <p>这就是<b>「检查」和「维护」的区别</b>：检查只看当前窗口，维护跨窗口连续。</p>
+</div>
+<div class="warn">
+  <p><b>③ 两个边界都是「个数 ↔ 位置」的换算。</b></p>
+  <p><code>i >= s.length()</code> 才开始移出 —— 前 k 个字符是在攒窗口，攒满了才有东西可移。</p>
+  <p><code>i - s.length() + 1</code> 是窗口<b>左端</b>下标，也就是要记录的起点。<code>i</code> 是右端。</p>
+</div>
+
+<h2>match 这个计数器值多少钱</h2>
+<div class="panel">
+  <p>它把「扫一遍 k 个字符确认全为 0」这个 <b>O(k)</b> 的判断，压缩成一次 <b>O(1)</b> 的整数比较。</p>
+  <p><code>match</code> = 有多少个不同字符的需求量<b>正好是 0</b>。当 <code>match == map.size()</code>，所有字符都配平，就是一个 anagram。</p>
+  <p><b>这是整道题最值钱的设计。</b>没有它，滑窗也还是 O(n·k)。</p>
+</div>
+
+<h2>和 O(n·k) 那版的对照</h2>
+<div class="panel">
+  <table>
+    <tr><th style="width:150px"></th><th>每窗复制 map（我写的）</th><th>滑动窗口（官方）</th></tr>
+    <tr><td>时间</td><td class="m">O(n·k)</td><td class="m"><b>O(n)</b></td></tr>
+    <tr><td>每窗做什么</td><td>复制整张表 + 重扫 k 个</td><td><b>只处理进 1 个、出 1 个</b></td></tr>
+    <tr><td>map 的角色</td><td>标准答案清单，每窗复印</td><td><b>「还差多少」的状态量，全程一张</b></td></tr>
+    <tr><td>允许负数吗</td><td>不允许（0 就判失败）</td><td><b>允许</b></td></tr>
+    <tr><td>命中判断</td><td class="m">O(k) 扫完没失败</td><td class="m"><b>O(1) match == size</b></td></tr>
+  </table>
+  <p>面试时：<b>先说 O(n·k) 那版</b>（好想好写能过），<b>再说「如果 l 很长可以做到 O(n)」</b>，然后讲 match 这个设计。能说出两版并给出取舍，比只会一版强。</p>
+</div>
+
+<h2>代码</h2>
+<pre id="code"></pre>
+
+<footer>Time: O(n) · Space: O(d)，d 是 s 里不同字符的个数</footer>
+</div>
+
+<script>
+const CODE=[
+"public List<Integer> allAnagrams(String s, String l) {",
+"  List<Integer> result = new ArrayList<Integer>();",
+"  if (l.length() == 0) return result;",
+"  if (s.length() > l.length()) return result;",
+"",
+"  Map<Character, Integer> map = countMap(s);   // 每个字符「还需要几个」",
+"  int match = 0;                               // 有几个字符正好配平",
+"",
+"  for (int i = 0; i < l.length(); i++) {",
+"    char tmp = l.charAt(i);                    // 右边进来的",
+"    Integer count = map.get(tmp);",
+"    if (count != null) {",
+"      map.put(tmp, count - 1);",
+"      if (count == 1) match++;                 // 1→0 才算刚配平",
+"    }",
+"    if (i >= s.length()) {                     // 攒满了才开始移出",
+"      tmp = l.charAt(i - s.length());          // 左边掉出去的",
+"      count = map.get(tmp);",
+"      if (count != null) {",
+"        map.put(tmp, count + 1);",
+"        if (count == 0) match--;               // 0→1 才算刚失配",
+"      }",
+"    }",
+"    if (match == map.size()) {                 // O(1) 判断",
+"      result.add(i - s.length() + 1);          // 窗口左端",
+"    }",
+"  }",
+"  return result;",
+"}"
+];
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+let S="",L="",steps=[],cur=0,timer=null;
+const el=id=>document.getElementById(id);
+
+function build(s,l){
+  const k=s.length,ST=[];
+  const base={}; for(const c of s) base[c]=(base[c]||0)+1;
+  const size=Object.keys(base).length;
+  const map={...base};
+  let match=0; const res=[];
+  ST.push({i:-1,map:{...map},match,size,res:[],on:[5,6],
+    text:`用 s = "<b>${s}</b>" 建表：${Object.entries(base).map(([c,n])=>`${c} 还需要 ${n} 个`).join("、")}。<br>
+      <code>match</code> = 有几个字符<b>正好配平（需求量 = 0）</b>，现在是 0。窗口大小固定为 ${k}。`});
+  for(let i=0;i<l.length;i++){
+    const parts=[];
+    const inC=l[i]; let touched=[inC];
+    if(inC in map){
+      const c=map[inC]; map[inC]=c-1;
+      if(c===1){ match++; parts.push(`进 <b>${inC}</b>：需求 1 → 0，<span class="g">刚好配平，match++ → ${match}</span>`); }
+      else parts.push(`进 <b>${inC}</b>：需求 ${c} → ${c-1}，<b>没跨过 0</b>，match 不动`);
+    } else parts.push(`进 <b>${inC}</b>：s 里根本没这个字符，<b>跳过</b>（不进 map，也不影响 match）`);
+    let outC=null;
+    if(i>=k){
+      outC=l[i-k]; touched.push(outC);
+      if(outC in map){
+        const c=map[outC]; map[outC]=c+1;
+        if(c===0){ match--; parts.push(`出 <b>${outC}</b>：需求 0 → 1，<span class="r">从配平变缺，match-- → ${match}</span>`); }
+        else parts.push(`出 <b>${outC}</b>：需求 ${c} → ${c+1}，<b>没跨过 0</b>，match 不动`);
+      } else parts.push(`出 <b>${outC}</b>：不在 s 里，跳过`);
+    }
+    let hit=false;
+    if(match===size){ res.push(i-k+1); hit=true; parts.push(`<span class="g">match == map.size() = ${size}，命中！起点 ${i-k+1}</span>`); }
+    ST.push({i,inC,outC,map:{...map},match,size,res:[...res],hit,touched,
+      on:hit?[8,9,10,11,12,13,15,16,17,18,19,20,22,23]:(i>=k?[8,9,10,11,12,13,15,16,17,18,19,20]:[8,9,10,11,12,13]),
+      text:parts.join("<br>")});
+  }
+  ST.push({i:l.length,map:{...map},match,size,res:[...res],done:true,on:[26],
+    text:`扫完了，返回 <b>[${res.join(", ")}]</b>。<br>全程 map 只有一张、<b>从没复制过</b>，每个窗口只处理了「进一个、出一个」两个字符。`});
+  return ST;
+}
+
+function render(){
+  const s=steps[cur],k=S.length;
+  const lo=s.i>=0&&!s.done ? Math.max(0,s.i-k+1) : (s.done? -1 : -1);
+  el("arr").innerHTML=[...L].map((ch,idx)=>{
+    let c="";
+    if(s.i<0||s.done) c = s.done? "out":"";
+    else{
+      if(idx>s.i) c="";
+      else if(idx>=lo&&idx<=s.i) c=s.hit?"hit":"win";
+      else c="out";
+      if(idx===s.i) c="enter";
+      if(s.outC!==null&&s.outC!==undefined&&idx===s.i-k) c="leave";
+    }
+    let tag="";
+    if(idx===s.i&&s.i>=0&&!s.done) tag='<span class="tag in">进</span>';
+    if(s.i>=k&&idx===s.i-k&&!s.done) tag='<span class="tag out2">出</span>';
+    return `<div class="cell ${c}">${tag}<span class="v">${ch}</span><span class="i">${idx}</span></div>`;
+  }).join("");
+
+  el("vMatch").textContent=`${s.match} / ${s.size}`;
+  el("stMatch").className="stat"+(s.match===s.size&&s.i>=0?" ok":"");
+  el("vWin").textContent = (s.i<0||s.done||s.i<k-1) ? "还没攒满" : `[${s.i-k+1}, ${s.i}]`;
+  el("vFound").textContent=s.res.length;
+
+  el("maprow").innerHTML=Object.entries(s.map).map(([c,v])=>{
+    let cls="kv"+(v===0?" zero":(v<0?" neg":""))+((s.touched||[]).includes(c)?" touch":"");
+    return `<span class="${cls}">${c} : <b>${v}</b></span>`;
+  }).join("");
+
+  el("resbar").innerHTML=s.done?`返回 <b>[${s.res.join(", ")}]</b>`:"";
+  el("stepno").textContent=`步骤 ${cur} / ${steps.length-1}`;
+  const cl=el("cline");
+  cl.textContent = s.i<0 ? "map = countMap(s);   int match = 0;"
+    : (s.done ? "return result;"
+    : `i = ${s.i}　进 '${s.inC}'${s.outC!=null?`　出 '${s.outC}'`:""}${s.hit?"　→ 命中":""}`);
+  cl.className="cline"+((s.i<0||s.done)?" plain":"");
+  el("say").innerHTML=s.text;
+  el("code").innerHTML=CODE.map((ln,i)=>
+    `<span class="ln${(s.on||[]).includes(i)?" on":""}">${esc(ln)||" "}</span>`).join("");
+}
+function next(){cur<steps.length-1?(cur++,render()):stop();}
+function prev(){if(cur>0){cur--;render();}}
+function reset(){stop();cur=0;render();}
+function stop(){if(timer){clearInterval(timer);timer=null;el("playbtn").textContent="⚡ 自动";}}
+function play(){if(timer)return stop();el("playbtn").textContent="⏸ 暂停";timer=setInterval(next,1500);}
+function preset(a,b){el("sIn").value=a;el("lIn").value=b;apply();}
+function apply(){
+  stop();
+  const s=el("sIn").value.replace(/\s/g,""), l=el("lIn").value.replace(/\s/g,"");
+  const err=el("err");
+  if(!s.length){err.textContent="s 不能为空";return;}
+  if(!l.length){err.textContent="l 不能为空";return;}
+  if(l.length>16){err.textContent="l 最多 16 个字符";return;}
+  if(s.length>l.length){err.textContent="s 比 l 还长，直接返回空 —— 换个输入看动画";return;}
+  err.textContent="";
+  S=s;L=l;steps=build(S,L);cur=0;render();
+}
+apply();
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT")return;
+  if(e.key==="ArrowRight"){next();e.preventDefault();}
+  if(e.key==="ArrowLeft"){prev();e.preventDefault();}
+});
+</script>
+</body>
+</html>
