@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>👆 滑动窗口 · 谁指向谁</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:26px 16px 70px;background:#f6f6f4;color:#222;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.72}
+  .wrap{max-width:900px;margin:0 auto}
+  h1{font-size:23px;text-align:center;margin:0 0 4px}
+  .sub{text-align:center;font-size:14px;color:#888;margin:0 0 8px}
+  .core{text-align:center;font-size:14.5px;color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;
+    border-radius:9px;padding:11px 16px;margin:0 auto 22px;max-width:640px}
+  .core b{color:#6b4c05}
+  h2{font-size:17px;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #e4e2db}
+  p{margin:0 0 11px;font-size:14.5px;color:#555}
+  p b{color:#222}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:.9em;background:#f0eee8;padding:1px 5px;border-radius:4px}
+
+  .setup{display:flex;gap:11px;justify-content:center;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+  .field{display:flex;flex-direction:column;gap:3px}
+  .field label{font-size:11.5px;color:#999}
+  input{font:inherit;font-size:15px;font-family:ui-monospace,Menlo,monospace;padding:7px 10px;
+    border:1px solid #d8d5cd;border-radius:8px;background:#fff;letter-spacing:1px}
+  #kIn{width:70px} #lIn{width:240px}
+  .setup button{font:inherit;font-size:13.5px;padding:8px 15px;border:1px solid #d8d5cd;
+    border-radius:8px;background:#fff;cursor:pointer}
+  .err{text-align:center;font-size:12.5px;color:#c0392b;min-height:20px;margin-bottom:8px}
+
+  .ctrl{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+  .ctrl button{font:inherit;font-size:14.5px;padding:9px 19px;border:none;border-radius:9px;
+    background:#4272c4;color:#fff;cursor:pointer;box-shadow:0 2px 0 #2f5695;transition:transform .1s,box-shadow .1s}
+  .ctrl button:active{transform:translateY(2px);box-shadow:0 0 0 #2f5695}
+  .ctrl button.alt{background:#8a8a84;box-shadow:0 2px 0 #5f5f59}
+
+  .stage{background:linear-gradient(180deg,#fdfdfb,#f2f0ea);border:1px solid #e4e2db;border-radius:13px;
+    padding:26px 20px 22px;margin-bottom:16px;box-shadow:0 2px 9px rgba(0,0,0,.05);overflow-x:auto}
+
+  .track{position:relative;min-width:min-content;padding-top:52px;padding-bottom:56px}
+  .cells{display:flex;gap:6px;justify-content:center}
+  .cell{width:56px;height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:#fff;border:2px solid #ddd9d0;border-radius:10px;font-family:ui-monospace,Menlo,monospace;
+    transition:all .34s;box-shadow:0 2px 0 -1px #e8e5dc;position:relative;flex:none}
+  .cell .v{font-size:20px;font-weight:700}
+  .cell .i{font-size:10px;color:#b3b0a7}
+  .cell.dim{opacity:.3}
+  .cell.win{border-color:#7fa9e4;background:#eaf3ff;color:#1c4a8a}
+  .cell.win .i{color:#5b82c4}
+  .cell.enter{border-color:#c39a1e;background:#fdf3d8;color:#8a6408;
+    box-shadow:0 3px 0 -1px #e7d296,0 8px 16px rgba(160,120,20,.22)}
+  .cell.leave{border-color:#d9534f;background:#fbe6e6;color:#a02622;opacity:.85}
+
+  .ptr{position:absolute;display:flex;flex-direction:column;align-items:center;
+    transition:left .38s cubic-bezier(.4,0,.2,1),opacity .3s;pointer-events:none}
+  .ptr .lab{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;padding:3px 9px;border-radius:20px;
+    color:#fff;white-space:nowrap}
+  .ptr .arrow{font-size:16px;line-height:1}
+  .ptr.top{top:12px}
+  .ptr.top .arrow{margin-top:2px}
+  .ptr.bot{bottom:12px;flex-direction:column-reverse}
+  .ptr.bot .arrow{margin-bottom:2px}
+  .ptr.i .lab{background:#c39a1e} .ptr.i .arrow{color:#c39a1e}
+  .ptr.out .lab{background:#c05353} .ptr.out .arrow{color:#c05353}
+  .ptr.start .lab{background:#4a9c2e} .ptr.start .arrow{color:#4a9c2e}
+  .ptr.hidden{opacity:0}
+
+  .formulas{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:11px;margin-top:6px}
+  .fbox{background:#fff;border:2px solid #e0ddd4;border-radius:10px;padding:12px 14px;transition:all .3s}
+  .fbox .t{font-size:11.5px;color:#a5a29a;margin-bottom:3px;font-family:ui-monospace,Menlo,monospace}
+  .fbox .calc{font-family:ui-monospace,Menlo,monospace;font-size:14px;color:#555;margin-bottom:2px}
+  .fbox .res{font-family:ui-monospace,Menlo,monospace;font-size:17px;font-weight:700}
+  .fbox.i{border-color:#e0c76a;background:#fffdf6} .fbox.i .res{color:#8a6408}
+  .fbox.out{border-color:#e8b4b4;background:#fdf7f7} .fbox.out .res{color:#a02622}
+  .fbox.start{border-color:#a8d18c;background:#f7fdf3} .fbox.start .res{color:#2c6614}
+  .fbox.na{opacity:.45;border-style:dashed}
+  .fbox.na .res{color:#b3b0a7}
+
+  .say{background:#fff;border:1px solid #e4e2db;border-radius:10px;padding:14px 17px;min-height:76px;
+    font-size:14.4px;color:#444;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:22px}
+  .say b{color:#222} .say .y{color:#8a6408;font-weight:600} .say .r{color:#a02622;font-weight:600}
+  .say .g{color:#2c6614;font-weight:600}
+
+  .panel{background:#fff;border:1px solid #e4e2db;border-radius:12px;padding:17px 21px;margin-bottom:15px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin-bottom:10px}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid #eceae4}
+  th{background:#f5f4f0;font-weight:600;color:#333;font-size:12.5px}
+  td.m{font-family:ui-monospace,Menlo,monospace}
+  .warn{background:#fff4f4;border:1px solid #f0c9c9;border-radius:10px;padding:13px 17px;margin-bottom:14px}
+  .warn p{margin:0;color:#7d3b3b;font-size:14.3px} .warn p b{color:#a02622} .warn p+p{margin-top:7px}
+  footer{text-align:center;font-size:12.5px;color:#a5a29a;margin-top:32px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>👆 滑动窗口 · 谁指向谁</h1>
+<p class="sub">只看下标，不管配平逻辑 —— 先把三个位置搞清楚</p>
+<div class="core"><b>窗口不存在于任何容器里。</b>它就是 <code>[i-k+1, i]</code> 这两个<b>算出来</b>的下标圈起来的一段。<br>
+字符从头到尾没被搬动过，动的只是圈。</div>
+
+<div class="setup">
+  <div class="field"><label for="lIn">字符串 lo</label><input id="lIn" value="abcbac"></div>
+  <div class="field"><label for="kIn">窗口大小 k</label><input id="kIn" type="number" min="1" value="2"></div>
+  <button onclick="apply()">重新生成</button>
+</div>
+<div class="err" id="err"></div>
+
+<div class="ctrl">
+  <button onclick="next()">▶ i++</button>
+  <button onclick="play()" id="playbtn">⚡ 自动</button>
+  <button class="alt" onclick="prev()">◀ i--</button>
+  <button class="alt" onclick="reset()">↺ 重置</button>
+</div>
+
+<div class="stage">
+  <div class="track" id="track">
+    <div class="cells" id="cells"></div>
+  </div>
+  <div class="formulas">
+    <div class="fbox i" id="fI">
+      <div class="t">① 进来的是谁</div>
+      <div class="calc">lo.charAt(<b>i</b>)</div>
+      <div class="res" id="rI">—</div>
+    </div>
+    <div class="fbox out" id="fOut">
+      <div class="t">② 出去的是谁</div>
+      <div class="calc">lo.charAt(<b>i − k</b>)</div>
+      <div class="res" id="rOut">—</div>
+    </div>
+    <div class="fbox start" id="fStart">
+      <div class="t">③ 命中时记录的起点</div>
+      <div class="calc">i − k + 1</div>
+      <div class="res" id="rStart">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="say" id="say">点「i++」往右挪一格。<b>黄色是刚进来的，红色是刚出去的，蓝色是留在窗口里的。</b></div>
+
+<h2>三个下标，一张表</h2>
+<div class="panel">
+  <table>
+    <tr><th style="width:170px">你想知道</th><th style="width:150px">怎么算</th><th>为什么</th></tr>
+    <tr><td>进来的是谁</td><td class="m">lo.charAt(i)</td><td>i 就是当前这一轮的位置</td></tr>
+    <tr><td>出去的是谁</td><td class="m">lo.charAt(i − k)</td><td>窗口只装 k 个，i 进来了，<b>k 个之前那个就得走</b></td></tr>
+    <tr><td>窗口左端在哪</td><td class="m">i − k + 1</td><td>i 是右端，往左数 k 个，<b>包含自己所以 +1</b></td></tr>
+    <tr><td>留下的是谁</td><td class="m">不需要知道</td><td>它们上一轮就算过了，<b>对状态没有任何影响</b></td></tr>
+  </table>
+</div>
+
+<h2>为什么 <code>i &gt;= k</code> 才开始移出</h2>
+<div class="warn">
+  <p>前 k 个字符是在<b>攒窗口</b>，这段时间窗口还没满，没东西可移出。</p>
+  <p>k=2 时：i=0 窗口是 [0]，i=1 窗口是 [0,1] 刚好满。<b>i=2 时才第一次有东西出去</b>（下标 0 那个）。</p>
+  <p>写成 <code>i &gt; k</code> 会晚一轮，窗口就变成 k+1 个了。</p>
+</div>
+
+<h2>i − k + 1 那个 +1</h2>
+<div class="warn">
+  <p>k=2、i=3 时，窗口是下标 <b>2 和 3</b> 两个格子。左端是 2 = <code>3 − 2 + 1</code>。</p>
+  <p>不加 1 的话算出来是 1，那是<b>已经滑出去</b>的那个位置。</p>
+  <p><b>这是「个数 ↔ 位置」的换算</b>：k 是个数，往左数 k 个格子（含自己），落点要 +1。</p>
+</div>
+
+<h2>固定窗口 vs 可变窗口</h2>
+<div class="panel">
+  <table>
+    <tr><th style="width:150px"></th><th>固定大小（398 这种）</th><th>大小可变（最长不重复子串那种）</th></tr>
+    <tr><td>需要几个指针</td><td><b>一个 i</b>，另一端算出来</td><td><b>两个</b>，left 和 right 各自独立走</td></tr>
+    <tr><td>右移时</td><td>必然一进一出</td><td>右指针进，左指针<b>看情况</b>收缩</td></tr>
+  </table>
+  <p>398 是前者，所以代码里只有一个 <code>i</code>。看到「窗口大小固定」这几个字，就知道只需要一个循环变量。</p>
+</div>
+
+<footer>把 k 改成 3 再走一遍，三个公式的关系会更清楚</footer>
+</div>
+
+<script>
+let L="abcbac",K=2,i=-1,timer=null;
+const el=id=>document.getElementById(id);
+const CW=56, GAP=6;   // 和 CSS 里的 .cell 宽度、gap 保持一致
+
+function centerOf(idx, n){
+  // cells 是 justify-content:center，算出第 idx 格中心相对 track 的 left（百分比不好算，用 px + 居中偏移）
+  const total = n*CW + (n-1)*GAP;
+  const startLeft = -total/2;                 // 相对中心
+  return startLeft + idx*(CW+GAP) + CW/2;     // 相对中心的偏移
+}
+
+function render(){
+  const n=L.length;
+  const lo = i>=0 ? Math.max(0,i-K+1) : -1;
+  const outIdx = i>=K ? i-K : -1;
+  const full = i>=K-1;
+
+  el("cells").innerHTML=[...L].map((ch,idx)=>{
+    let c="dim";
+    if(i>=0){
+      if(idx===i) c="enter";
+      else if(idx===outIdx) c="leave";
+      else if(idx>=lo&&idx<i) c="win";
+      else c="dim";
+    }
+    return `<div class="cell ${c}"><span class="v">${ch}</span><span class="i">${idx}</span></div>`;
+  }).join("");
+
+  // 指针
+  const track=el("track");
+  track.querySelectorAll(".ptr").forEach(p=>p.remove());
+  const mk=(cls,pos,label,idx,arrow)=>{
+    const d=document.createElement("div");
+    d.className=`ptr ${cls} ${pos}`+(idx<0||idx>=n?" hidden":"");
+    d.innerHTML=`<span class="lab">${label}</span><span class="arrow">${arrow}</span>`;
+    d.style.left=`calc(50% + ${centerOf(Math.max(0,Math.min(idx,n-1)),n)}px)`;
+    d.style.transform="translateX(-50%)";
+    track.appendChild(d);
+  };
+  mk("i","top",`i = ${i<0?"—":i}　进`,i,"▼");
+  if(outIdx>=0) mk("out","bot",`i − k = ${outIdx}　出`,outIdx,"▲");
+  if(full&&i>=0) mk("start","bot",`i − k + 1 = ${lo}　窗口左端`,lo,"▲");
+
+  // 公式框
+  el("rI").textContent = i<0?"—":`'${L[i]}'　下标 ${i}`;
+  el("fI").className="fbox i"+(i<0?" na":"");
+  if(outIdx>=0){ el("rOut").textContent=`'${L[outIdx]}'　下标 ${outIdx}`; el("fOut").className="fbox out"; }
+  else { el("rOut").textContent = i<0?"—":"还没满，不移出"; el("fOut").className="fbox out na"; }
+  if(full&&i>=0){ el("rStart").textContent=`${lo}`; el("fStart").className="fbox start"; }
+  else { el("rStart").textContent = i<0?"—":"窗口还没满"; el("fStart").className="fbox start na"; }
+
+  let t;
+  if(i<0) t='还没开始。点「i++」让 i 走到 0。';
+  else if(!full) t=`i = ${i}，窗口还在<b>攒</b>（现在 ${i+1} 个，要 ${K} 个）。<br>
+      <code>i >= k</code> 不成立 → <span class="r">这一轮不移出任何东西</span>。`;
+  else if(outIdx<0) t=`i = ${i}，窗口<b>刚好攒满</b> ${K} 个，范围是 <b>[${lo}, ${i}]</b>。<br>
+      这一轮还是不移出 —— 下一轮 i = ${K} 时才第一次有东西出去。`;
+  else t=`i = ${i}。<span class="y">进来的是下标 ${i} 的 '${L[i]}'</span>，<span class="r">出去的是下标 ${outIdx} 的 '${L[outIdx]}'</span>。<br>
+      窗口现在是 <b>[${lo}, ${i}]</b>，中间那些字符<b>一动没动</b> —— 所以只需要处理进出这两个。`;
+  el("say").innerHTML=t;
+}
+function next(){ if(i<L.length-1){i++;render();} else stop(); }
+function prev(){ if(i>-1){i--;render();} }
+function reset(){ stop(); i=-1; render(); }
+function stop(){ if(timer){clearInterval(timer);timer=null;el("playbtn").textContent="⚡ 自动";} }
+function play(){ if(timer) return stop(); el("playbtn").textContent="⏸ 暂停"; timer=setInterval(next,1400); }
+function apply(){
+  stop();
+  const l=el("lIn").value.replace(/\s/g,""), k=parseInt(el("kIn").value,10);
+  const err=el("err");
+  if(!l.length){err.textContent="字符串不能为空";return;}
+  if(l.length>12){err.textContent="最多 12 个字符，太长挤不下";return;}
+  if(!Number.isInteger(k)||k<1||k>l.length){err.textContent=`k 要在 1 到 ${l.length} 之间`;return;}
+  err.textContent="";
+  L=l;K=k;i=-1;render();
+}
+apply();
+window.addEventListener("resize",render);
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT")return;
+  if(e.key==="ArrowRight"){next();e.preventDefault();}
+  if(e.key==="ArrowLeft"){prev();e.preventDefault();}
+});
+</script>
+</body>
+</html>

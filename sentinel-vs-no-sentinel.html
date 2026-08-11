@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛡️ 哨兵到底省掉了什么</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:26px 16px 70px;background:#f6f6f4;color:#222;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.72}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:23px;text-align:center;margin:0 0 4px}
+  .sub{text-align:center;font-size:14px;color:#888;margin:0 0 22px}
+  .core{text-align:center;font-size:14.5px;color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;
+    border-radius:9px;padding:11px 16px;margin:0 auto 24px;max-width:620px}
+  .core b{color:#6b4c05}
+  h2{font-size:17px;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #e4e2db}
+  p{margin:0 0 11px;font-size:14.5px;color:#555}
+  p b{color:#222}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:.9em;background:#f0eee8;padding:1px 5px;border-radius:4px}
+
+  .ctrl{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+  .ctrl button{font:inherit;font-size:14.5px;padding:9px 19px;border:none;border-radius:9px;
+    background:#4272c4;color:#fff;cursor:pointer;box-shadow:0 2px 0 #2f5695;transition:transform .1s,box-shadow .1s}
+  .ctrl button:active{transform:translateY(2px);box-shadow:0 0 0 #2f5695}
+  .ctrl button.alt{background:#8a8a84;box-shadow:0 2px 0 #5f5f59}
+  .cases{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+  .cases button{font:inherit;font-size:12.5px;padding:6px 13px;border:1px solid #ddd9d0;border-radius:18px;
+    background:#fff;color:#777;cursor:pointer}
+  .cases button.on{background:#fdf6dd;border-color:#e0c76a;color:#8a6408;font-weight:600}
+
+  .stepno{text-align:center;font-size:12.5px;color:#a5a29a;margin-bottom:10px;font-family:ui-monospace,Menlo,monospace}
+  .cline{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:15px;font-weight:600;
+    color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;border-radius:9px;
+    padding:10px 16px;margin:0 auto 20px;max-width:600px;min-height:46px}
+  .cline.plain{color:#8a8a84;background:#f2f0ea;border-color:#e0ddd4;font-weight:400}
+
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  @media (max-width:800px){.split{grid-template-columns:1fr}}
+  .side{border-radius:13px;padding:18px 16px;border:2px solid}
+  .side.bad{background:linear-gradient(180deg,#fffbfb,#fdf2f2);border-color:#f0c9c9}
+  .side.good{background:linear-gradient(180deg,#fbfdf9,#f1f8ec);border-color:#cbe4b6}
+  .side .t{text-align:center;font-size:15px;font-weight:700;margin-bottom:4px}
+  .side.bad .t{color:#a02622} .side.good .t{color:#2c6614}
+  .side .st{text-align:center;font-size:12px;color:#999;margin-bottom:16px;font-family:ui-monospace,Menlo,monospace}
+
+  .row{display:flex;align-items:center;justify-content:center;gap:2px;min-height:92px;flex-wrap:wrap}
+  .node{min-width:66px;background:#fff;border:2px solid #d8d5cc;border-radius:11px;padding:10px 11px;
+    font-family:ui-monospace,Menlo,monospace;text-align:center;position:relative;transition:all .4s;
+    box-shadow:0 3px 0 -1px #e5e2d9,0 6px 12px rgba(0,0,0,.07)}
+  .node .ch{font-size:20px;font-weight:700}
+  .node.sent{border-style:dashed;border-color:#b8b5ac;background:#f4f3ef;min-width:72px}
+  .node.sent .ch{font-size:12px;color:#9a978e;font-weight:500}
+  .node.target{border-color:#c39a1e;background:linear-gradient(170deg,#fffcf2,#fdf1d2);transform:translateY(-6px);
+    box-shadow:0 3px 0 -1px #e7d296,0 12px 20px rgba(160,120,20,.2)}
+  .node.gone{opacity:.28;transform:scale(.9)}
+  .node .cap{position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:9px;
+    padding:2px 8px;border-radius:20px;color:#fff;white-space:nowrap;background:#c39a1e}
+  .lk{color:#c2bfb6;font-family:ui-monospace,Menlo,monospace;font-size:15px;letter-spacing:-2px;padding:0 1px}
+  .nulcap{font-family:ui-monospace,Menlo,monospace;font-size:12px;padding:6px 9px;border-radius:7px;
+    background:#fdeded;color:#c53b3b;border:1px solid #f0c9c9;font-weight:600}
+  .loopmark{text-align:center;font-size:11.5px;color:#8a8780;font-family:ui-monospace,Menlo,monospace;
+    margin-top:8px;padding-top:8px;border-top:1px dashed #ddd9cf}
+
+  .probe{margin-top:14px;padding-top:12px;border-top:1px dashed #ddd9cf;font-size:13px;
+    font-family:ui-monospace,Menlo,monospace;line-height:2}
+  .probe div{display:flex;justify-content:space-between;gap:10px}
+  .probe .k{color:#888}
+  .probe .v{font-weight:700}
+  .probe .v.ok{color:#2c6614}
+  .probe .v.no{color:#c53b3b}
+
+  .verdict{margin-top:14px;padding:11px 14px;border-radius:9px;font-size:13.5px;text-align:center;font-weight:600}
+  .verdict.bad{background:#fdeded;color:#a02622;border:1px solid #f0c9c9}
+  .verdict.good{background:#eef8e6;color:#2c6614;border:1px solid #cbe4b6}
+  .verdict.wait{background:#f4f3ef;color:#8a8780;border:1px solid #e0ddd4;font-weight:400}
+
+  .say{background:#fff;border:1px solid #e4e2db;border-radius:10px;padding:14px 17px;min-height:80px;
+    font-size:14.4px;color:#444;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:22px}
+  .say b{color:#222} .say .r{color:#a02622;font-weight:600} .say .g{color:#2c6614;font-weight:600}
+
+  .codes{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  @media (max-width:800px){.codes{grid-template-columns:1fr}}
+  pre{background:#26261f;color:#e6e3d8;border-radius:11px;padding:14px 0;margin:0;
+    overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.3px;line-height:1.8}
+  pre .ln{display:block;padding:0 16px;white-space:pre;border-left:4px solid transparent}
+  pre .ln.hot{background:#4b4526;border-left-color:#e2bd45;color:#fff9e2}
+  pre .ln.dead{background:#3d1f1f;border-left-color:#c05353;color:#f3c9c9}
+  .cap2{text-align:center;font-size:12px;color:#999;margin-bottom:6px;font-family:ui-monospace,Menlo,monospace}
+
+  .panel{background:#fff;border:1px solid #e4e2db;border-radius:12px;padding:17px 21px;margin-bottom:15px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin-bottom:10px}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid #eceae4}
+  th{background:#f5f4f0;font-weight:600;color:#333;font-size:12.5px}
+  td.m{font-family:ui-monospace,Menlo,monospace}
+  td.y{color:#2c6614;font-weight:600} td.n{color:#c53b3b;font-weight:600}
+  footer{text-align:center;font-size:12.5px;color:#a5a29a;margin-top:32px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🛡️ 哨兵到底省掉了什么</h1>
+<p class="sub">左边没有哨兵，右边有 —— 同样删一个节点，看谁会崩</p>
+<div class="core"><b>哨兵不是装饰，它是一个「永远不会被删掉的假节点」。</b><br>
+有了它，真实节点的 prev 和 next <b>永远不可能是 null</b> —— 所以那些 null 判断就都不需要了。</div>
+
+<div class="cases" id="cases"></div>
+<div class="ctrl">
+  <button onclick="next()">▶ 下一步</button>
+  <button onclick="play()" id="playbtn">⚡ 自动</button>
+  <button class="alt" onclick="prev()">◀ 上一步</button>
+  <button class="alt" onclick="reset()">↺ 重置</button>
+</div>
+
+<div class="stepno" id="stepno">步骤 0 / 3</div>
+<div class="cline" id="cline">（还没开始）</div>
+
+<div class="split">
+  <div class="side bad">
+    <div class="t">✗ 没有哨兵</div>
+    <div class="st">head → [a] ⇄ [b] ⇄ [c] → null</div>
+    <div class="row" id="rowBad"></div>
+    <div class="probe" id="probeBad"></div>
+    <div class="verdict wait" id="vBad">还没动手</div>
+  </div>
+  <div class="side good">
+    <div class="t">✓ 有哨兵（循环）</div>
+    <div class="st">[哨兵] ⇄ [a] ⇄ [b] ⇄ [c] ↺ 回哨兵</div>
+    <div class="row" id="rowGood"></div>
+    <div class="loopmark" id="loopmark">↺ 最后一个的 next 指回哨兵，哨兵的 prev 指向最后一个</div>
+    <div class="probe" id="probeGood"></div>
+    <div class="verdict wait" id="vGood">还没动手</div>
+  </div>
+</div>
+
+<div class="say" id="say">上面选一个「要删哪个节点」，然后一步步走。重点看下面那两行探针：<code>node.prev</code> 和 <code>node.next</code> 分别是什么。</div>
+
+<div class="codes">
+  <div>
+    <div class="cap2">没有哨兵 · 必须逐个判 null</div>
+    <pre id="codeBad"></pre>
+  </div>
+  <div>
+    <div class="cap2">有哨兵 · 前两句直接写</div>
+    <pre id="codeGood"></pre>
+  </div>
+</div>
+
+<h2>哨兵是什么</h2>
+<div class="panel">
+  <p><b>一个不装真实数据的假节点，永远待在链表里，永远不会被删除。</b>288 那份答案里它的 <code>ch</code> 是 null，就是明摆着说"我不是真字符"。</p>
+  <p>它唯一的作用是<b>站在边界上，替真实节点挡住 null</b>。原本"第一个节点的 prev 是 null"这种边界情况，现在变成"第一个节点的 prev 是哨兵" —— <b>边界消失了，所有节点长得一样</b>。</p>
+  <p>代价是多一个对象。收益是 <code>remove</code> 从四个 if 变成一个。</p>
+</div>
+
+<h2>为什么 288 还要「循环」</h2>
+<div class="panel">
+  <p>只有一个哨兵放在<b>头部</b>的话，头这边被兜住了，但<b>尾巴那边还是 null</b>：</p>
+  <p><code>[哨兵] ⇄ [a] ⇄ [b] → null</code> —— 删 b 时 <code>b.next.prev</code> 就是 <code>null.prev</code>，照样崩。</p>
+  <p>288 的做法是<b>让最后一个的 next 指回哨兵</b>，形成环 —— 这样一个哨兵就同时兜住了两头。<code>append</code> 里那句 <code>node.next = head</code> 就是在维持这个环，<b>漏了它环就断了，remove 立刻 NPE</b>。</p>
+  <p>另一种常见做法是<b>头尾各放一个哨兵</b>，不用环。效果一样，代价是多一个对象。</p>
+</div>
+
+<h2>三种方案对比</h2>
+<div class="panel">
+  <table>
+    <tr><th style="width:190px">方案</th><th style="width:130px">remove 里判断</th><th>要额外维护什么</th></tr>
+    <tr><td>不用哨兵（你的 205）</td><td class="n">四个 if</td><td>无，但每个边界都要自己想清楚</td></tr>
+    <tr><td>一个哨兵 + 循环（288）</td><td class="y">一个 if</td><td><code>node.next = head</code> 维持环</td></tr>
+    <tr><td>头尾两个哨兵</td><td class="y">一个 if</td><td>多一个对象，最好写</td></tr>
+  </table>
+  <p><b>三种都对，只是把复杂度放在了不同地方。</b>不用哨兵是"代码里到处判"，用哨兵是"结构上一次性堵死"。</p>
+</div>
+
+<footer>把「要删哪个」切到「只剩一个节点」，差别最明显</footer>
+</div>
+
+<script>
+const CODE_BAD=[
+"private void remove(Node node) {",
+"  if (node.prev != null) {",
+"    node.prev.next = node.next;",
+"  }",
+"  if (node.next != null) {",
+"    node.next.prev = node.prev;",
+"  }",
+"  if (node == head) head = head.next;",
+"  if (node == tail) tail = tail.prev;",
+"  node.prev = node.next = null;",
+"}"
+];
+const CODE_GOOD=[
+"private void remove(Node node) {",
+"  node.prev.next = node.next;",
+"  node.next.prev = node.prev;",
+"",
+"",
+"",
+"",
+"",
+"  if (node == tail) tail = node.prev;",
+"  node.prev = node.next = null;",
+"}"
+];
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+const CASES=[
+  {id:"mid",  label:"删中间的 b", list:["a","b","c"], tgt:"b"},
+  {id:"head", label:"删头上的 a", list:["a","b","c"], tgt:"a"},
+  {id:"tail", label:"删尾巴的 c", list:["a","b","c"], tgt:"c"},
+  {id:"only", label:"链表只剩一个", list:["a"],       tgt:"a"}
+];
+let cs="head", cur=0, timer=null;
+const el=id=>document.getElementById(id);
+const C=()=>CASES.find(c=>c.id===cs);
+
+// 探针：目标节点在两种结构下的 prev / next 是什么
+function probe(withSent){
+  const {list,tgt}=C();
+  const i=list.indexOf(tgt);
+  const prev = i>0 ? "节点 "+list[i-1] : (withSent?"哨兵":"null");
+  const next = i<list.length-1 ? "节点 "+list[i+1] : (withSent?"哨兵":"null");
+  return {prev,next,prevNull:prev==="null",nextNull:next==="null"};
+}
+
+const STEPS=[
+  {t:"（还没开始）",plain:true,hotBad:[],hotGood:[],
+   say:'左右是同一条链表、同一个删除目标，区别只有<b>有没有哨兵</b>。先看下面那两行探针：目标节点的 <code>prev</code> 和 <code>next</code> 各是什么。'},
+  {t:"node.prev.next = node.next;",hotBad:[1,2,3],hotGood:[1],
+   say:'第一句要改<b>「它前面那个」的 next</b>。左边必须先问一句 <code>node.prev != null</code>，右边直接写 —— 因为哨兵保证前面一定有人。'},
+  {t:"node.next.prev = node.prev;",hotBad:[4,5,6],hotGood:[2],
+   say:'第二句要改<b>「它后面那个」的 prev</b>。同理，左边要判，右边不用。'},
+  {t:"if (node == head) / if (node == tail)",hotBad:[7,8],hotGood:[8],
+   say:'左边 head 和 tail 都可能指着被删的节点，<b>两个都得判</b>。右边 head 永远是哨兵、永远不会被删，所以<b>只剩 tail 那一个判断</b>。'},
+  {t:"node.prev = node.next = null;   完成",plain:true,hotBad:[9],hotGood:[9],done:true,
+   say:'删完了。左边写了 <b>4 个 if</b>，右边 <b>1 个</b>。<br>结构上的一次性投入（一个假节点），换掉了代码里每次都要写的边界判断。'}
+];
+
+function renderRow(elId, withSent, step){
+  const {list,tgt}=C();
+  let h="";
+  if(withSent){
+    h+=`<div class="node sent"><span class="ch">哨兵</span></div><span class="lk">⇄</span>`;
+  }else{
+    h+=`<span class="nulcap">null</span><span class="lk">⇄</span>`;
+  }
+  list.forEach((c,i)=>{
+    const isT=c===tgt;
+    const cls="node"+(isT?(step>=4?" gone":" target"):"");
+    const cap=isT?'<span class="cap">要删这个</span>':"";
+    h+=`<div class="${cls}">${cap}<span class="ch">${c}</span></div>`;
+    if(i<list.length-1) h+='<span class="lk">⇄</span>';
+  });
+  h+='<span class="lk">⇄</span>';
+  h+= withSent
+    ? `<div class="node sent"><span class="ch">↺ 回哨兵</span></div>`
+    : `<span class="nulcap">null</span>`;
+  el(elId).innerHTML=h;
+}
+
+function render(){
+  const s=STEPS[cur];
+  renderRow("rowBad",false,cur);
+  renderRow("rowGood",true,cur);
+
+  const pb=probe(false), pg=probe(true);
+  el("probeBad").innerHTML=
+    `<div><span class="k">node.prev =</span><span class="v ${pb.prevNull?"no":"ok"}">${pb.prev}</span></div>
+     <div><span class="k">node.next =</span><span class="v ${pb.nextNull?"no":"ok"}">${pb.next}</span></div>`;
+  el("probeGood").innerHTML=
+    `<div><span class="k">node.prev =</span><span class="v ok">${pg.prev}</span></div>
+     <div><span class="k">node.next =</span><span class="v ok">${pg.next}</span></div>`;
+
+  const risky = pb.prevNull||pb.nextNull;
+  const vb=el("vBad");
+  if(cur===0){ vb.className="verdict wait"; vb.textContent="还没动手"; }
+  else if(risky){ vb.className="verdict bad";
+    vb.innerHTML=`⚠️ 有 null！不判的话 <code>${pb.prevNull?"node.prev.next":"node.next.prev"}</code> 直接 NPE`; }
+  else { vb.className="verdict wait"; vb.textContent="这个 case 侥幸没 null，但判断还是得写 —— 你没法保证每次都是中间节点"; }
+
+  const vg=el("vGood");
+  if(cur===0){ vg.className="verdict wait"; vg.textContent="还没动手"; }
+  else { vg.className="verdict good"; vg.textContent="两边都是哨兵，永远不为 null —— 直接写，不用判"; }
+
+  el("loopmark").style.display = C().list.length ? "" : "none";
+  el("stepno").textContent=`步骤 ${cur} / ${STEPS.length-1}`;
+  const cl=el("cline");
+  cl.textContent=s.t; cl.className="cline"+(s.plain?" plain":"");
+  el("say").innerHTML=s.say;
+
+  el("codeBad").innerHTML=CODE_BAD.map((ln,i)=>
+    `<span class="ln${(s.hotBad||[]).includes(i)?" hot":""}">${esc(ln)||" "}</span>`).join("");
+  el("codeGood").innerHTML=CODE_GOOD.map((ln,i)=>
+    `<span class="ln${(s.hotGood||[]).includes(i)?" hot":""}">${esc(ln)||" "}</span>`).join("");
+}
+function next(){cur<STEPS.length-1?(cur++,render()):stop();}
+function prev(){if(cur>0){cur--;render();}}
+function reset(){stop();cur=0;render();}
+function stop(){if(timer){clearInterval(timer);timer=null;el("playbtn").textContent="⚡ 自动";}}
+function play(){if(timer)return stop();el("playbtn").textContent="⏸ 暂停";timer=setInterval(next,2100);}
+
+el("cases").innerHTML=CASES.map(c=>
+  `<button data-id="${c.id}" class="${c.id===cs?"on":""}">${c.label}</button>`).join("");
+el("cases").addEventListener("click",e=>{
+  const id=e.target.dataset.id; if(!id) return;
+  stop(); cs=id; cur=0;
+  el("cases").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.id===id));
+  render();
+});
+render();
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowRight"){next();e.preventDefault();}
+  if(e.key==="ArrowLeft"){prev();e.preventDefault();}
+});
+</script>
+</body>
+</html>
