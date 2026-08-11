@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔤 First Non-Repeating Character In Stream</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:26px 16px 70px;background:#f6f6f4;color:#222;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.72}
+  .wrap{max-width:940px;margin:0 auto}
+  h1{font-size:23px;text-align:center;margin:0 0 4px}
+  .sub{text-align:center;font-size:14px;color:#888;margin:0 0 8px}
+  .core{text-align:center;font-size:14.5px;color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;
+    border-radius:9px;padding:11px 16px;margin:0 auto 22px;max-width:660px}
+  .core b{color:#6b4c05}
+  h2{font-size:17px;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #e4e2db}
+  p{margin:0 0 11px;font-size:14.5px;color:#555}
+  p b{color:#222}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:.9em;background:#f0eee8;padding:1px 5px;border-radius:4px}
+
+  .setup{display:flex;gap:11px;justify-content:center;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px}
+  .field{display:flex;flex-direction:column;gap:3px}
+  .field label{font-size:11.5px;color:#999}
+  input{font:inherit;font-size:15px;font-family:ui-monospace,Menlo,monospace;padding:7px 10px;
+    border:1px solid #d8d5cd;border-radius:8px;background:#fff;width:280px;letter-spacing:2px}
+  .setup button{font:inherit;font-size:13.5px;padding:8px 15px;border:1px solid #d8d5cd;
+    border-radius:8px;background:#fff;cursor:pointer}
+  .presets{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:8px 0 6px}
+  .presets button{font:inherit;font-size:12.5px;padding:5px 12px;border:1px solid #ddd9d0;border-radius:18px;
+    background:#fff;color:#777;cursor:pointer}
+  .presets button:hover{border-color:#b8b5ac;color:#333}
+  .err{text-align:center;font-size:12.5px;color:#c0392b;min-height:20px;margin-bottom:10px}
+
+  .ctrl{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+  .ctrl button{font:inherit;font-size:14.5px;padding:9px 19px;border:none;border-radius:9px;
+    background:#4272c4;color:#fff;cursor:pointer;box-shadow:0 2px 0 #2f5695;transition:transform .1s,box-shadow .1s}
+  .ctrl button:active{transform:translateY(2px);box-shadow:0 0 0 #2f5695}
+  .ctrl button.alt{background:#8a8a84;box-shadow:0 2px 0 #5f5f59}
+
+  .stepno{text-align:center;font-size:12.5px;color:#a5a29a;margin-bottom:10px;font-family:ui-monospace,Menlo,monospace}
+  .cline{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:14.5px;font-weight:600;
+    color:#8a6408;background:#fdf6dd;border:1px solid #ecdca0;border-radius:9px;
+    padding:9px 15px;margin:0 auto 16px;max-width:620px;min-height:44px}
+  .cline.plain{color:#8a8a84;background:#f2f0ea;border-color:#e0ddd4;font-weight:400}
+
+  .stream{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+  .sc{width:46px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:#fff;border:2px solid #ddd9d0;border-radius:9px;font-family:ui-monospace,Menlo,monospace;
+    transition:all .32s;box-shadow:0 2px 0 -1px #e8e5dc}
+  .sc .v{font-size:18px;font-weight:700}
+  .sc .i{font-size:9.5px;color:#b3b0a7}
+  .sc.done{opacity:.38}
+  .sc.now{border-color:#4272c4;background:#e8f1ff;color:#1c4a8a;transform:translateY(-6px) scale(1.06);
+    box-shadow:0 3px 0 -1px #b6cdec,0 10px 18px rgba(40,90,160,.24)}
+  .sc.newin{border-color:#4a9c2e;background:#e9f6de;color:#2c6614}
+  .sc.kill{border-color:#d9534f;background:#fbe6e6;color:#a02622}
+  .sc.skip{border-color:#b79ce0;background:#f2ebfc;color:#5b3f8f}
+
+  .stage{background:linear-gradient(180deg,#fdfdfb,#f2f0ea);border:1px solid #e4e2db;border-radius:13px;
+    padding:20px 18px;margin-bottom:14px;box-shadow:0 2px 9px rgba(0,0,0,.05);overflow-x:auto}
+  .lbl{font-size:11.5px;color:#a5a29a;font-family:ui-monospace,Menlo,monospace;margin-bottom:9px}
+  .dll{display:flex;align-items:center;gap:2px;min-height:86px;min-width:min-content}
+  .node{min-width:74px;background:#fff;border:2px solid #d8d5cc;border-radius:11px;padding:10px 12px;
+    font-family:ui-monospace,Menlo,monospace;text-align:center;position:relative;transition:all .4s;
+    box-shadow:0 3px 0 -1px #e5e2d9,0 6px 13px rgba(0,0,0,.08)}
+  .node .ch{font-size:22px;font-weight:700}
+  .node .cap{position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:9px;
+    padding:2px 8px;border-radius:20px;color:#fff;white-space:nowrap}
+  .cap.h{background:#8a8a84} .cap.t{background:#c39a1e} .cap.ans{background:#4a9c2e}
+  .node.sentinel{border-style:dashed;border-color:#c6c3ba;background:#f7f6f2;min-width:78px}
+  .node.sentinel .ch{color:#c0bdb4;font-size:13px;font-weight:400}
+  .node.first{border-color:#4a9c2e;background:linear-gradient(170deg,#f5fcef,#e4f4d8);
+    transform:translateY(-5px);box-shadow:0 3px 0 -1px #b3d99b,0 12px 20px rgba(70,140,40,.2)}
+  .node.first .ch{color:#2c6614}
+  .node.newnode{border-color:#4a9c2e;background:#e9f6de}
+  .lk{color:#c2bfb6;font-family:ui-monospace,Menlo,monospace;font-size:14px;letter-spacing:-2px;padding:0 1px}
+  .loop{font-size:11px;color:#b8b5ac;font-family:ui-monospace,Menlo,monospace;margin-top:8px;text-align:center}
+
+  .sets{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:18px;
+    padding-top:14px;border-top:1px dashed #ddd9cf}
+  .setbox{background:#fff;border:1px solid #e0ddd4;border-radius:10px;padding:11px 14px}
+  .setbox .t{font-size:11.5px;color:#a5a29a;font-family:ui-monospace,Menlo,monospace;margin-bottom:7px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;min-height:28px;align-items:center}
+  .chip{font-family:ui-monospace,Menlo,monospace;font-size:13px;padding:4px 10px;border-radius:7px;
+    border:1px solid #ddd9cf;background:#faf9f6;color:#555}
+  .chip.s{background:#eef8e6;border-color:#a8d18c;color:#2c6614}
+  .chip.r{background:#f2ebfc;border-color:#b79ce0;color:#5b3f8f}
+  .empty{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:#c6c3ba}
+
+  .ansbar{text-align:center;font-size:17px;margin-bottom:18px;color:#666;min-height:34px;
+    font-family:ui-monospace,Menlo,monospace}
+  .ansbar b{font-size:26px;color:#2c6614}
+  .ansbar b.nul{color:#a02622;font-size:20px}
+
+  .say{background:#fff;border:1px solid #e4e2db;border-radius:10px;padding:14px 17px;min-height:88px;
+    font-size:14.4px;color:#444;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:20px}
+  .say b{color:#222} .say .g{color:#2c6614;font-weight:600} .say .r{color:#a02622;font-weight:600}
+  .say .p{color:#5b3f8f;font-weight:600} .say .y{color:#8a6408;font-weight:600}
+
+  pre{background:#26261f;color:#e6e3d8;border-radius:11px;padding:15px 0;margin:0 0 14px;
+    overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.4px;line-height:1.76}
+  pre .ln{display:block;padding:0 19px;white-space:pre;border-left:4px solid transparent;transition:background .3s}
+  pre .ln.on{background:#4b4526;border-left-color:#e2bd45;color:#fff9e2}
+
+  .panel{background:#fff;border:1px solid #e4e2db;border-radius:12px;padding:17px 21px;margin-bottom:15px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .warn{background:#fff4f4;border:1px solid #f0c9c9;border-radius:10px;padding:13px 17px;margin-bottom:14px}
+  .warn p{margin:0;color:#7d3b3b;font-size:14.3px} .warn p b{color:#a02622} .warn p+p{margin-top:7px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin-bottom:10px}
+  th,td{padding:8px 11px;text-align:left;border-bottom:1px solid #eceae4}
+  th{background:#f5f4f0;font-weight:600;color:#333;font-size:12.5px}
+  td.m{font-family:ui-monospace,Menlo,monospace}
+  td.y{color:#2c6614;font-weight:600} td.n{color:#c53b3b}
+  footer{text-align:center;font-size:12.5px;color:#a5a29a;margin-top:32px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🔤 First Non-Repeating Character In Stream</h1>
+<p class="sub">字符流不断进来，任意时刻 O(1) 说出第一个不重复的字符</p>
+<div class="core"><b>骨架和 LRU 一样：Map 管定位 + 双向链表管顺序。</b><br>
+但语义完全不同 —— 链表里<b>只装"目前还不重复"的字符</b>，没有 capacity，答案就是链表最前面那个。</div>
+
+<div class="setup">
+  <div class="field"><label for="seq">字符流（连着写，或用空格隔开）</label><input id="seq" value="a b c a c c b"></div>
+  <button onclick="apply()">重新生成</button>
+</div>
+<div class="presets">
+  <button onclick="preset('a b c a c c b')">题目例子</button>
+  <button onclick="preset('a a b')">第一个就被废掉</button>
+  <button onclick="preset('a b a b')">全都废掉 → null</button>
+  <button onclick="preset('a a a a')">同一个来四次</button>
+  <button onclick="preset('a b c d')">一个都不重复</button>
+</div>
+<div class="err" id="err"></div>
+
+<div class="ctrl">
+  <button onclick="next()">▶ 下一步</button>
+  <button onclick="play()" id="playbtn">⚡ 自动</button>
+  <button class="alt" onclick="prev()">◀ 上一步</button>
+  <button class="alt" onclick="reset()">↺ 重置</button>
+</div>
+
+<div class="stepno" id="stepno">步骤 0 / 0</div>
+<div class="cline" id="cline">（还没开始）</div>
+
+<div class="stream" id="stream"></div>
+
+<div class="stage">
+  <div class="lbl">双向链表 · 只装「目前还不重复」的字符，从左到右 = 到达顺序</div>
+  <div class="dll" id="dll"></div>
+  <div class="loop">↺ 这是个循环链表：tail.next 指回 head 哨兵，所以 remove 里一个 null 判断都不需要</div>
+  <div class="sets">
+    <div class="setbox">
+      <div class="t">singled : Map&lt;Character, Node&gt; · 只出现过一次的</div>
+      <div class="chips" id="singled"></div>
+    </div>
+    <div class="setbox">
+      <div class="t">repeated : Set&lt;Character&gt; · 已经废掉的（墓碑）</div>
+      <div class="chips" id="repeated"></div>
+    </div>
+  </div>
+</div>
+
+<div class="ansbar" id="ansbar"></div>
+<div class="say" id="say">点「下一步」开始。注意最左边那个<b>虚线方框是哨兵</b>，它永远不动，<code>head.next</code> 就是答案。</div>
+
+<h2>一个字符的三种状态</h2>
+<div class="panel">
+  <table>
+    <tr><th style="width:210px">状态</th><th>在 singled 里</th><th>在 repeated 里</th><th>在链表里</th></tr>
+    <tr><td>1. 还没出现过</td><td class="n">✗</td><td class="n">✗</td><td class="n">✗</td></tr>
+    <tr><td>2. <b>只出现过一次</b></td><td class="y">✓</td><td class="n">✗</td><td class="y">✓</td></tr>
+    <tr><td>3. 出现过两次以上</td><td class="n">✗</td><td class="y">✓</td><td class="n">✗</td></tr>
+  </table>
+  <p><code>read()</code> 里那三个分支，就是按这三种状态分的。<b>只有状态 2 的字符才在链表里</b>，所以链表最前面那个就是答案。</p>
+</div>
+
+<h2>为什么需要 repeated 这个 Set</h2>
+<div class="warn">
+  <p>讲义的 Discussion 问：<b>直接用一个没有 size 限制的 LRU 来做这题，对吗？</b>答案是不对。</p>
+  <p>第一个 a 来 → 加 map + 加链表；第二个 a 来 → 从 map 和链表都删掉。<b>第三个 a 来 → 你分不清它是"第一次来"还是"已经来过又被删了"。</b></p>
+  <p>删干净之后，这个字符在数据结构里<b>不留任何痕迹</b>。<code>repeated</code> 就是墓碑，专门记住"这个字符已经废了，以后再来直接无视"。</p>
+  <p>试试「同一个来四次」那个预设，后两次 a 走的就是 <code>repeated.contains(ch)</code> 那条直接 return 的路。</p>
+</div>
+
+<h2>哨兵怎么用的</h2>
+<div class="panel">
+  <p>构造器里<b>只 new 了一个节点</b>：</p>
+  <p><code>tail = new Node(null); tail.next = tail.prev = tail; head = tail;</code></p>
+  <p>head 和 tail 都指着它，而它自己的 next 和 prev 都指向自己 —— <b>一个只有一个元素的循环链表</b>。</p>
+  <p>好处：<code>remove</code> 里 <code>node.prev</code> 和 <code>node.next</code> <b>永远不为 null</b>（最差也是哨兵），所以一个 null 判断都不需要。对比 LRU 205 那份答案，那里没用哨兵，remove 里有四个 if。</p>
+  <p><b>head 从头到尾没变过</b>，一直是哨兵。所以 <code>head.next</code> 永远是"最早进来且还没重复的那个"，正好是答案。<code>head == tail</code> 表示只剩哨兵，链表空了。</p>
+</div>
+
+<h2>和 LRU 205 的对照</h2>
+<div class="panel">
+  <table>
+    <tr><th style="width:170px"></th><th>LRU Cache</th><th>First Non-Repeating</th></tr>
+    <tr><td>链表里装什么</td><td>缓存里所有 key</td><td><b>只装还不重复的字符</b></td></tr>
+    <tr><td>有 capacity 吗</td><td>有 limit</td><td><b>没有</b></td></tr>
+    <tr><td>什么时候删节点</td><td>满了删最老的</td><td><b>这个字符第二次出现时</b></td></tr>
+    <tr><td>链表顺序表示</td><td>最近使用程度</td><td><b>到达时间</b></td></tr>
+    <tr><td>答案是什么</td><td>get 的返回值</td><td><b>head.next</b></td></tr>
+    <tr><td>额外结构</td><td>无</td><td><b>repeated 墓碑集合</b></td></tr>
+  </table>
+  <p><b>共用的不是"缓存"这个概念，是「Map 管定位 + 双向链表管顺序」这套组合。</b>任何"需要按某种顺序排队 + 需要 O(1) 定位并删除中间元素"的题，都长这个样子。</p>
+</div>
+
+<h2>代码</h2>
+<pre id="code"></pre>
+
+<footer>read / firstNonRepeating 均为 O(1)</footer>
+</div>
+
+<script>
+const CODE=[
+"public void read(char ch) {",
+"  if (repeated.contains(ch)) {      // 状态 3：已经废了，直接无视",
+"    return;",
+"  }",
+"  Node node = singled.get(ch);",
+"  if (node == null) {               // 状态 1：第一次见",
+"    node = new Node(ch);",
+"    append(node);                   // 进链表尾巴 + 进 singled",
+"  } else {                          // 状态 2：第二次见",
+"    remove(node);                   // 出链表 + 出 singled + 进 repeated",
+"  }",
+"}",
+"",
+"private void append(Node node) {",
+"  singled.put(node.ch, node);",
+"  tail.next = node;",
+"  node.prev = tail;",
+"  node.next = head;                 // 循环：接回哨兵",
+"  tail = tail.next;",
+"}",
+"",
+"private void remove(Node node) {",
+"  node.prev.next = node.next;       // 哨兵保证 prev/next 不为 null",
+"  node.next.prev = node.prev;",
+"  if (node == tail) {",
+"    tail = node.prev;",
+"  }",
+"  node.prev = node.next = null;",
+"  repeated.add(node.ch);            // 立墓碑",
+"  singled.remove(node.ch);",
+"}",
+"",
+"public Character firstNonRepeating() {",
+"  if (head == tail) {               // 只剩哨兵 = 链表空",
+"    return null;",
+"  }",
+"  return head.next.ch;              // 哨兵后面第一个 = 最老的",
+"}"
+];
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+let SEQ=[],steps=[],cur=0,timer=null;
+const el=id=>document.getElementById(id);
+
+function build(seq){
+  const S=[];
+  let list=[],singled=[],repeated=[];
+  const snap=()=>({list:list.slice(),singled:singled.slice(),repeated:repeated.slice()});
+  S.push({i:-1,...snap(),on:[],kind:null,
+    text:`构造器里<b>只 new 了一个哨兵节点</b>，head 和 tail 都指着它，它自己的 next / prev 也指向自己。<br>现在链表里只有哨兵 → <code>head == tail</code> → <code>firstNonRepeating()</code> 返回 null。`});
+  seq.forEach((ch,i)=>{
+    let kind,on,txt;
+    if(repeated.includes(ch)){
+      kind="skip";on=[0,1,2];
+      txt=`<b>${ch}</b> 已经在 repeated 里（<span class="p">墓碑</span>）→ <b>直接 return，什么都不做</b>。<br>这就是为什么需要 repeated：没有它，你分不清这个 ${ch} 是第一次来还是已经废了。`;
+    }else if(!singled.includes(ch)){
+      kind="newin";on=[4,5,6,7];
+      list.push(ch);singled.push(ch);
+      txt=`<b>${ch}</b> 第一次见（<code>singled.get(${ch})</code> 返回 null）→ <span class="g">建新节点，挂到链表尾巴</span>，并存进 singled。`;
+    }else{
+      kind="kill";on=[8,9];
+      list=list.filter(c=>c!==ch);
+      singled=singled.filter(c=>c!==ch);
+      repeated.push(ch);
+      txt=`<b>${ch}</b> 第二次见（singled 里有它）→ <span class="r">从链表摘掉、从 singled 删掉、加进 repeated 立墓碑</span>。<br>它从此不再是"不重复的字符"了。`;
+    }
+    S.push({i,...snap(),on,kind,ch,text:txt});
+  });
+  S.push({i:seq.length,...snap(),on:[31,32,33,34,35],done:true,
+    text:`流跑完了。链表里剩下的都是<b>只出现过一次</b>的字符，从左到右就是到达顺序。<br><code>head.next</code> 就是答案 —— ${list.length?`现在是 <b>${list[0]}</b>`:`链表空了，返回 <b>null</b>`}。`});
+  return S;
+}
+
+function render(){
+  const s=steps[cur];
+  el("stream").innerHTML=SEQ.map((c,i)=>{
+    let cls="";
+    if(i<s.i) cls="done";
+    else if(i===s.i) cls="now "+(s.kind||"");
+    return `<div class="sc ${cls}"><span class="v">${c}</span><span class="i">${i}</span></div>`;
+  }).join("");
+
+  let h=`<div class="node sentinel"><span class="cap h">head 哨兵</span><span class="ch">sentinel</span></div>`;
+  if(!s.list.length){
+    h+=`<span class="lk">⇄</span><span class="empty">　（链表里没有真实节点，head == tail）　</span>`;
+  }else{
+    s.list.forEach((c,idx)=>{
+      const isFirst=idx===0, isTail=idx===s.list.length-1;
+      let cls="node"+(isFirst?" first":"")+(s.kind==="newin"&&s.ch===c?" newnode":"");
+      let cap = isFirst?'<span class="cap ans">head.next = 答案</span>'
+              :(isTail?'<span class="cap t">tail</span>':"");
+      h+=`<span class="lk">⇄</span><div class="${cls}">${cap}<span class="ch">${c}</span></div>`;
+    });
+  }
+  el("dll").innerHTML=h;
+
+  el("singled").innerHTML=s.singled.length
+    ? s.singled.map(c=>`<span class="chip s">${c} → Node</span>`).join("")
+    : '<span class="empty">（空）</span>';
+  el("repeated").innerHTML=s.repeated.length
+    ? s.repeated.map(c=>`<span class="chip r">${c}</span>`).join("")
+    : '<span class="empty">（空）</span>';
+
+  el("ansbar").innerHTML = s.i<0&&!s.done
+    ? 'firstNonRepeating() → <b class="nul">null</b>'
+    : `firstNonRepeating() → ${s.list.length?`<b>${s.list[0]}</b>`:'<b class="nul">null</b>'}`;
+
+  el("stepno").textContent=`步骤 ${cur} / ${steps.length-1}`;
+  const cl=el("cline");
+  cl.textContent = s.i<0 ? "构造器：建哨兵，head = tail = sentinel"
+    : (s.done ? "return head.next.ch;"
+    : (s.kind==="skip"?`read('${s.ch}')  →  repeated.contains  →  return`
+    : (s.kind==="newin"?`read('${s.ch}')  →  singled.get 为 null  →  append`
+    : `read('${s.ch}')  →  singled 里有  →  remove`)));
+  cl.className="cline"+((s.i<0||s.done)?" plain":"");
+  el("say").innerHTML=s.text;
+  el("code").innerHTML=CODE.map((ln,i)=>
+    `<span class="ln${(s.on||[]).includes(i)?" on":""}">${esc(ln)||" "}</span>`).join("");
+}
+function next(){cur<steps.length-1?(cur++,render()):stop();}
+function prev(){if(cur>0){cur--;render();}}
+function reset(){stop();cur=0;render();}
+function stop(){if(timer){clearInterval(timer);timer=null;el("playbtn").textContent="⚡ 自动";}}
+function play(){if(timer)return stop();el("playbtn").textContent="⏸ 暂停";timer=setInterval(next,1600);}
+function preset(s){el("seq").value=s;apply();}
+function apply(){
+  stop();
+  const raw=el("seq").value.replace(/[\s,、]/g,"").split("");
+  const err=el("err");
+  if(raw.length<1){err.textContent="至少填一个字符";return;}
+  if(raw.length>14){err.textContent="最多 14 个字符";return;}
+  err.textContent="";
+  SEQ=raw;steps=build(SEQ);cur=0;render();
+}
+apply();
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT")return;
+  if(e.key==="ArrowRight"){next();e.preventDefault();}
+  if(e.key==="ArrowLeft"){prev();e.preventDefault();}
+});
+</script>
+</body>
+</html>
