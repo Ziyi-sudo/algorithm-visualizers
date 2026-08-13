@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Algorithm Visualizers — Ziyi Jia</title>
+<style>
+  :root{
+    --bg:#fbfaf8; --fg:#1a1917; --muted:#6b6862;
+    --card:#fff; --line:#e6e2db; --accent:#2f6f5e;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:56px 24px 80px}
+  header{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:40px}
+  h1{margin:0 0 10px;font-size:32px;letter-spacing:-.02em}
+  .sub{margin:0;color:var(--muted);max-width:62ch}
+  .meta{margin-top:18px;font-size:14px;color:var(--muted)}
+  .meta a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(47,111,94,.3)}
+  .meta a:hover{border-bottom-color:var(--accent)}
+  .search{
+    margin:32px 0 8px;width:100%;padding:12px 14px;font-size:15px;
+    border:1px solid var(--line);border-radius:8px;background:var(--card);
+    font-family:inherit;
+  }
+  .search:focus{outline:none;border-color:var(--accent)}
+  h2{
+    font-size:13px;text-transform:uppercase;letter-spacing:.09em;
+    color:var(--muted);margin:44px 0 14px;font-weight:600;
+  }
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+  a.card{
+    display:block;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:14px 16px;text-decoration:none;color:inherit;
+    transition:border-color .12s, transform .12s;
+  }
+  a.card:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .name{font-weight:600;font-size:15px;margin-bottom:3px}
+  .file{font-size:12px;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}
+  .empty{color:var(--muted);padding:20px 0;display:none}
+  footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+  footer a{color:var(--accent);text-decoration:none}
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#141412;--fg:#eceae6;--muted:#98948c;--card:#1e1d1a;--line:#2e2c28;--accent:#7fc4ad}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Algorithm Visualizers</h1>
+  <p class="sub">Step through classic algorithm patterns one state at a time. Each page is
+  self-contained — no build, no install. Watch the pointers move and see why the invariant holds,
+  instead of reading that it does.</p>
+  <p class="meta">
+    Built by Ziyi Jia ·
+    <a href="https://github.com/Ziyi-sudo/algorithm-visualizers">Source on GitHub</a> ·
+    <a href="https://www.linkedin.com/in/ziyi-jia-7a5a32381">LinkedIn</a>
+  </p>
+</header>
+
+<input class="search" id="q" type="search" placeholder="Filter…  (try: pointer, graph, sort)" autocomplete="off">
+<p class="empty" id="empty">No match.</p>
+
+<section data-group>
+  <h2>Two Pointers &amp; Sliding Window</h2>
+  <div class="grid">
+    <a class="card" href="398-sliding-window.html"><div class="name">Sliding Window (398)</div><div class="file">398-sliding-window.html</div></a>
+    <a class="card" href="sliding-window-indices.html"><div class="name">Sliding Window — Index Tracking</div><div class="file">sliding-window-indices.html</div></a>
+    <a class="card" href="3sum-visualizer.html"><div class="name">3Sum</div><div class="file">3sum-visualizer.html</div></a>
+    <a class="card" href="max-water-two-pointer-visualizer.html"><div class="name">Container With Most Water</div><div class="file">max-water-two-pointer-visualizer.html</div></a>
+    <a class="card" href="square-animated-check.html"><div class="name">Squares of a Sorted Array</div><div class="file">square-animated-check.html</div></a>
+    <a class="card" href="keep-distance-visualizer.html"><div class="name">Keep Distance</div><div class="file">keep-distance-visualizer.html</div></a>
+    <a class="card" href="keep-distance-position-first-visualizer.html"><div class="name">Keep Distance — Position First</div><div class="file">keep-distance-position-first-visualizer.html</div></a>
+  </div>
+</section>
+
+<section data-group>
+  <h2>Deduplication &amp; In-Place Rewriting</h2>
+  <div class="grid">
+    <a class="card" href="dedup-iv-visualizer.html"><div class="name">Remove Duplicates IV</div><div class="file">dedup-iv-visualizer.html</div></a>
+    <a class="card" href="dedup4_1333222333.html"><div class="name">Dedup — Worked Example</div><div class="file">dedup4_1333222333.html</div></a>
+    <a class="card" href="reorder-array-visualizer.html"><div class="name">Reorder Array</div><div class="file">reorder-array-visualizer.html</div></a>
+    <a class="card" href="reorder-array-visualizer_1.html"><div class="name">Reorder Array — Variant</div><div class="file">reorder-array-visualizer_1.html</div></a>
+    <a class="card" href="sentinel-vs-no-sentinel.html"><div class="name">Sentinel vs No Sentinel</div><div class="file">sentinel-vs-no-sentinel.html</div></a>
+  </div>
+</section>
+
+<section data-group>
+  <h2>Graphs &amp; Traversal</h2>
+  <div class="grid">
+    <a class="card" href="deep-copy-graph-bfs-visualizer.html"><div class="name">Clone Graph — BFS</div><div class="file">deep-copy-graph-bfs-visualizer.html</div></a>
+    <a class="card" href="deep-copy-graph-visualizer.html"><div class="name">Clone Graph</div><div class="file">deep-copy-graph-visualizer.html</div></a>
+    <a class="card" href="deep-copy-linkedlist-random-visualizer.html"><div class="name">Copy List With Random Pointer</div><div class="file">deep-copy-linkedlist-random-visualizer.html</div></a>
+    <a class="card" href="bipartite-visualizer.html"><div class="name">Bipartite Check</div><div class="file">bipartite-visualizer.html</div></a>
+    <a class="card" href="max-water-2d-bfs-visualizer.html"><div class="name">Trapping Rain Water 2D — BFS</div><div class="file">max-water-2d-bfs-visualizer.html</div></a>
+    <a class="card" href="priority-parentheses-dfs.html"><div class="name">Valid Parentheses — DFS</div><div class="file">priority-parentheses-dfs.html</div></a>
+  </div>
+</section>
+
+<section data-group>
+  <h2>Trees</h2>
+  <div class="grid">
+    <a class="card" href="reconstruct-levelorder.html"><div class="name">Reconstruct From Level Order</div><div class="file">reconstruct-levelorder.html</div></a>
+    <a class="card" href="path-sum-target-prefixsum.html"><div class="name">Path Sum III — Prefix Sum</div><div class="file">path-sum-target-prefixsum.html</div></a>
+    <a class="card" href="closest_k_values_stepper.html"><div class="name">Closest K Values in BST</div><div class="file">closest_k_values_stepper.html</div></a>
+    <a class="card" href="flatten-prev-pointer.html"><div class="name">Flatten With Prev Pointer</div><div class="file">flatten-prev-pointer.html</div></a>
+  </div>
+</section>
+
+<section data-group>
+  <h2>Sorting &amp; Selection</h2>
+  <div class="grid">
+    <a class="card" href="quicksort-twopointer-partition.html"><div class="name">Quicksort — Two-Pointer Partition</div><div class="file">quicksort-twopointer-partition.html</div></a>
+    <a class="card" href="quicksort-v.html"><div class="name">Quicksort — Variant</div><div class="file">quicksort-v.html</div></a>
+    <a class="card" href="kth-smallest-two-sorted-arrays.html"><div class="name">Kth Smallest in Two Sorted Arrays</div><div class="file">kth-smallest-two-sorted-arrays.html</div></a>
+    <a class="card" href="kth-two-arrays-animated.html"><div class="name">Kth in Two Arrays — Animated</div><div class="file">kth-two-arrays-animated.html</div></a>
+    <a class="card" href="largest_second_largest_stepper.html"><div class="name">Largest &amp; Second Largest</div><div class="file">largest_second_largest_stepper.html</div></a>
+    <a class="card" href="largest_smallest_pairing_stepper.html"><div class="name">Largest–Smallest Pairing</div><div class="file">largest_smallest_pairing_stepper.html</div></a>
+    <a class="card" href="largest-x-animated.html"><div class="name">Largest X</div><div class="file">largest-x-animated.html</div></a>
+  </div>
+</section>
+
+<section data-group>
+  <h2>Counting, Voting &amp; Streams</h2>
+  <div class="grid">
+    <a class="card" href="boyer-moore-majority.html"><div class="name">Boyer–Moore Majority</div><div class="file">boyer-moore-majority.html</div></a>
+    <a class="card" href="majority-ii-animated.html"><div class="name">Majority Element II</div><div class="file">majority-ii-animated.html</div></a>
+    <a class="card" href="first-non-repeating-stream.html"><div class="name">First Non-Repeating in a Stream</div><div class="file">first-non-repeating-stream.html</div></a>
+    <a class="card" href="matches-animated.html"><div class="name">Matches</div><div class="file">matches-animated.html</div></a>
+  </div>
+</section>
+
+<section data-group>
+  <h2>Matrices</h2>
+  <div class="grid">
+    <a class="card" href="rotate-matrix-visualizer.html"><div class="name">Rotate Matrix</div><div class="file">rotate-matrix-visualizer.html</div></a>
+    <a class="card" href="spiral-traversal-visualizer.html"><div class="name">Spiral Traversal</div><div class="file">spiral-traversal-visualizer.html</div></a>
+    <a class="card" href="spiral-traversal-ii-visualizer.html"><div class="name">Spiral Traversal II</div><div class="file">spiral-traversal-ii-visualizer.html</div></a>
+  </div>
+</section>
+
+<section data-group>
+  <h2>Data Structure Design</h2>
+  <div class="grid">
+    <a class="card" href="lru-205-complete.html"><div class="name">LRU Cache</div><div class="file">lru-205-complete.html</div></a>
+  </div>
+</section>
+
+<footer>
+  Vanilla HTML, CSS, and JavaScript. No framework, no build step.
+  <a href="https://github.com/Ziyi-sudo/algorithm-visualizers">View source</a>.
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var q = document.getElementById('q');
+  var empty = document.getElementById('empty');
+  var groups = [].slice.call(document.querySelectorAll('[data-group]'));
+  q.addEventListener('input', function(){
+    var t = q.value.trim().toLowerCase();
+    var any = false;
+    groups.forEach(function(g){
+      var shown = 0;
+      [].slice.call(g.querySelectorAll('a.card')).forEach(function(c){
+        var hit = !t || (c.textContent + ' ' + g.querySelector('h2').textContent).toLowerCase().indexOf(t) > -1;
+        c.style.display = hit ? '' : 'none';
+        if (hit) shown++;
+      });
+      g.style.display = shown ? '' : 'none';
+      if (shown) any = true;
+    });
+    empty.style.display = any ? 'none' : 'block';
+  });
+})();
+</script>
+</body>
+</html>
