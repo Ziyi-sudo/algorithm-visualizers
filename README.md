@@ -20,7 +20,7 @@ invariant wasn't obvious from the code, it became a page here.
 - **Streaming** — first non-repeating character over a live stream
 - **Voting** — Boyer-Moore majority, and why the counter can't go wrong
 
-【这几行按你实际文件补充或删减,别留不存在的类别】
+
 
 ## Stack
 
