@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>门外做事，递归就进不了门 — Bipartite / Deep Copy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8e5df;
+  --bg-deep:#d8d4cc;
+  --card:#fff;
+  --ink:#15191e;
+  --soft:#5d6873;
+  --faint:#98a2ad;
+  --rule:#e2ded6;
+  --blue:#2563a8;
+  --blue-bg:#e8f0f9;
+  --rose:#c2405f;
+  --rose-bg:#fbe9ee;
+  --teal:#0f766e;
+  --teal-bg:#e4f2f0;
+  --fault:#c0392b;
+  --fault-bg:#fbe9e6;
+  --mark:#e8b93c;
+  --lift:0 1px 2px rgba(21,25,30,.06), 0 6px 16px rgba(21,25,30,.08);
+  --lift-lg:0 2px 4px rgba(21,25,30,.07), 0 14px 34px rgba(21,25,30,.13);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;
+  font-size:16px;line-height:1.7;
+  background-image:radial-gradient(circle at 20% 0%, #f2f0ec 0%, var(--bg) 46%, var(--bg-deep) 100%);
+  background-attachment:fixed;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:52px 22px 90px}
+
+header{margin-bottom:30px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+h1{font-size:clamp(27px,4.6vw,40px);line-height:1.16;font-weight:700;margin:0 0 14px;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--fault)}
+.lede{font-size:16.5px;color:var(--soft);max-width:64ch;margin:0}
+.lede code,p code,li code{font-family:"JetBrains Mono",monospace;font-size:.88em;background:rgba(21,25,30,.06);padding:1px 5px;border-radius:3px}
+
+.switch{display:flex;gap:10px;margin:26px 0 14px;flex-wrap:wrap}
+.switch button{
+  appearance:none;border:0;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:14px;font-weight:500;padding:11px 20px;background:var(--card);color:var(--soft);
+  box-shadow:var(--lift);transition:transform .16s,box-shadow .16s,background .16s,color .16s
+}
+.switch button:hover{transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.switch button[aria-selected="true"]{background:var(--ink);color:#fff;transform:translateY(-2px);box-shadow:var(--lift-lg)}
+.switch.sub button{font-size:13.5px;padding:9px 16px;border-radius:8px}
+.switch.sub button[aria-selected="true"].bad{background:var(--fault)}
+.switch.sub button[aria-selected="true"].good{background:var(--teal)}
+button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+
+.stage{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start;margin-top:18px}
+@media(max-width:820px){.stage{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:16px 18px;box-shadow:var(--lift)}
+.card+.card{margin-top:14px}
+.card h3{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 12px;font-weight:500}
+
+pre.code{margin:0;font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.9;white-space:pre;overflow-x:auto}
+pre.code .ln{display:block;padding:1px 9px;border-radius:4px;color:var(--soft);border-left:3px solid transparent}
+pre.code .ln.on{background:#fdf7e6;border-left-color:var(--mark);color:var(--ink);font-weight:500}
+pre.code .ln.fault{background:var(--fault-bg);border-left-color:var(--fault);color:var(--fault);font-weight:500}
+
+.gate{margin-top:14px;background:var(--card);border-radius:12px;padding:16px 18px;box-shadow:var(--lift)}
+.gatebar{display:flex;align-items:center;gap:14px;min-height:56px}
+.caller{
+  font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:500;padding:8px 13px;
+  border-radius:8px;background:var(--blue-bg);color:var(--blue);white-space:nowrap;
+  box-shadow:0 2px 6px rgba(37,99,168,.18);transition:transform .3s cubic-bezier(.34,1.4,.64,1),opacity .2s
+}
+.door{flex:0 0 7px;align-self:stretch;background:var(--ink);border-radius:4px;position:relative;transition:background .2s,box-shadow .2s}
+.door::after{
+  content:attr(data-state);position:absolute;left:50%;top:-10px;transform:translateX(-50%);
+  font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;color:var(--faint);white-space:nowrap
+}
+.gate.open .door{background:var(--teal);box-shadow:0 0 0 5px var(--teal-bg)}
+.gate.blocked .door{background:var(--fault);box-shadow:0 0 0 5px var(--fault-bg)}
+.gate.open .caller{transform:translateX(14px)}
+.gate.blocked .caller{transform:translateX(-18px)}
+.gatenote{font-size:13.5px;color:var(--soft);flex:1;min-width:0}
+.gate.blocked .gatenote{color:var(--fault)}
+@media(prefers-reduced-motion:reduce){.caller,.switch button{transition:none}}
+
+/* stacked plates */
+.stack{padding-top:6px}
+.plate{
+  font-family:"JetBrains Mono",monospace;font-size:12.5px;font-weight:500;
+  background:linear-gradient(180deg,#fff,#f6f4f0);border-radius:8px;padding:7px 12px;
+  box-shadow:0 1px 0 #e6e2da, 0 3px 0 #efece6, 0 6px 14px rgba(21,25,30,.1);
+  color:var(--faint);margin-bottom:9px;transform-origin:left center
+}
+.plate.top{color:var(--ink);box-shadow:0 1px 0 #dcd7cd, 0 4px 0 #e9e5dd, 0 12px 22px rgba(21,25,30,.16)}
+.plate.dead{background:var(--fault-bg);color:var(--fault)}
+
+table.ledger{width:100%;border-collapse:collapse;font-family:"JetBrains Mono",monospace;font-size:13px}
+table.ledger th{text-align:left;font-weight:500;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:0 0 6px;border-bottom:1px solid var(--rule)}
+table.ledger td{padding:4px 0}
+td.k{color:var(--blue);width:44%}
+td.v{color:var(--teal)}
+td.v.b{color:var(--blue)} td.v.r{color:var(--rose)}
+.empty{color:var(--faint);font-family:"JetBrains Mono",monospace;font-size:13px;margin:0}
+.nbrow{font-family:"JetBrains Mono",monospace;font-size:13px;padding:3px 0}
+.nbrow b{font-weight:500;color:var(--teal)}
+.nbrow .miss{color:var(--fault)}
+
+.log{margin-top:14px;padding:14px 17px;border-radius:12px;background:var(--card);box-shadow:var(--lift);font-size:15px;min-height:56px;border-left:4px solid var(--ink)}
+.log.warn{border-left-color:var(--mark)}
+.log.fault{border-left-color:var(--fault);color:var(--fault);background:#fffaf9}
+
+.controls{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.controls button{
+  appearance:none;background:var(--card);border:0;border-radius:9px;font-family:inherit;font-size:14px;
+  padding:10px 22px;cursor:pointer;color:var(--ink);box-shadow:var(--lift);transition:transform .15s,box-shadow .15s
+}
+.controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.controls button:disabled{opacity:.4;cursor:default;box-shadow:none}
+.pos{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--faint)}
+.verdict{margin-left:auto;font-size:14px;font-weight:500}
+.verdict.bad{color:var(--fault)} .verdict.good{color:var(--teal)}
+
+.takeaway{margin-top:54px;padding-top:30px;border-top:1px solid rgba(21,25,30,.14)}
+h2{font-size:21px;font-weight:500;margin:0 0 12px;letter-spacing:-.01em}
+p{max-width:68ch}
+.rules{list-style:none;padding:0;margin:20px 0 0;counter-reset:r;display:grid;gap:12px}
+.rules li{counter-increment:r;background:var(--card);border-radius:11px;padding:14px 18px;box-shadow:var(--lift);display:grid;grid-template-columns:auto 1fr;gap:15px}
+.rules li::before{content:counter(r);font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--faint);padding-top:3px}
+.rules b{display:block;font-weight:500}
+.rules span{color:var(--soft);font-size:14.5px}
+footer{margin-top:44px;font-size:13px;color:var(--faint)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">laicode 56 bipartite · 132 deep copy graph</p>
+  <h1>门外做事，<em>递归就进不了门</em></h1>
+  <p class="lede">两道题，同一个洞。门口的闸问的是「<code>map</code> 里有没有它」，而门外那句 <code>put</code> 恰恰就是往 <code>map</code> 里塞——你在门外把自己人写进了名单，门卫按规矩把他挡了。左右方向键也能翻步。</p>
+</header>
+
+<div class="switch" role="tablist" id="probs"></div>
+<div class="switch sub" role="tablist" id="vers"></div>
+
+<div class="stage">
+  <div>
+    <div class="card"><h3 id="codeTitle">写法</h3><pre class="code" id="code"></pre></div>
+    <div class="gate" id="gate">
+      <div class="gatebar">
+        <span class="caller" id="caller">—</span>
+        <span class="door" id="door" data-state=""></span>
+        <span class="gatenote" id="gatenote"></span>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="card"><h3 id="gTitle">图</h3><div id="graph"></div></div>
+    <div class="card"><h3 id="sTitle">状态</h3><div id="state"></div></div>
+    <div class="card"><h3>调用栈</h3><div class="stack" id="stack"></div></div>
+  </div>
+</div>
+
+<div class="log" id="log"></div>
+
+<div class="controls">
+  <button id="prev" type="button">上一步</button>
+  <button id="next" type="button">下一步</button>
+  <span class="pos" id="pos"></span>
+  <span class="verdict" id="verdict"></span>
+</div>
+
+<section class="takeaway">
+  <h2>三个动作，各归各位</h2>
+  <p>两道题里那件「在门外做的事」，名字不同、形状一样：Bipartite 是<b>门外染色</b>，Deep Copy 是<b>门外造壳</b>。它们都会写进闸所依据的那个容器，于是递归到门口就被自己刚写下的记录挡了回去——被展开节点的邻居列表根本没打开过。</p>
+  <ol class="rules">
+    <li><b>写容器 —— 放在函数开头，进门就写</b><span>跟闸配套。闸问 map，那就只有进了门的人能写 map；门外一个 <code>put</code> 都不留。染色、造壳都属于这一类。</span></li>
+    <li><b>递归 —— 放在「它还没被记过」的分支里</b><span>已经在 map 里，说明它自己那趟跑过或正在跑。环上的节点第二次被撞见时在这里短路，所以不会死循环。</span></li>
+    <li><b>连线 / 比色 —— 放在 if 外，无条件执行</b><span>建节点和连边是两回事，节点已存在 ≠ 边已连上。同理，冲突恰恰只在撞见「已经有颜色的老熟人」时才暴露——把它挪进 if 就等于每次都扭头走开。</span></li>
+  </ol>
+  <p style="margin-top:22px"><b>判据一句话：染色时机和防重复闸门是配套的一对，拆一半就空转。</b></p>
+</section>
+
+<footer>单步演示 · Bipartite 用三角形 1–2–3（非二分图，正确答案为 false）· Deep Copy 用 A–B 两点一边，副本记作 A′ B′</footer>
+</div>
+
+<script>
+var CODE={
+bpBad:["dfs(node, flag):",
+"  map 有 node → return true         ← 闸还留着",
+"  // map.put(node, flag)             ← 被注释掉了",
+"  对每个 nei:",
+"    c ← map.get(nei)",
+"    c 为空:",
+"       map.put(nei, !flag)           ← 在门外染色",
+"       dfs(nei, !flag)",
+"    否则 → c == flag 就 return false",
+"  return true"],
+bpGood:["dfs(node, flag):",
+"  map 有 node → return true         ← 闸",
+"  map.put(node, flag)                ← 唯一染色处,进门就染",
+"  对每个 nei:",
+"    c ← map.get(nei)",
+"    c 为空 → dfs(nei, !flag) 为假就 return false",
+"    否则  → c == flag 就 return false",
+"  return true"],
+dcBad:["dfs(node):",
+"  map 有 node → return              ← 闸",
+"  cur ← new 壳;  map.put(node, cur)",
+"  对每个 nei:",
+"    map 没有 nei → map.put(nei, 新壳)   ← 门外造壳",
+"    cur.neighbors.add(map.get(nei))",
+"    dfs(nei)"],
+dcGood:["dfs(node):",
+"  map 有 node → return              ← 闸",
+"  cur ← new 壳;  map.put(node, cur)   ← 唯一造壳处",
+"  对每个 nei:",
+"    map 没有 nei → dfs(nei)          ← 只管递归,不造壳",
+"    cur.neighbors.add(map.get(nei))  ← 在 if 外,无条件"]};
+
+// [line, state, stack, log, tone, gate, caller, note]
+// tone 0 normal 1 warn 2 fault ; gate "" | "open" | "blocked"
+var T={
+bpBad:[
+[1,{},["dfs(1,蓝)"],"进 dfs(1)。map 空，闸放行。",0,"open","dfs(1)","map 里没有 1 → 放行"],
+[2,{},["dfs(1,蓝)"],"染色那行被注释掉了 —— 1 到现在还没有颜色。",1,"","",""],
+[4,{},["dfs(1,蓝)"],"看邻居 2：无色。",0,"","",""],
+[6,{2:"r"},["dfs(1,蓝)"],"在门外给 2 染色：红。map 里现在有 2 了。",1,"","","门外刚把 2 写进了 map"],
+[7,{2:"r"},["dfs(1,蓝)","dfs(2,红)"],"递归 dfs(2, 红)。",0,"","dfs(2)","2 走向门口……"],
+[1,{2:"r"},["dfs(1,蓝)","dfs(2,红)*"],"闸一查：map 里已经有 2 了（刚在门外塞的）→ return true，掉头就走。2 的邻居一个都没看。",2,"blocked","dfs(2)","map 里有 2 → 拦下，自己人被自己挡了"],
+[4,{2:"r"},["dfs(1,蓝)"],"回到 1，看邻居 3：无色。",0,"","",""],
+[6,{2:"r",3:"r"},["dfs(1,蓝)"],"门外染色：3 ← 红。注意 2 和 3 现在同色，而它们相邻。",1,"","",""],
+[7,{2:"r",3:"r"},["dfs(1,蓝)","dfs(3,红)"],"递归 dfs(3, 红)。",0,"","dfs(3)","3 走向门口……"],
+[1,{2:"r",3:"r"},["dfs(1,蓝)","dfs(3,红)*"],"闸再次拦下自己人 → return true。3 的邻居也没看。",2,"blocked","dfs(3)","map 里有 3 → 拦下"],
+[9,{2:"r",3:"r"},["dfs(1,蓝)"],"1 的邻居走完 → return true。2–3 这条同色边从没被检查过。",2,"","",""]],
+bpGood:[
+[1,{},["dfs(1,蓝)"],"进 dfs(1)。map 空，闸放行。",0,"open","dfs(1)","map 里没有 1 → 放行"],
+[2,{1:"b"},["dfs(1,蓝)"],"染色：1 ← 蓝。这是唯一染色的地方。",0,"","",""],
+[4,{1:"b"},["dfs(1,蓝)"],"看邻居 2：无色。",0,"","",""],
+[5,{1:"b"},["dfs(1,蓝)","dfs(2,红)"],"递归 dfs(2, 红)。颜色由父亲算好了传下去。",0,"","dfs(2)","2 走向门口……"],
+[1,{1:"b"},["dfs(1,蓝)","dfs(2,红)"],"map 里没有 2 → 放行，递归真的进去了。",0,"open","dfs(2)","map 里没有 2 → 放行"],
+[2,{1:"b",2:"r"},["dfs(1,蓝)","dfs(2,红)"],"染色：2 ← 红。",0,"","",""],
+[6,{1:"b",2:"r"},["dfs(1,蓝)","dfs(2,红)"],"2 的邻居 1：有色，蓝。我是红 → 不冲突，继续。",0,"","",""],
+[5,{1:"b",2:"r"},["dfs(1,蓝)","dfs(2,红)","dfs(3,蓝)"],"2 的邻居 3 无色 → 递归 dfs(3, 蓝)。",0,"","dfs(3)","3 走向门口……"],
+[2,{1:"b",2:"r",3:"b"},["dfs(1,蓝)","dfs(2,红)","dfs(3,蓝)"],"闸放行，染色：3 ← 蓝。",0,"open","dfs(3)","map 里没有 3 → 放行"],
+[6,{1:"b",2:"r",3:"b"},["dfs(1,蓝)","dfs(2,红)","dfs(3,蓝)"],"3 的邻居 1：蓝 —— 我也是蓝。冲突！return false。",0,"","",""]],
+dcBad:[
+[1,{c:[],e:[]},["dfs(A)"],"进 dfs(A)。map 空，闸放行。",0,"open","dfs(A)","map 里没有 A → 放行"],
+[2,{c:["A"],e:[]},["dfs(A)"],"造 A′ 的壳，put(A → A′)。",0,"","",""],
+[4,{c:["A","B"],e:[]},["dfs(A)"],"邻居 B 不在 map → 在门外造好 B′ 的壳，put 进去。",1,"","","门外刚把 B 写进了 map"],
+[5,{c:["A","B"],e:[["A","B"]]},["dfs(A)"],"连线：A′.neighbors 加上 B′。这一步是对的。",0,"","",""],
+[6,{c:["A","B"],e:[["A","B"]]},["dfs(A)","dfs(B)"],"递归 dfs(B)。",0,"","dfs(B)","B 走向门口……"],
+[1,{c:["A","B"],e:[["A","B"]]},["dfs(A)","dfs(B)*"],"闸一查：map 里已经有 B（刚在门外塞的）→ return，掉头就走。B 的邻居列表根本没打开。",2,"blocked","dfs(B)","map 里有 B → 拦下，自己人被自己挡了"],
+[6,{c:["A","B"],e:[["A","B"]]},["dfs(A)"],"回到 A，循环结束。B′ 的 neighbors 永远是空的 —— B′→A′ 这条边丢了。",2,"","",""]],
+dcGood:[
+[1,{c:[],e:[]},["dfs(A)"],"进 dfs(A)。map 空，闸放行。",0,"open","dfs(A)","map 里没有 A → 放行"],
+[2,{c:["A"],e:[]},["dfs(A)"],"造 A′ 的壳，put(A → A′)。门外一个 put 都没有。",0,"","",""],
+[4,{c:["A"],e:[]},["dfs(A)","dfs(B)"],"邻居 B 不在 map → 递归 dfs(B)。注意：没有在门外造壳。",0,"","dfs(B)","B 走向门口……"],
+[1,{c:["A"],e:[]},["dfs(A)","dfs(B)"],"B 到门口，闸一查：map 里没有 B → 放行，真的进去了。",0,"open","dfs(B)","map 里没有 B → 放行"],
+[2,{c:["A","B"],e:[]},["dfs(A)","dfs(B)"],"B 自己造自己的壳，put(B → B′)。",0,"","",""],
+[4,{c:["A","B"],e:[]},["dfs(A)","dfs(B)"],"B 的邻居 A 已在 map → 不递归（环在这里短路）。",0,"","",""],
+[5,{c:["A","B"],e:[["B","A"]]},["dfs(A)","dfs(B)"],"但连线照做——这行在 if 外：B′.neighbors 加上 A′。",0,"","",""],
+[5,{c:["A","B"],e:[["B","A"],["A","B"]]},["dfs(A)"],"dfs(B) 返回。回到 A 的循环，连线：A′ → B′。两条边都连上了。",0,"","",""]]};
+
+var PROBS=[
+ {id:"bp",label:"56 · Bipartite",gTitle:"三角形 1–2–3",sTitle:"map 节点 → 颜色",
+  vers:[{k:"bpBad",label:"❌ 门外染色 + 留着闸",verdict:"同色边未检查 · 返回 true（错）",bad:true},
+        {k:"bpGood",label:"✅ 进门染色",verdict:"抓到冲突 · 返回 false",bad:false}]},
+ {id:"dc",label:"132 · Deep Copy",gTitle:"原图 / 副本",sTitle:"map 原节点 → 副本",
+  vers:[{k:"dcBad",label:"❌ 门外造壳 + 留着闸",verdict:"B′ 邻居为空 · 丢边",bad:true},
+        {k:"dcGood",label:"✅ 进门造壳",verdict:"两条边都连上",bad:false}]}];
+
+var p=0,v=0,s=0;
+var probsEl=document.getElementById("probs"),versEl=document.getElementById("vers");
+
+PROBS.forEach(function(pr,i){
+  var b=document.createElement("button");b.type="button";b.textContent=pr.label;b.setAttribute("role","tab");
+  b.addEventListener("click",function(){p=i;v=0;s=0;buildVers();render();});
+  probsEl.appendChild(b);
+});
+
+function buildVers(){
+  versEl.innerHTML="";
+  PROBS[p].vers.forEach(function(vr,i){
+    var b=document.createElement("button");b.type="button";b.textContent=vr.label;b.setAttribute("role","tab");
+    b.className=vr.bad?"bad":"good";
+    b.addEventListener("click",function(){v=i;s=0;render();});
+    versEl.appendChild(b);
+  });
+}
+
+function dot(cx,cy,fill,stroke,label,txt){
+  return '<circle cx="'+cx+'" cy="'+(cy+2)+'" r="19" fill="rgba(21,25,30,.13)"/>'+
+         '<circle cx="'+cx+'" cy="'+cy+'" r="19" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.5"/>'+
+         '<text x="'+cx+'" y="'+cy+'" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-size="13" font-weight="500" fill="'+txt+'">'+label+'</text>';
+}
+function edge(x1,y1,x2,y2,on){
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+(on?"#0f766e":"#cfcac1")+'" stroke-width="'+(on?3:2)+'" stroke-linecap="round"/>';
+}
+
+function renderGraph(st){
+  if(PROBS[p].id==="bp"){
+    var pos={1:[125,42],2:[62,140],3:[188,140]};
+    var g='<svg viewBox="0 0 250 176" width="100%" role="img"><title>三角形图与当前染色</title>';
+    g+=edge(125,42,62,140,false)+edge(125,42,188,140,false)+edge(62,140,188,140,false);
+    [1,2,3].forEach(function(n){
+      var c=st[n];
+      var f=c==="b"?"#2563a8":c==="r"?"#c2405f":"#fff";
+      var sk=c?f:"#c8c2b8", tx=c?"#fff":"#98a2ad";
+      g+=dot(pos[n][0],pos[n][1],f,sk,n,tx);
+    });
+    return g+'</svg>';
+  }
+  var g2='<svg viewBox="0 0 250 200" width="100%" role="img"><title>原图与副本</title>';
+  g2+='<text x="62" y="16" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="1" fill="#98a2ad">ORIGINAL</text>';
+  g2+='<text x="188" y="16" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="1" fill="#98a2ad">COPY</text>';
+  g2+=edge(62,58,62,146,false);
+  g2+=dot(62,58,"#eef2f7","#9fb4cc","A","#2563a8")+dot(62,146,"#eef2f7","#9fb4cc","B","#2563a8");
+  var has=function(n){return st.c.indexOf(n)>-1;};
+  var eOn=st.e.length>0;
+  if(eOn) g2+=edge(188,58,188,146,true);
+  else g2+='<line x1="188" y1="58" x2="188" y2="146" stroke="#e2ded6" stroke-width="2" stroke-dasharray="4 5" stroke-linecap="round"/>';
+  ["A","B"].forEach(function(n,i){
+    var y=i===0?58:146;
+    if(has(n)) g2+=dot(188,y,"#e4f2f0","#0f766e",n+"′","#0f766e");
+    else g2+='<circle cx="188" cy="'+y+'" r="19" fill="none" stroke="#d5d0c7" stroke-width="1.5" stroke-dasharray="3 4"/>';
+  });
+  g2+='<text x="188" y="186" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="11" fill="'+(st.e.length===2?"#0f766e":"#98a2ad")+'">已连边 '+st.e.length+' / 2</text>';
+  return g2+'</svg>';
+}
+
+function renderState(st){
+  if(PROBS[p].id==="bp"){
+    var ks=Object.keys(st);
+    if(!ks.length) return '<p class="empty">空</p>';
+    var t='<table class="ledger"><tr><th>节点</th><th>颜色</th></tr>';
+    ks.forEach(function(k){
+      t+='<tr><td class="k">'+k+'</td><td class="v '+st[k]+'">'+(st[k]==="b"?"蓝":"红")+'</td></tr>';});
+    return t+'</table>';
+  }
+  if(!st.c.length) return '<p class="empty">空</p>';
+  var t2='<table class="ledger"><tr><th>原节点</th><th>副本</th></tr>';
+  st.c.forEach(function(k){t2+='<tr><td class="k">'+k+'</td><td class="v">'+k+'′</td></tr>';});
+  t2+='</table><div style="margin-top:10px">';
+  st.c.forEach(function(k){
+    var out=st.e.filter(function(e){return e[0]===k;}).map(function(e){return e[1]+"′";});
+    t2+='<div class="nbrow"><b>'+k+'′</b>: ['+(out.length?out.join(", "):'<span class="miss">空</span>')+']</div>';
+  });
+  return t2+'</div>';
+}
+
+function render(){
+  var pr=PROBS[p],vr=pr.vers[v],tr=T[vr.k],st=tr[s];
+  Array.prototype.forEach.call(probsEl.children,function(b,i){b.setAttribute("aria-selected",i===p?"true":"false");});
+  Array.prototype.forEach.call(versEl.children,function(b,i){b.setAttribute("aria-selected",i===v?"true":"false");});
+
+  document.getElementById("codeTitle").textContent=vr.bad?"写法 · 有洞":"写法 · 正确";
+  document.getElementById("gTitle").textContent=pr.gTitle;
+  document.getElementById("sTitle").textContent=pr.sTitle;
+
+  var lines=CODE[vr.k],h="";
+  for(var i=0;i<lines.length;i++){
+    var cls="ln"; if(i===st[0]) cls+=(st[4]===2?" fault":" on");
+    h+='<span class="'+cls+'">'+lines[i].replace(/</g,"&lt;")+'</span>';
+  }
+  document.getElementById("code").innerHTML=h;
+  document.getElementById("graph").innerHTML=renderGraph(st[1]);
+  document.getElementById("state").innerHTML=renderState(st[1]);
+
+  document.getElementById("stack").innerHTML=st[2].map(function(f,i){
+    var dead=f.slice(-1)==="*";
+    var name=dead?f.slice(0,-1):f;
+    var cls="plate"+(i===st[2].length-1?" top":"")+(dead?" dead":"");
+    return '<div class="'+cls+'" style="margin-left:'+(i*13)+'px">'+name+(dead?"  ← 被拦下":"")+'</div>';
+  }).join("");
+
+  var gate=document.getElementById("gate");
+  gate.className="gate"+(st[5]?" "+st[5]:"");
+  var cl=document.getElementById("caller");
+  cl.textContent=st[6]||"—"; cl.style.opacity=st[6]?"1":".3";
+  document.getElementById("door").setAttribute("data-state",st[5]==="blocked"?"拦下":(st[5]==="open"?"放行":""));
+  document.getElementById("gatenote").textContent=st[7]||"门口的闸问的是：map 里有没有它。";
+
+  var log=document.getElementById("log");
+  log.textContent=st[3];
+  log.className="log"+(st[4]===2?" fault":(st[4]===1?" warn":""));
+
+  document.getElementById("pos").textContent=(s+1)+" / "+tr.length;
+  document.getElementById("prev").disabled=s===0;
+  document.getElementById("next").disabled=s===tr.length-1;
+  var vd=document.getElementById("verdict");
+  vd.textContent=s===tr.length-1?vr.verdict:"";
+  vd.className="verdict "+(vr.bad?"bad":"good");
+}
+
+document.getElementById("next").addEventListener("click",function(){var n=T[PROBS[p].vers[v].k].length;if(s<n-1){s++;render();}});
+document.getElementById("prev").addEventListener("click",function(){if(s>0){s--;render();}});
+document.addEventListener("keydown",function(e){
+  if(e.key==="ArrowRight")document.getElementById("next").click();
+  if(e.key==="ArrowLeft")document.getElementById("prev").click();
+});
+
+buildVers();render();
+</script>
+</body>
+</html>
