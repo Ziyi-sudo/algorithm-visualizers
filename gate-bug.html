@@ -115,7 +115,11 @@ td.v.b{color:var(--blue)} td.v.r{color:var(--rose)}
 .log.warn{border-left-color:var(--mark)}
 .log.fault{border-left-color:var(--fault);color:var(--fault);background:#fffaf9}
 
-.controls{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.controls{display:flex;align-items:center;gap:12px;margin:4px 0 14px;flex-wrap:wrap}
+#code{min-height:200px}
+#graph{min-height:186px}
+#state{min-height:150px}
+#stack{min-height:118px}
 .controls button{
   appearance:none;background:var(--card);border:0;border-radius:9px;font-family:inherit;font-size:14px;
   padding:10px 22px;cursor:pointer;color:var(--ink);box-shadow:var(--lift);transition:transform .15s,box-shadow .15s
@@ -150,6 +154,15 @@ footer{margin-top:44px;font-size:13px;color:var(--faint)}
 <div class="switch" role="tablist" id="probs"></div>
 <div class="switch sub" role="tablist" id="vers"></div>
 
+<div class="controls">
+  <button id="prev" type="button">上一步</button>
+  <button id="next" type="button">下一步</button>
+  <span class="pos" id="pos"></span>
+  <span class="verdict" id="verdict"></span>
+</div>
+
+<div class="log" id="log"></div>
+
 <div class="stage">
   <div>
     <div class="card"><h3 id="codeTitle">写法</h3><pre class="code" id="code"></pre></div>
@@ -166,15 +179,6 @@ footer{margin-top:44px;font-size:13px;color:var(--faint)}
     <div class="card"><h3 id="sTitle">状态</h3><div id="state"></div></div>
     <div class="card"><h3>调用栈</h3><div class="stack" id="stack"></div></div>
   </div>
-</div>
-
-<div class="log" id="log"></div>
-
-<div class="controls">
-  <button id="prev" type="button">上一步</button>
-  <button id="next" type="button">下一步</button>
-  <span class="pos" id="pos"></span>
-  <span class="verdict" id="verdict"></span>
 </div>
 
 <section class="takeaway">
