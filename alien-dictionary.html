@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alien Dictionary — 相邻两个单词只给一条信息</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8e5df; --card:#fff; --ink:#15191e; --soft:#5d6873; --faint:#98a2ad;
+  --same:#98a2ad; --a:#2563a8; --a-bg:#e8f0f9; --b:#c2405f; --b-bg:#fbe9ee;
+  --ok:#0f766e; --ok-bg:#e4f2f0; --bad:#c0392b; --bad-bg:#fbe9e6; --mark:#e8b93c;
+  --lift:0 1px 2px rgba(21,25,30,.06), 0 6px 16px rgba(21,25,30,.08);
+  --lift-lg:0 2px 4px rgba(21,25,30,.07), 0 14px 34px rgba(21,25,30,.13);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.7;
+  background-image:radial-gradient(circle at 20% 0%, #f2f0ec 0%, var(--bg) 46%, #d8d4cc 100%);
+  background-attachment:fixed;}
+.wrap{max-width:880px;margin:0 auto;padding:52px 22px 90px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+h1{font-size:clamp(25px,4.2vw,36px);line-height:1.18;font-weight:700;margin:0 0 14px;letter-spacing:-.02em}
+.lede{font-size:16.5px;color:var(--soft);max-width:64ch;margin:0 0 24px}
+code{font-family:"JetBrains Mono",monospace;font-size:.9em;background:rgba(21,25,30,.06);padding:1px 5px;border-radius:3px}
+
+.switch{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.switch button{appearance:none;border:0;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:13.5px;font-weight:500;padding:10px 18px;background:var(--card);color:var(--soft);
+  box-shadow:var(--lift);transition:all .16s}
+.switch button:hover{transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.switch button[aria-selected="true"]{background:var(--ink);color:#fff;transform:translateY(-2px);box-shadow:var(--lift-lg)}
+button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+
+.controls{display:flex;align-items:center;gap:12px;margin:0 0 14px;flex-wrap:wrap}
+.controls button{appearance:none;background:var(--card);border:0;border-radius:9px;font-family:inherit;font-size:14px;
+  padding:10px 22px;cursor:pointer;color:var(--ink);box-shadow:var(--lift);transition:all .15s}
+.controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.controls button:disabled{opacity:.4;cursor:default;box-shadow:none}
+.pos{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--faint)}
+.verdict{margin-left:auto;font-size:14px;font-weight:500}
+
+.log{padding:14px 17px;border-radius:12px;background:var(--card);box-shadow:var(--lift);
+  font-size:15px;min-height:58px;border-left:4px solid var(--ink);margin-bottom:18px}
+.log.good{border-left-color:var(--ok)}
+.log.bad{border-left-color:var(--bad);color:var(--bad);background:#fffaf9}
+.log b.a{color:var(--a)} .log b.b{color:var(--b)}
+
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,290px);gap:18px;align-items:start}
+@media(max-width:760px){.stage{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:16px 18px;box-shadow:var(--lift)}
+.card+.card{margin-top:12px}
+.card h3{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 12px;font-weight:500}
+
+.wordrow{display:flex;align-items:center;gap:10px;padding:5px 0;font-family:"JetBrains Mono",monospace}
+.wordrow .lbl{font-size:11px;color:var(--faint);width:26px;flex:none}
+.ch{width:30px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:6px;
+  font-size:17px;background:#f4f2ee;color:var(--faint);transition:all .22s}
+.ch.same{background:#eeece7;color:var(--same)}
+.ch.d1{background:var(--a-bg);color:var(--a);font-weight:500;box-shadow:0 2px 6px rgba(37,99,168,.2);transform:translateY(-1px)}
+.ch.d2{background:var(--b-bg);color:var(--b);font-weight:500;box-shadow:0 2px 6px rgba(194,64,95,.2);transform:translateY(-1px)}
+.ch.dim{opacity:.32}
+.wordrow.active{background:#fdf9ee;border-radius:8px;padding:5px 8px;margin:0 -8px}
+
+.edges{display:flex;gap:8px;flex-wrap:wrap;min-height:34px}
+.edge{font-family:"JetBrains Mono",monospace;font-size:14px;padding:6px 12px;border-radius:7px;
+  background:var(--ok-bg);color:var(--ok);box-shadow:0 1px 3px rgba(15,118,110,.18)}
+.edge.fresh{background:var(--mark);color:#412402;font-weight:500}
+.empty{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--faint)}
+#graph{min-height:230px}
+.result{font-family:"JetBrains Mono",monospace;font-size:22px;letter-spacing:.12em;color:var(--ok);font-weight:500}
+
+.takeaway{margin-top:46px;padding-top:26px;border-top:1px solid rgba(21,25,30,.14)}
+h2{font-size:20px;font-weight:500;margin:0 0 12px}
+p{max-width:68ch}
+pre{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.8;background:var(--card);
+  padding:14px 16px;border-radius:12px;box-shadow:var(--lift);overflow-x:auto;margin:16px 0}
+footer{margin-top:38px;font-size:13px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">alien dictionary · 建图</p>
+<h1>相邻两个单词，<br>只给你一条信息</h1>
+<p class="lede">字典是按外星字母表排好序的。逐位比较相邻两个单词，<b>第一个不同的字母</b>就是一条排序关系 —— 前一个单词的那个字母排在前面。第一个差异之后的位全部无意义，因为字典序只看到差异为止。</p>
+
+<div class="switch" role="tablist" id="tabs"></div>
+
+<div class="controls">
+  <button id="prev" type="button">上一步</button>
+  <button id="next" type="button">下一步</button>
+  <span class="pos" id="pos"></span>
+  <span class="verdict" id="verdict"></span>
+</div>
+
+<div class="log" id="log"></div>
+
+<div class="stage">
+  <div class="card"><h3>字典（已按外星顺序排好）</h3><div id="words"></div></div>
+  <div>
+    <div class="card"><h3>推出的边</h3><div class="edges" id="edges"></div></div>
+    <div class="card"><h3>依赖图</h3><div id="graph"></div></div>
+    <div class="card"><h3>结果</h3><div class="result" id="res">—</div></div>
+  </div>
+</div>
+
+<section class="takeaway">
+  <h2>跟 Course Schedule II 的差别</h2>
+  <p>拓扑排序那一半完全一样。<b>新东西只有两件：图要自己推出来，而且点是字母不是下标。</b></p>
+
+  <pre>点：出现过的字母（先扫一遍所有单词收集，别漏了只出现一次的）
+边：相邻两个单词第一个不同的字母 c1 → c2
+
+容器要换成 Map，因为点是字符不是 0~n-1 的下标：
+    Map&lt;Character, Set&lt;Character&gt;&gt; graph     ← 用 Set 去重,同一条边可能被推出多次
+    Map&lt;Character, Integer&gt; inDegree
+
+坑：前缀反序是非法输入
+    ["abc", "ab"] —— 长的排在短的前面,逐位比完没有差异,
+    但 abc 更长 ⇒ 违反字典序 ⇒ 直接返回 ""</pre>
+
+  <p><b>为什么 graph 的 value 用 Set 不用 List：</b>同一对字母关系可能从多对单词里被推出来。用 List 会重复加边，导致 <code>inDegree</code> 被多加几次，永远减不到 0 —— 明明无环却报环。<b>加边前必须判重。</b></p>
+
+  <p><b>为什么要先扫一遍收集所有字母：</b>只出现在某一个单词里、从没参与过任何比较的字母（比如例 1 里没被比到的），也必须出现在结果里。漏了它们，最后的长度对不上。</p>
+</section>
+
+<footer>单步演示 · 蓝色 = 前一个单词的字母 · 红色 = 后一个单词的字母</footer>
+</div>
+
+<script>
+var CASES=[
+ {label:"例 1 · wertf", words:["wrt","wrf","er","ett","rftt"]},
+ {label:"例 2 · zx", words:["z","x"]},
+ {label:"例 3 · 有环 ✗", words:["z","x","z"]},
+ {label:"前缀反序 ✗", words:["abc","ab"]}
+];
+
+function build(words){
+  var steps=[], edges=[], chars={};
+  words.forEach(function(w){ for(var i=0;i<w.length;i++) chars[w[i]]=true; });
+  var letters=Object.keys(chars).sort();
+
+  function snap(o){
+    o.edges=edges.map(function(e){return e;});
+    steps.push(o);
+  }
+  snap({pair:-1, dp:-1, msg:"先扫一遍所有单词，收集出现过的字母：<b>"+letters.join("、")+"</b>。它们都是图上的点，<b>哪怕从没参与过比较也要在结果里</b>。", tone:0});
+
+  var invalid=false;
+  for(var k=0;k+1<words.length && !invalid;k++){
+    var w1=words[k], w2=words[k+1], L=Math.min(w1.length,w2.length), found=-1;
+    snap({pair:k, dp:-1, msg:"比较第 "+(k+1)+" 对：<code>"+w1+"</code> 和 <code>"+w2+"</code>，逐位往后找第一个不同的字母。", tone:0});
+    for(var i=0;i<L;i++){
+      if(w1[i]!==w2[i]){ found=i; break; }
+    }
+    if(found>=0){
+      var e=w1[found]+"→"+w2[found];
+      var dup = edges.indexOf(e)>-1;
+      if(!dup) edges.push(e);
+      snap({pair:k, dp:found, msg:"第 "+(found+1)+" 位不同：<b class='a'>"+w1[found]+"</b> vs <b class='b'>"+w2[found]+"</b> ⇒ 边 <b>"+e+"</b>"+(dup?"（这条边之前已经有了，<b>不能重复加</b>）":"")+"。<b>后面的位全部无意义</b> —— 字典序只看到第一个差异为止。", tone:0, fresh:e});
+    } else if(w1.length>w2.length){
+      invalid=true;
+      snap({pair:k, dp:-1, msg:"逐位比完没有任何差异，但 <code>"+w1+"</code> 比 <code>"+w2+"</code> <b>更长却排在前面</b> —— 前缀必须排在前面，这违反字典序。<b>直接返回 \"\"</b>。", tone:2});
+    } else {
+      snap({pair:k, dp:-1, msg:"<code>"+w1+"</code> 是 <code>"+w2+"</code> 的前缀，顺序合法，但<b>推不出任何边</b>。", tone:0});
+    }
+  }
+
+  var order=null, cyc=false;
+  if(!invalid){
+    var g={}, deg={};
+    letters.forEach(function(c){ g[c]=[]; deg[c]=0; });
+    edges.forEach(function(e){ var a=e[0], b=e[2]; g[a].push(b); deg[b]++; });
+    var q=letters.filter(function(c){ return deg[c]===0; }), out=[];
+    while(q.length){
+      var c=q.shift(); out.push(c);
+      g[c].forEach(function(nb){ deg[nb]--; if(deg[nb]===0) q.push(nb); });
+    }
+    if(out.length===letters.length) order=out.join("");
+    else cyc=true;
+  }
+
+  if(invalid) snap({pair:-1, dp:-1, msg:"非法输入 → 返回空字符串。", tone:2, done:true, res:""});
+  else if(cyc) snap({pair:-1, dp:-1, msg:"边收集完，跑拓扑排序 —— <b>字母之间形成了环</b>，谁也解不开，顺序不存在 → 返回空字符串。", tone:2, done:true, res:""});
+  else snap({pair:-1, dp:-1, msg:"边收集完，跑拓扑排序（跟 Course Schedule II 一模一样）→ 结果 <b>"+order+"</b>", tone:1, done:true, res:order});
+
+  return {steps:steps, letters:letters};
+}
+
+var TR=CASES.map(function(c){ return build(c.words); });
+var cur=0, s=0;
+var tb=document.getElementById("tabs");
+CASES.forEach(function(c,i){
+  var b=document.createElement("button"); b.type="button"; b.textContent=c.label;
+  b.setAttribute("role","tab");
+  b.addEventListener("click", function(){ cur=i; s=0; render(); });
+  tb.appendChild(b);
+});
+
+function drawGraph(letters, edges){
+  var n=letters.length, cx=145, cy=110, R=78;
+  if(!edges.length && n<=1) return '<p class="empty">还没有边</p>';
+  var pts={};
+  letters.forEach(function(c,i){
+    var ang = -Math.PI/2 + i*2*Math.PI/n;
+    pts[c]=[cx+R*Math.cos(ang), cy+R*Math.sin(ang)];
+  });
+  var svg='<svg width="100%" viewBox="0 0 290 225">';
+  svg+='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="#0f766e" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>';
+  edges.forEach(function(e){
+    var p1=pts[e[0]], p2=pts[e[2]];
+    if(!p1||!p2) return;
+    var dx=p2[0]-p1[0], dy=p2[1]-p1[1], L=Math.sqrt(dx*dx+dy*dy);
+    svg+='<line x1="'+(p1[0]+dx/L*19)+'" y1="'+(p1[1]+dy/L*19)+'" x2="'+(p2[0]-dx/L*23)+'" y2="'+(p2[1]-dy/L*23)+'" stroke="#0f766e" stroke-width="1.8" opacity=".7" marker-end="url(#ah)"/>';
+  });
+  letters.forEach(function(c){
+    var p=pts[c];
+    svg+='<circle cx="'+p[0]+'" cy="'+(p[1]+2)+'" r="17" fill="rgba(21,25,30,.10)"/>';
+    svg+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="17" fill="#f4f2ee" stroke="#d5d0c7" stroke-width="1.5"/>';
+    svg+='<text x="'+p[0]+'" y="'+p[1]+'" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-size="15" font-weight="500" fill="#15191e">'+c+'</text>';
+  });
+  return svg+'</svg>';
+}
+
+function render(){
+  var c=CASES[cur], tr=TR[cur], st=tr.steps[s];
+  Array.prototype.forEach.call(tb.children, function(b,i){
+    b.setAttribute("aria-selected", i===cur?"true":"false");
+  });
+
+  var wh="";
+  c.words.forEach(function(w,i){
+    var act = (i===st.pair || i===st.pair+1) && st.pair>=0;
+    wh+='<div class="wordrow'+(act?" active":"")+'"><span class="lbl">'+i+'</span>';
+    for(var j=0;j<w.length;j++){
+      var cls="ch";
+      if(act && st.dp>=0){
+        if(j<st.dp) cls+=" same";
+        else if(j===st.dp) cls += (i===st.pair ? " d1" : " d2");
+        else cls+=" dim";
+      } else if(act) cls+=" same";
+      wh+='<span class="'+cls+'">'+w[j]+'</span>';
+    }
+    wh+='</div>';
+  });
+  document.getElementById("words").innerHTML=wh;
+
+  var eh = st.edges.length
+    ? st.edges.map(function(e){ return '<span class="edge'+(e===st.fresh?" fresh":"")+'">'+e+'</span>'; }).join("")
+    : '<span class="empty">还没有边</span>';
+  document.getElementById("edges").innerHTML=eh;
+
+  document.getElementById("graph").innerHTML=drawGraph(tr.letters, st.edges);
+  document.getElementById("res").innerHTML = st.done ? (st.res===""?'<span style="color:var(--bad)">""（空字符串）</span>':st.res) : "—";
+
+  var log=document.getElementById("log");
+  log.innerHTML=st.msg;
+  log.className="log"+(st.tone===1?" good":(st.tone===2?" bad":""));
+
+  document.getElementById("pos").textContent=(s+1)+" / "+tr.steps.length;
+  document.getElementById("prev").disabled = s===0;
+  document.getElementById("next").disabled = s===tr.steps.length-1;
+  var vd=document.getElementById("verdict");
+  var last=tr.steps[tr.steps.length-1];
+  vd.textContent = s===tr.steps.length-1 ? (last.res===""?"无解":"顺序 "+last.res) : "";
+  vd.style.color = last.res==="" ? "var(--bad)" : "var(--ok)";
+}
+document.getElementById("next").addEventListener("click",function(){ if(s<TR[cur].steps.length-1){s++;render();} });
+document.getElementById("prev").addEventListener("click",function(){ if(s>0){s--;render();} });
+document.addEventListener("keydown",function(e){
+  if(e.key==="ArrowRight") document.getElementById("next").click();
+  if(e.key==="ArrowLeft") document.getElementById("prev").click();
+});
+render();
+</script>
+</body>
+</html>
