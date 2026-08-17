@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>下标是位置，值是内容 — arr[0] 和 inDegree[0] 的区别</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8e5df; --card:#fff; --ink:#15191e; --soft:#5d6873; --faint:#98a2ad;
+  --pos:#2563a8; --pos-bg:#e8f0f9; --val:#c2405f; --val-bg:#fbe9ee;
+  --ok:#0f766e; --ok-bg:#e4f2f0; --bad:#c0392b; --bad-bg:#fbe9e6; --mark:#e8b93c;
+  --lift:0 1px 2px rgba(21,25,30,.06), 0 6px 16px rgba(21,25,30,.08);
+  --lift-lg:0 2px 4px rgba(21,25,30,.07), 0 14px 34px rgba(21,25,30,.13);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.7;
+  background-image:radial-gradient(circle at 20% 0%, #f2f0ec 0%, var(--bg) 46%, #d8d4cc 100%);
+  background-attachment:fixed;}
+.wrap{max-width:860px;margin:0 auto;padding:52px 22px 90px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+h1{font-size:clamp(25px,4.2vw,36px);line-height:1.18;font-weight:700;margin:0 0 14px;letter-spacing:-.02em}
+.lede{font-size:16.5px;color:var(--soft);max-width:64ch;margin:0 0 26px}
+code{font-family:"JetBrains Mono",monospace;font-size:.9em;background:rgba(21,25,30,.06);padding:1px 5px;border-radius:3px}
+
+.controls{display:flex;align-items:center;gap:12px;margin:0 0 16px;flex-wrap:wrap}
+.controls button{appearance:none;background:var(--card);border:0;border-radius:9px;font-family:inherit;font-size:14px;
+  padding:10px 22px;cursor:pointer;color:var(--ink);box-shadow:var(--lift);transition:transform .15s,box-shadow .15s}
+.controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.controls button:disabled{opacity:.4;cursor:default;box-shadow:none}
+button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+.pos{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--faint)}
+
+.log{padding:14px 17px;border-radius:12px;background:var(--card);box-shadow:var(--lift);
+  font-size:15px;min-height:60px;border-left:4px solid var(--ink);margin-bottom:20px}
+.log b.p{color:var(--pos)} .log b.v{color:var(--val)}
+
+.card{background:var(--card);border-radius:12px;padding:18px 20px;box-shadow:var(--lift);margin-bottom:14px}
+.card h3{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 4px;font-weight:500}
+.sub{font-size:13px;color:var(--soft);margin:0 0 14px}
+
+.row{display:flex;gap:10px;align-items:flex-end}
+.slot{flex:1;min-width:0;text-align:center}
+.idx{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--pos);margin-bottom:4px;
+  background:var(--pos-bg);border-radius:4px;padding:2px 0}
+.box{font-family:"JetBrains Mono",monospace;font-size:20px;padding:14px 0;border-radius:8px;
+  background:#f4f2ee;color:var(--soft);border:2px solid transparent;transition:all .25s}
+.box.lit{background:var(--val-bg);color:var(--val);border-color:var(--val);font-weight:500;transform:translateY(-2px)}
+.box.hit{background:var(--ok-bg);color:var(--ok);border-color:var(--ok);font-weight:500;transform:translateY(-2px)}
+.tag{font-size:11.5px;color:var(--faint);margin-top:5px;min-height:17px}
+
+.bridge{display:flex;align-items:center;justify-content:center;gap:10px;margin:14px 0;
+  font-family:"JetBrains Mono",monospace;font-size:14px;color:var(--soft);min-height:30px}
+.bridge .k{background:var(--val-bg);color:var(--val);padding:3px 10px;border-radius:6px;font-weight:500}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+@media(max-width:640px){.two{grid-template-columns:1fr}}
+.two div{background:var(--card);border-radius:11px;padding:14px 18px;box-shadow:var(--lift)}
+.two.wrongright div:first-child{border-left:4px solid var(--bad);border-radius:0 11px 11px 0}
+.two.wrongright div:last-child{border-left:4px solid var(--ok);border-radius:0 11px 11px 0}
+.two b{display:block;font-weight:500;margin-bottom:6px;font-family:"JetBrains Mono",monospace;font-size:14px}
+.two span{font-size:14px;color:var(--soft)}
+.takeaway{margin-top:46px;padding-top:26px;border-top:1px solid rgba(21,25,30,.14)}
+h2{font-size:20px;font-weight:500;margin:0 0 12px}
+p{max-width:68ch}
+footer{margin-top:38px;font-size:13px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">course schedule ii · 下标 vs 值</p>
+<h1><code>arr[0]</code> 和 <code>inDegree[0]</code> 里的 0，<br>是两个完全不同的 0</h1>
+<p class="lede">同一段代码里有两个数组，它们的下标含义毫无关系。<code>arr</code> 的下标是「第几个数」，<code>inDegree</code> 的下标是「哪门课」。把前者的值当成后者的下标用，才是正确的桥梁。</p>
+
+<div class="controls">
+  <button id="prev" type="button">上一步</button>
+  <button id="next" type="button">下一步</button>
+  <span class="pos" id="pos"></span>
+</div>
+
+<div class="log" id="log"></div>
+
+<div class="card">
+  <h3>arr — 题目给的一对</h3>
+  <p class="sub">下标只表示「第一个数 / 第二个数」，跟课程编号无关</p>
+  <div class="row" id="arrRow"></div>
+</div>
+
+<div class="bridge" id="bridge"></div>
+
+<div class="card">
+  <h3>inDegree — 我自己开的账本</h3>
+  <p class="sub">下标就是课程编号，值是「这门课还欠几门先修」</p>
+  <div class="row" id="degRow"></div>
+</div>
+
+<section class="takeaway">
+  <h2>那行为什么写错</h2>
+  <div class="two wrongright">
+    <div>
+      <b>inDegree[0]++</b>
+      <span>写死了 0 —— 不管这一对是什么，永远在给<b>课程 0</b> 加账。四条边跑完，<code>inDegree[0]</code> 变成 4，其余全是 0。</span>
+    </div>
+    <div>
+      <b>inDegree[cur]++</b>
+      <span><code>cur</code> 是从 <code>arr[0]</code> 取出来的<b>值</b>。这一对是 [1,0] 就动课程 1，是 [3,2] 就动课程 3。</span>
+    </div>
+  </div>
+
+  <p style="margin-top:22px"><b>「我现在指的是谁」不需要去查 —— 是你自己在下标里指定的。</b>写 <code>inDegree[0]</code> 就是在说「我要动课程 0」，写 <code>inDegree[cur]</code> 就是「cur 是多少就动谁」。数组的格子位置从头到尾不变，变的只是格子里的数。</p>
+
+  <p><b>防这个坑的习惯：提取之后就只用变量名。</b>既然已经写了 <code>int cur = arr[0];</code>，下面就别再出现 <code>arr[0]</code> 或裸的 <code>0</code> —— 混着写正是手滑的来源。</p>
+</section>
+
+<footer>示例：numCourses = 4，prerequisites = [[1,0],[2,0],[3,1],[3,2]]</footer>
+</div>
+
+<script>
+var PRE=[[1,0],[2,0],[3,1],[3,2]];
+var N=4;
+var steps=[];
+(function(){
+  var deg=[0,0,0,0];
+  steps.push({arr:null, deg:deg.slice(), phase:0,
+    msg:"账本 <code>inDegree</code> 有 4 个格子，<b class='p'>下标 0~3 就是课程编号</b>，初始全是 0。下面逐对处理 prerequisites。"});
+  for(var k=0;k<PRE.length;k++){
+    var a=PRE[k][0], b=PRE[k][1];
+    steps.push({arr:PRE[k], deg:deg.slice(), phase:1, a:a, b:b, k:k,
+      msg:"取出第 "+(k+1)+" 对 <code>arr = ["+a+", "+b+"]</code>。注意：这里的 <b class='p'>下标 0 和 1</b> 只是「第一个数、第二个数」。"});
+    steps.push({arr:PRE[k], deg:deg.slice(), phase:2, a:a, b:b, k:k,
+      msg:"<code>arr[<b class='p'>0</b>]</code> 取出的<b class='v'>值</b>是 <b class='v'>"+a+"</b> —— 这才是课程编号。<code>int cur = arr[0]</code> 之后，<code>cur = "+a+"</code>。"});
+    deg[a]++;
+    steps.push({arr:PRE[k], deg:deg.slice(), phase:3, a:a, b:b, k:k,
+      msg:"<code>inDegree[cur]++</code> → 动的是 <b>下标 "+a+"</b> 那一格，课程 "+a+" 的账变成 <b>"+deg[a]+"</b>。<b>arr 的下标 0 ≠ inDegree 的下标 0。</b>"});
+  }
+  steps.push({arr:null, deg:deg.slice(), phase:4,
+    msg:"四对处理完，账本是 ["+deg.join(", ")+"]。<b>每个格子代表谁，一秒都没变过 —— 变的只是格子里的数。</b>"});
+})();
+
+var s=0;
+function slots(el, vals, opts){
+  var h="";
+  for(var i=0;i<vals.length;i++){
+    var cls="box";
+    if(opts.lit===i) cls+=" lit";
+    if(opts.hit===i) cls+=" hit";
+    h+='<div class="slot"><div class="idx">'+(opts.idxLabel? opts.idxLabel(i) : i)+'</div>'+
+       '<div class="'+cls+'">'+vals[i]+'</div>'+
+       '<div class="tag">'+(opts.tag? opts.tag(i) : "")+'</div></div>';
+  }
+  el.innerHTML=h;
+}
+
+function render(){
+  var st=steps[s];
+  document.getElementById("log").innerHTML=st.msg;
+
+  var arrEl=document.getElementById("arrRow");
+  if(st.arr){
+    slots(arrEl, st.arr, {
+      lit: (st.phase>=2 ? 0 : -1),
+      tag: function(i){ return i===0 ? "后续课" : "先修课"; }
+    });
+  } else {
+    arrEl.innerHTML='<div class="slot" style="color:var(--faint);font-size:13px;padding:18px 0">还没取出任何一对</div>';
+  }
+
+  var br=document.getElementById("bridge");
+  if(st.phase>=2 && st.arr){
+    br.innerHTML='<span>arr[0] 的值</span><span class="k">'+st.a+'</span><span>拿去当 inDegree 的下标 →</span>';
+  } else br.innerHTML='';
+
+  slots(document.getElementById("degRow"), st.deg, {
+    hit: (st.phase===3 ? st.a : -1),
+    tag: function(i){ return "课程 "+i; }
+  });
+
+  document.getElementById("pos").textContent=(s+1)+" / "+steps.length;
+  document.getElementById("prev").disabled = s===0;
+  document.getElementById("next").disabled = s===steps.length-1;
+}
+document.getElementById("next").addEventListener("click",function(){ if(s<steps.length-1){s++;render();} });
+document.getElementById("prev").addEventListener("click",function(){ if(s>0){s--;render();} });
+document.addEventListener("keydown",function(e){
+  if(e.key==="ArrowRight") document.getElementById("next").click();
+  if(e.key==="ArrowLeft") document.getElementById("prev").click();
+});
+render();
+</script>
+</body>
+</html>
