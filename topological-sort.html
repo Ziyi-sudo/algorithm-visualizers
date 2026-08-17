@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>拓扑排序 — 依次消灭入度为 0 的点</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8e5df; --card:#fff; --ink:#15191e; --soft:#5d6873; --faint:#98a2ad; --rule:#e2ded6;
+  --ready:#2563a8; --ready-bg:#e8f0f9; --done:#0f766e; --done-bg:#e4f2f0;
+  --stuck:#c0392b; --stuck-bg:#fbe9e6; --mark:#e8b93c;
+  --lift:0 1px 2px rgba(21,25,30,.06), 0 6px 16px rgba(21,25,30,.08);
+  --lift-lg:0 2px 4px rgba(21,25,30,.07), 0 14px 34px rgba(21,25,30,.13);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.7;
+  background-image:radial-gradient(circle at 20% 0%, #f2f0ec 0%, var(--bg) 46%, #d8d4cc 100%);
+  background-attachment:fixed;}
+.wrap{max-width:900px;margin:0 auto;padding:52px 22px 90px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+h1{font-size:clamp(26px,4.4vw,38px);line-height:1.16;font-weight:700;margin:0 0 14px;letter-spacing:-.02em}
+.lede{font-size:16.5px;color:var(--soft);max-width:62ch;margin:0 0 26px}
+code{font-family:"JetBrains Mono",monospace;font-size:.88em;background:rgba(21,25,30,.06);padding:1px 5px;border-radius:3px}
+
+.switch{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.switch button{appearance:none;border:0;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:13.5px;font-weight:500;padding:10px 18px;background:var(--card);color:var(--soft);
+  box-shadow:var(--lift);transition:transform .16s,box-shadow .16s,background .16s,color .16s}
+.switch button:hover{transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.switch button[aria-selected="true"]{background:var(--ink);color:#fff;transform:translateY(-2px);box-shadow:var(--lift-lg)}
+button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+
+.controls{display:flex;align-items:center;gap:12px;margin:4px 0 14px;flex-wrap:wrap}
+.controls button{appearance:none;background:var(--card);border:0;border-radius:9px;font-family:inherit;font-size:14px;
+  padding:10px 22px;cursor:pointer;color:var(--ink);box-shadow:var(--lift);transition:transform .15s,box-shadow .15s}
+.controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.controls button:disabled{opacity:.4;cursor:default;box-shadow:none}
+.pos{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--faint)}
+.verdict{margin-left:auto;font-size:14px;font-weight:500}
+
+.log{padding:13px 16px;border-radius:12px;background:var(--card);box-shadow:var(--lift);
+  font-size:15px;min-height:52px;border-left:4px solid var(--ink);margin-bottom:16px}
+.log.good{border-left-color:var(--done)}
+.log.bad{border-left-color:var(--stuck);color:var(--stuck);background:#fffaf9}
+
+.stage{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:720px){.stage{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:16px 18px;box-shadow:var(--lift)}
+.card+.card{margin-top:12px}
+.card h3{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 12px;font-weight:500}
+#graph{min-height:290px}
+.deg{display:flex;gap:8px;flex-wrap:wrap}
+.degcell{font-family:"JetBrains Mono",monospace;font-size:13px;padding:6px 10px;border-radius:6px;
+  background:#f4f2ee;color:var(--soft);transition:background .25s,color .25s}
+.degcell.zero{background:var(--ready-bg);color:var(--ready);font-weight:500}
+.degcell.out{background:var(--done-bg);color:var(--done);text-decoration:line-through;opacity:.7}
+.chips{display:flex;gap:7px;flex-wrap:wrap;min-height:32px}
+.chip{font-family:"JetBrains Mono",monospace;font-size:14px;padding:5px 12px;border-radius:7px;
+  background:var(--ready-bg);color:var(--ready);box-shadow:0 1px 3px rgba(37,99,168,.18)}
+.chip.done{background:var(--done-bg);color:var(--done);box-shadow:0 1px 3px rgba(15,118,110,.18)}
+.empty{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--faint)}
+
+.takeaway{margin-top:48px;padding-top:28px;border-top:1px solid rgba(21,25,30,.14)}
+h2{font-size:20px;font-weight:500;margin:0 0 12px}
+p{max-width:68ch}
+ol{padding-left:20px}
+ol li{margin-bottom:8px}
+pre{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.8;background:var(--card);
+  padding:14px 16px;border-radius:12px;box-shadow:var(--lift);overflow-x:auto;margin:16px 0}
+footer{margin-top:40px;font-size:13px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">laicode 430 · course schedule ii · topological sort</p>
+<h1>依次消灭入度为 0 的点</h1>
+<p class="lede">入度 = 还有几门先修课没上完。入度为 0 = 现在就能上。上完一门，它指向的每门课入度各减 1，减到 0 的就进队列。<code>[a, b]</code> 表示要上 a 得先上 b，所以边的方向是 <code>b → a</code>。</p>
+
+<div class="switch" role="tablist" id="tabs"></div>
+
+<div id="hint" style="font-size:14.5px;color:var(--soft);margin:0 0 16px;max-width:70ch"></div>
+
+<div class="controls">
+  <button id="prev" type="button">上一步</button>
+  <button id="next" type="button">下一步</button>
+  <span class="pos" id="pos"></span>
+  <span class="verdict" id="verdict"></span>
+</div>
+
+<div class="log" id="log"></div>
+
+<div class="stage">
+  <div class="card"><h3 id="gtitle">依赖图</h3><div id="graph"></div></div>
+  <div>
+    <div class="card"><h3>入度表 indegree</h3><div class="deg" id="deg"></div></div>
+    <div class="card"><h3>队列（入度为 0，可以上）</h3><div class="chips" id="queue"></div></div>
+    <div class="card"><h3>结果 result</h3><div class="chips" id="res"></div></div>
+  </div>
+</div>
+
+<section class="takeaway">
+  <h2>算法本体（Kahn）</h2>
+  <ol>
+    <li><b>建图 + 统计入度</b>：每条 <code>[a, b]</code> 加一条边 <code>b → a</code>，同时 <code>indegree[a]++</code>。</li>
+    <li><b>所有入度为 0 的点入队</b>——它们没有先修课，一开始就能上。</li>
+    <li><b>出队一个，收进结果</b>；把它指向的每个邻居入度减 1，<b>减到 0 就入队</b>。</li>
+    <li><b>队列空了</b>：结果里有 n 个点 → 成功；少于 n 个 → 有环，返回空数组。</li>
+  </ol>
+
+  <pre>indegree ← int[n];  graph ← n 个空列表
+
+对每条 [a, b]:
+    graph[b].add(a)          ← 边的方向:先修课指向后续课
+    indegree[a]++
+
+队列 ← 所有 indegree[i] == 0 的 i
+
+队列非空:
+    cur ← poll();  result.add(cur)
+    对 graph[cur] 里每个 nei:
+        indegree[nei]--
+        indegree[nei] == 0 → offer(nei)      ← 减到 0 才入队
+
+result.size() == n → 返回 result
+否则 → 返回空数组                            ← 有环</pre>
+
+  <p><b>为什么"减到 0 才入队"而不是"减了就入队"：</b>入度 3 的课有三门先修，减一次只说明少了一门，还不能上。只有归零那一刻才真正解锁 —— 而且那一刻只会发生一次，所以每个点只入队一次，不需要额外的 visited。</p>
+
+  <p><b>为什么剩下的点就是环：</b>环上的每个点都在等环里的另一个点，入度永远减不到 0，谁也进不了队列。队列空了但还有点没出来 —— 那些点必定卡在环里。</p>
+
+  <p><b>答案不唯一：</b>队列里同时有多个入度为 0 的点时，先取谁都行 —— 它们之间没有依赖关系。所以 <code>[0,1,2,3]</code> 和 <code>[0,2,1,3]</code> 都对。</p>
+</section>
+
+<footer>单步演示 · 蓝色 = 入度为 0 可上 · 绿色 = 已上完</footer>
+</div>
+
+<script>
+var CASES=[
+ {label:"① 菱形", n:4, pre:[[1,0],[2,0],[3,1],[3,2]],
+  pos:{0:[170,50],1:[80,140],2:[260,140],3:[170,230]},
+  hint:"最典型的形状。0 上完后 1 和 2 同时解锁，队列里有两个候选 —— 先取谁都行，所以 [0,1,2,3] 和 [0,2,1,3] 都是正确答案。3 要等 1 和 2 都上完（入度从 2 减到 0）。"},
+
+ {label:"② 全无先修", n:4, pre:[],
+  pos:{0:[80,80],1:[260,80],2:[80,210],3:[260,210]},
+  hint:"没有任何边，入度全是 0，四门课一开始就全部入队。任意顺序都对 —— 共 4! = 24 种合法答案。"},
+
+ {label:"③ 一条链", n:5, pre:[[1,0],[2,1],[3,2],[4,3]],
+  pos:{0:[70,45],1:[160,95],2:[250,145],3:[160,195],4:[70,245]},
+  hint:"每门课只有一门先修。队列里永远只有一个点，<b>答案唯一</b>：[0,1,2,3,4]。这是拓扑序最受限的形状。"},
+
+ {label:"④ 多门汇聚", n:5, pre:[[4,0],[4,1],[4,2],[4,3]],
+  pos:{0:[50,60],1:[130,60],2:[210,60],3:[290,60],4:[170,220]},
+  hint:"课程 4 的入度是 4 —— 要等四门先修全上完。注意前三次减 1 都没让它入队，<b>只有归零那一刻才解锁</b>。这就是「减到 0 才入队」的意义。"},
+
+ {label:"⑤ 三个独立小组", n:6, pre:[[1,0],[3,2],[5,4]],
+  pos:{0:[70,80],1:[70,210],2:[170,80],3:[170,210],4:[270,80],5:[270,210]},
+  hint:"图不连通也没关系 —— 拓扑排序不需要图连通，只要没环。一开始 0、2、4 三个入度为 0 的点同时入队，互相之间没有任何约束。"},
+
+ {label:"⑥ 三角环 ✗", n:3, pre:[[1,0],[2,1],[0,2]],
+  pos:{0:[170,55],1:[255,195],2:[85,195]},
+  hint:"0 等 2、2 等 1、1 等 0，三个人互相等。入度全是 1，<b>队列一开始就是空的，一步都走不了</b>。result 是空的，少于 n，返回空数组。"},
+
+ {label:"⑦ 局部有环 ✗", n:5, pre:[[1,0],[2,1],[3,2],[1,3]],
+  pos:{0:[60,45],1:[170,100],2:[270,155],3:[165,215],4:[55,215]},
+  hint:"0 和 4 能正常出队，但 1、2、3 组成一个环，谁也解不开。<b>能走一部分不代表能走完</b> —— 所以判环的标准是「result 的个数等不等于 n」，不是「队列有没有空过」。"}
+];
+
+function buildTrace(c){
+  var n=c.n, g=[], deg=[];
+  for(var i=0;i<n;i++){ g.push([]); deg.push(0); }
+  c.pre.forEach(function(p){ g[p[1]].push(p[0]); deg[p[0]]++; });
+
+  var steps=[], q=[], res=[], out=[];
+  function snap(msg,tone,hl){
+    steps.push({deg:deg.slice(), q:q.slice(), res:res.slice(), out:out.slice(), msg:msg, tone:tone||0, hl:(hl===undefined?-1:hl)});
+  }
+  snap("建图完成，统计出每个点的入度。<b>入度 = 还有几门先修课没上。</b>",0);
+  for(var i=0;i<n;i++) if(deg[i]===0) q.push(i);
+  snap("入度为 0 的点全部入队 —— 它们没有先修课，现在就能上。",0);
+
+  while(q.length){
+    var cur=q.shift();
+    res.push(cur); out.push(cur);
+    snap("出队 <b>"+cur+"</b>，收进结果。接下来把它指向的课各减 1。",0,cur);
+    var unlocked=[];
+    for(var k=0;k<g[cur].length;k++){
+      var nei=g[cur][k];
+      deg[nei]--;
+      if(deg[nei]===0){ q.push(nei); unlocked.push(nei); }
+    }
+    if(g[cur].length===0){
+      snap(cur+" 不是任何课的先修课，没有要减的。",0,cur);
+    }else if(unlocked.length){
+      snap("课程 "+g[cur].join("、")+" 入度各减 1。<b>"+unlocked.join("、")+" 归零，入队</b> —— 先修课全上完了。",0,cur);
+    }else{
+      snap("课程 "+g[cur].join("、")+" 入度各减 1，但都还没归零，暂时不能上。",0,cur);
+    }
+  }
+
+  if(res.length===n) snap("队列空了，结果里有 "+n+" 个点 = 总课程数 → <b>成功</b>，顺序：["+res.join(", ")+"]",1);
+  else snap("队列空了，但结果里只有 "+res.length+" 个点（少于 "+n+"）→ <b>剩下的点卡在环里，入度永远减不到 0</b>。返回空数组。",2);
+  return {steps:steps, g:g, ok:res.length===n};
+}
+
+var TR=CASES.map(buildTrace);
+var cur=0, s=0;
+var tb=document.getElementById("tabs");
+CASES.forEach(function(c,i){
+  var b=document.createElement("button"); b.type="button"; b.textContent=c.label;
+  b.setAttribute("role","tab");
+  b.addEventListener("click", function(){ cur=i; s=0; render(); });
+  tb.appendChild(b);
+});
+
+function drawGraph(c, st, g){
+  var svg='<svg width="100%" viewBox="0 0 340 290">';
+  svg+='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="#b6b0a6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>';
+  for(var u=0;u<c.n;u++) for(var k=0;k<g[u].length;k++){
+    var v=g[u][k], a=c.pos[u], b=c.pos[v];
+    var dx=b[0]-a[0], dy=b[1]-a[1], L=Math.sqrt(dx*dx+dy*dy);
+    var x1=a[0]+dx/L*24, y1=a[1]+dy/L*24, x2=b[0]-dx/L*28, y2=b[1]-dy/L*28;
+    var live = st.out.indexOf(u)>-1;
+    svg+='<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+(live?"#9fc9c0":"#cfcac1")+'" stroke-width="'+(live?2.4:1.8)+'" marker-end="url(#ah)"/>';
+  }
+  for(var i=0;i<c.n;i++){
+    var p=c.pos[i], fill="#f4f2ee", stroke="#d5d0c7", tx="#98a2ad", w=1.5;
+    if(st.out.indexOf(i)>-1){ fill="var(--done-bg)"; stroke="var(--done)"; tx="var(--done)"; }
+    else if(st.deg[i]===0){ fill="var(--ready-bg)"; stroke="var(--ready)"; tx="var(--ready)"; }
+    if(i===st.hl) w=3;
+    svg+='<circle cx="'+p[0]+'" cy="'+(p[1]+2)+'" r="22" fill="rgba(21,25,30,.10)"/>';
+    svg+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="22" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+w+'"/>';
+    svg+='<text x="'+p[0]+'" y="'+p[1]+'" text-anchor="middle" dominant-baseline="central" font-family="JetBrains Mono, monospace" font-size="15" font-weight="500" fill="'+tx+'">'+i+'</text>';
+  }
+  return svg+'</svg>';
+}
+
+function chips(arr, cls){
+  if(!arr.length) return '<span class="empty">空</span>';
+  return arr.map(function(x){ return '<span class="chip'+(cls?" "+cls:"")+'">'+x+'</span>'; }).join("");
+}
+
+function render(){
+  var c=CASES[cur], tr=TR[cur], st=tr.steps[s];
+  Array.prototype.forEach.call(tb.children, function(b,i){
+    b.setAttribute("aria-selected", i===cur?"true":"false");
+  });
+  document.getElementById("hint").innerHTML = c.hint || "";
+  document.getElementById("gtitle").textContent = "依赖图 · n = "+c.n;
+  document.getElementById("graph").innerHTML = drawGraph(c, st, tr.g);
+
+  var dh="";
+  for(var i=0;i<c.n;i++){
+    var cls = st.out.indexOf(i)>-1 ? " out" : (st.deg[i]===0 ? " zero" : "");
+    dh += '<span class="degcell'+cls+'">'+i+' : '+st.deg[i]+'</span>';
+  }
+  document.getElementById("deg").innerHTML = dh;
+  document.getElementById("queue").innerHTML = chips(st.q);
+  document.getElementById("res").innerHTML = chips(st.res, "done");
+
+  var log=document.getElementById("log");
+  log.innerHTML = st.msg;
+  log.className = "log" + (st.tone===1?" good":(st.tone===2?" bad":""));
+
+  document.getElementById("pos").textContent = (s+1)+" / "+tr.steps.length;
+  document.getElementById("prev").disabled = s===0;
+  document.getElementById("next").disabled = s===tr.steps.length-1;
+  var vd=document.getElementById("verdict");
+  vd.textContent = s===tr.steps.length-1 ? (tr.ok?"可以完成":"无法完成 · 返回空") : "";
+  vd.style.color = tr.ok ? "var(--done)" : "var(--stuck)";
+}
+
+document.getElementById("next").addEventListener("click", function(){
+  if(s < TR[cur].steps.length-1){ s++; render(); }
+});
+document.getElementById("prev").addEventListener("click", function(){
+  if(s > 0){ s--; render(); }
+});
+document.addEventListener("keydown", function(e){
+  if(e.key==="ArrowRight") document.getElementById("next").click();
+  if(e.key==="ArrowLeft") document.getElementById("prev").click();
+});
+render();
+</script>
+</body>
+</html>
