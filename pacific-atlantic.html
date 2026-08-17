@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pacific Atlantic Flow — 为什么要反过来搜</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8e5df; --card:#fff; --ink:#15191e; --soft:#5d6873; --faint:#98a2ad; --rule:#e2ded6;
+  --pac:#2563a8; --pac-bg:#e8f0f9; --atl:#0f766e; --atl-bg:#e4f2f0;
+  --both:#b8791a; --both-bg:#fbf0dc; --mark:#e8b93c;
+  --lift:0 1px 2px rgba(21,25,30,.06), 0 6px 16px rgba(21,25,30,.08);
+  --lift-lg:0 2px 4px rgba(21,25,30,.07), 0 14px 34px rgba(21,25,30,.13);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.7;
+  background-image:radial-gradient(circle at 20% 0%, #f2f0ec 0%, var(--bg) 46%, #d8d4cc 100%);
+  background-attachment:fixed;}
+.wrap{max-width:860px;margin:0 auto;padding:52px 22px 90px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+h1{font-size:clamp(26px,4.4vw,38px);line-height:1.16;font-weight:700;margin:0 0 14px;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--both)}
+.lede{font-size:16.5px;color:var(--soft);max-width:62ch;margin:0 0 28px}
+code{font-family:"JetBrains Mono",monospace;font-size:.88em;background:rgba(21,25,30,.06);padding:1px 5px;border-radius:3px}
+
+.tabs{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.tabs button{appearance:none;border:0;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:13.5px;font-weight:500;padding:10px 18px;background:var(--card);color:var(--soft);
+  box-shadow:var(--lift);transition:transform .16s,box-shadow .16s,background .16s,color .16s}
+.tabs button:hover{transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.tabs button[aria-selected="true"]{background:var(--ink);color:#fff;transform:translateY(-2px);box-shadow:var(--lift-lg)}
+button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+
+.stage{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:22px;align-items:start}
+@media(max-width:720px){.stage{grid-template-columns:1fr}}
+
+.gridwrap{background:var(--card);border-radius:12px;padding:14px;box-shadow:var(--lift)}
+.oc{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);text-align:center}
+.mid{display:flex;align-items:stretch;gap:6px;margin:6px 0}
+.side{writing-mode:vertical-rl;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--faint);display:flex;align-items:center}
+.side.r{transform:rotate(180deg)}
+#board{flex:1;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;
+  font-size:16px;border-radius:5px;background:#f4f2ee;color:#a8b0b8;border:2px solid transparent;
+  transition:background .25s,color .25s,border-color .25s,transform .2s;box-shadow:0 1px 2px rgba(21,25,30,.05)}
+.cell.on{transform:translateY(-1px);box-shadow:0 2px 6px rgba(21,25,30,.12)}
+
+.panel{background:var(--card);border-radius:12px;padding:18px 20px;box-shadow:var(--lift);font-size:15px}
+.panel b{font-weight:500}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;font-size:12.5px;color:var(--soft)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+.takeaway{margin-top:48px;padding-top:28px;border-top:1px solid rgba(21,25,30,.14)}
+h2{font-size:20px;font-weight:500;margin:0 0 12px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+@media(max-width:640px){.cmp{grid-template-columns:1fr}}
+.cmp div{background:var(--card);border-radius:11px;padding:14px 18px;box-shadow:var(--lift)}
+.cmp b{display:block;font-weight:500;margin-bottom:4px}
+.cmp span{font-size:14px;color:var(--soft)}
+.tc{font-family:"JetBrains Mono",monospace;font-size:13px;margin-top:8px;display:block}
+.bad{color:#c0392b}.good{color:var(--atl)}
+footer{margin-top:40px;font-size:13px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">laicode 665 · pacific atlantic flow</p>
+<h1>水往低处流，<em>那就反过来往高处爬</em></h1>
+<p class="lede">太平洋贴着左边和上边，大西洋贴着右边和下边。水从一格流向上下左右<b>高度小于等于自己</b>的邻居。要找出能同时流到两个大洋的格子。</p>
+
+<div class="tabs" role="tablist" id="tabs"></div>
+
+<div class="stage">
+  <div class="gridwrap">
+    <div class="oc">pacific ocean</div>
+    <div class="mid">
+      <span class="side">pacific</span>
+      <div id="board"></div>
+      <span class="side r">atlantic</span>
+    </div>
+    <div class="oc">atlantic ocean</div>
+  </div>
+
+  <div>
+    <div class="panel" id="note"></div>
+    <div class="legend">
+      <span><i style="background:var(--pac-bg);border:1px solid var(--pac)"></i>能到太平洋</span>
+      <span><i style="background:var(--atl-bg);border:1px solid var(--atl)"></i>能到大西洋</span>
+      <span><i style="background:var(--both-bg);border:1px solid var(--both)"></i>两个都能到</span>
+    </div>
+  </div>
+</div>
+
+<section class="takeaway">
+  <h2>为什么不正着搜</h2>
+  <div class="cmp">
+    <div>
+      <b>正着搜（每格问一次）</b>
+      <span>对每个格子跑一次搜索，问"从这儿出发能不能流到海"。m×n 个格子，每次最坏走遍全图。</span>
+      <span class="tc bad">O(m²n²)</span>
+    </div>
+    <div>
+      <b>反着搜（从海往内陆爬）</b>
+      <span>从海边格子出发往内陆爬，条件反过来：<b>只爬向不比自己矮的邻居</b>。跑两次，各得一张可达表，最后取交集。</span>
+      <span class="tc good">O(3mn) = O(mn)</span>
+    </div>
+  </div>
+  <p style="margin-top:22px"><b>方向反了，判断条件也要跟着反。</b>正着流是「邻居 ≤ 我」；反着爬是「邻居 ≥ 我」，代码里写成 <code>if (heights[新] &lt; heights[当前]) continue;</code>。这一处最容易写反。</p>
+</section>
+
+<footer>网格取自题目样例 · 单元格数字为高度</footer>
+</div>
+
+<script>
+var H=[[1,2,2,3,5],[3,2,3,4,4],[2,4,5,3,1],[6,7,1,4,5],[5,1,1,2,4]];
+var R=H.length, C=H[0].length;
+
+function flood(seeds){
+  var vis=[]; for(var i=0;i<R;i++){ vis.push([]); for(var j=0;j<C;j++) vis[i].push(false); }
+  var q=[];
+  seeds.forEach(function(s){ if(!vis[s[0]][s[1]]){ vis[s[0]][s[1]]=true; q.push(s); } });
+  var d=[[0,1],[1,0],[-1,0],[0,-1]];
+  while(q.length){
+    var c=q.shift();
+    for(var k=0;k<4;k++){
+      var nr=c[0]+d[k][0], nc=c[1]+d[k][1];
+      if(nr<0||nr>=R||nc<0||nc>=C) continue;
+      if(vis[nr][nc]) continue;
+      if(H[nr][nc] < H[c[0]][c[1]]) continue;
+      vis[nr][nc]=true; q.push([nr,nc]);
+    }
+  }
+  return vis;
+}
+
+var ps=[], as=[];
+for(var i=0;i<R;i++){ ps.push([i,0]); as.push([i,C-1]); }
+for(var j=0;j<C;j++){ ps.push([0,j]); as.push([R-1,j]); }
+var P=flood(ps), A=flood(as);
+
+var ansList=[];
+for(var i=0;i<R;i++) for(var j=0;j<C;j++) if(P[i][j]&&A[i][j]) ansList.push("["+i+","+j+"]");
+
+var VIEWS=[
+ {k:"h", label:"① 地形",
+  note:"每格是<b>高度</b>。水只能流向上下左右中<b>高度小于等于自己</b>的邻居 —— 往低处走，或者平着走。<br><br>左边和上边贴太平洋，右边和下边贴大西洋。边缘的格子本身就挨着海。"},
+ {k:"p", label:"② 能到太平洋",
+  note:"标蓝的格子能把水送到太平洋。<br><br>算法是<b>从太平洋边缘（第一行 + 第一列）往内陆爬</b>：只爬向<b>不比自己矮</b>的邻居。能爬到的，就说明水能顺着原路流回海里。<br><br>一次搜索搞定，不用每个格子各搜一遍。"},
+ {k:"a", label:"③ 能到大西洋",
+  note:"同样从<b>大西洋边缘（最后一行 + 最后一列）</b>往内陆爬一次，得到标绿的这批格子。"},
+ {k:"b", label:"④ 交集 = 答案",
+  note:"两张表<b>取交集</b>：既标蓝又标绿的格子（橙色），就是能同时流到两个大洋的。<br><br>答案：<code>"+ansList.join(" ")+"</code>"}
+];
+
+var cur=0, tb=document.getElementById("tabs");
+VIEWS.forEach(function(v,i){
+  var b=document.createElement("button"); b.type="button"; b.textContent=v.label;
+  b.setAttribute("role","tab");
+  b.addEventListener("click", function(){ cur=i; render(); });
+  tb.appendChild(b);
+});
+
+function render(){
+  var v=VIEWS[cur].k;
+  Array.prototype.forEach.call(tb.children, function(b,i){
+    b.setAttribute("aria-selected", i===cur ? "true" : "false");
+  });
+  var h="";
+  for(var i=0;i<R;i++) for(var j=0;j<C;j++){
+    var bg="#f4f2ee", fg="#a8b0b8", bd="transparent", on="";
+    if(v==="p" && P[i][j]){ bg="var(--pac-bg)"; fg="var(--pac)"; bd="var(--pac)"; on=" on"; }
+    if(v==="a" && A[i][j]){ bg="var(--atl-bg)"; fg="var(--atl)"; bd="var(--atl)"; on=" on"; }
+    if(v==="b"){
+      if(P[i][j] && A[i][j]){ bg="var(--both-bg)"; fg="var(--both)"; bd="var(--both)"; on=" on"; }
+      else if(P[i][j]){ bg="var(--pac-bg)"; fg="#9fc0e0"; }
+      else if(A[i][j]){ bg="var(--atl-bg)"; fg="#8fc9bd"; }
+    }
+    h+='<div class="cell'+on+'" style="background:'+bg+';color:'+fg+';border-color:'+bd+'">'+H[i][j]+'</div>';
+  }
+  document.getElementById("board").innerHTML=h;
+  document.getElementById("note").innerHTML=VIEWS[cur].note;
+}
+document.addEventListener("keydown", function(e){
+  if(e.key==="ArrowRight" && cur<VIEWS.length-1){ cur++; render(); }
+  if(e.key==="ArrowLeft" && cur>0){ cur--; render(); }
+});
+render();
+</script>
+</body>
+</html>
