@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alien Dictionary — 代码逐行走一遍</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8e5df; --card:#fff; --ink:#15191e; --soft:#5d6873; --faint:#98a2ad;
+  --a:#2563a8; --a-bg:#e8f0f9; --b:#c2405f; --b-bg:#fbe9ee;
+  --ok:#0f766e; --ok-bg:#e4f2f0; --bad:#c0392b; --bad-bg:#fbe9e6; --mark:#e8b93c;
+  --lift:0 1px 2px rgba(21,25,30,.06), 0 6px 16px rgba(21,25,30,.08);
+  --lift-lg:0 2px 4px rgba(21,25,30,.07), 0 14px 34px rgba(21,25,30,.13);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.7;
+  background-image:radial-gradient(circle at 20% 0%, #f2f0ec 0%, var(--bg) 46%, #d8d4cc 100%);
+  background-attachment:fixed;}
+.wrap{max-width:1080px;margin:0 auto;padding:48px 20px 90px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+h1{font-size:clamp(24px,4vw,34px);line-height:1.18;font-weight:700;margin:0 0 12px;letter-spacing:-.02em}
+.lede{font-size:16px;color:var(--soft);max-width:64ch;margin:0 0 22px}
+code{font-family:"JetBrains Mono",monospace;font-size:.9em;background:rgba(21,25,30,.06);padding:1px 5px;border-radius:3px}
+
+.switch{display:flex;gap:9px;margin-bottom:12px;flex-wrap:wrap}
+.switch button{appearance:none;border:0;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:500;padding:9px 16px;background:var(--card);color:var(--soft);
+  box-shadow:var(--lift);transition:all .16s}
+.switch button:hover{transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.switch button[aria-selected="true"]{background:var(--ink);color:#fff;transform:translateY(-2px);box-shadow:var(--lift-lg)}
+.switch.phase button{font-size:12.5px;padding:7px 13px;border-radius:8px}
+.switch.phase button[aria-selected="true"]{background:var(--mark);color:#412402}
+button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+
+.controls{display:flex;align-items:center;gap:11px;margin:0 0 12px;flex-wrap:wrap}
+.controls button{appearance:none;background:var(--card);border:0;border-radius:9px;font-family:inherit;font-size:14px;
+  padding:9px 20px;cursor:pointer;color:var(--ink);box-shadow:var(--lift);transition:all .15s}
+.controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.controls button:disabled{opacity:.4;cursor:default;box-shadow:none}
+.pos{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--faint)}
+
+.log{padding:13px 16px;border-radius:12px;background:var(--card);box-shadow:var(--lift);
+  font-size:14.5px;min-height:56px;border-left:4px solid var(--ink);margin-bottom:16px}
+.log.good{border-left-color:var(--ok)}
+.log.bad{border-left-color:var(--bad);color:var(--bad);background:#fffaf9}
+.log b.a{color:var(--a)} .log b.b{color:var(--b)}
+
+.stage{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:840px){.stage{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:14px 16px;box-shadow:var(--lift)}
+.card+.card{margin-top:11px}
+.card h3{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 10px;font-weight:500}
+
+pre.code{margin:0;font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.72;white-space:pre;overflow-x:auto}
+pre.code .ln{display:block;padding:0 7px;border-radius:3px;color:var(--soft);border-left:3px solid transparent}
+pre.code .ln.on{background:#fdf7e6;border-left-color:var(--mark);color:var(--ink);font-weight:500}
+pre.code .ln.bad{background:var(--bad-bg);border-left-color:var(--bad);color:var(--bad);font-weight:500}
+pre.code .ln.cmt{color:#b3aca1}
+
+.wordrow{display:flex;align-items:center;gap:8px;padding:3px 0;font-family:"JetBrains Mono",monospace}
+.wordrow .lbl{font-size:10.5px;color:var(--faint);width:20px;flex:none}
+.ch{width:26px;height:29px;display:flex;align-items:center;justify-content:center;border-radius:5px;
+  font-size:15px;background:#f4f2ee;color:var(--faint);transition:all .2s}
+.ch.same{background:#eeece7;color:var(--soft)}
+.ch.d1{background:var(--a-bg);color:var(--a);font-weight:500;transform:translateY(-1px)}
+.ch.d2{background:var(--b-bg);color:var(--b);font-weight:500;transform:translateY(-1px)}
+.ch.cmp{outline:2px solid var(--mark);outline-offset:-2px}
+.ch.dim{opacity:.3}
+.wordrow.active{background:#fdf9ee;border-radius:7px;padding:3px 6px;margin:0 -6px}
+
+table{width:100%;border-collapse:collapse;font-family:"JetBrains Mono",monospace;font-size:12.5px}
+td{padding:3px 0}
+td.k{width:34px;color:var(--a)}
+td.v{color:var(--ink)}
+tr.hit td{background:#fdf7e6}
+.chips{display:flex;gap:6px;flex-wrap:wrap;min-height:28px}
+.chip{font-family:"JetBrains Mono",monospace;font-size:13px;padding:4px 10px;border-radius:6px;
+  background:var(--a-bg);color:var(--a)}
+.empty{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--faint)}
+.result{font-family:"JetBrains Mono",monospace;font-size:20px;letter-spacing:.12em;color:var(--ok);font-weight:500;min-height:28px}
+footer{margin-top:36px;font-size:13px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">alien dictionary · 逐行 trace</p>
+<h1>代码走一遍，每一行都看得见</h1>
+<p class="lede">左边高亮当前执行的那一行，右边是三个容器的实时状态。上面的阶段按钮可以直接跳到 1a / 1b / 入队 / BFS / 收尾。</p>
+
+<div class="switch" role="tablist" id="tabs"></div>
+<div class="switch phase" id="phases"></div>
+
+<div class="controls">
+  <button id="prev" type="button">上一步</button>
+  <button id="next" type="button">下一步</button>
+  <span class="pos" id="pos"></span>
+</div>
+
+<div class="log" id="log"></div>
+
+<div class="stage">
+  <div class="card"><h3>代码</h3><pre class="code" id="code"></pre></div>
+  <div>
+    <div class="card"><h3>words</h3><div id="words"></div></div>
+    <div class="card"><h3>degree · 字母 → 欠几个</h3><table id="deg"></table></div>
+    <div class="card"><h3>graph · 字母 → 能解锁谁</h3><table id="gph"></table></div>
+    <div class="card"><h3>queue</h3><div class="chips" id="q"></div></div>
+    <div class="card"><h3>res</h3><div class="result" id="res">—</div></div>
+  </div>
+</div>
+
+<footer>蓝色 = 前一个单词的字母 · 红色 = 后一个单词的字母 · 黄框 = 正在比较的位</footer>
+</div>
+
+<script>
+var CODE=[
+/*0*/  "alienOrder(words):",
+/*1*/  "  graph  ← 空 Map<Character, Set<Character>>",
+/*2*/  "  degree ← 空 Map<Character, Integer>",
+/*3*/  "  res    ← 空 StringBuilder",
+/*4*/  "",
+/*5*/  "  // 1a 收集所有出现过的字母",
+/*6*/  "  for (String w : words)",
+/*7*/  "      for (char c : w.toCharArray())",
+/*8*/  "          degree.put(c, 0)",
+/*9*/  "",
+/*10*/ "  // 1b 相邻两两比，推出边",
+/*11*/ "  for (i = 0; i < words.length - 1; i++)",
+/*12*/ "      cur = words[i];  next = words[i+1]",
+/*13*/ "      len = min(cur.length, next.length);  j = 0",
+/*14*/ "      for (; j < len; j++)",
+/*15*/ "          c1 = cur.charAt(j);  c2 = next.charAt(j)",
+/*16*/ "          if (c1 != c2)",
+/*17*/ "              graph.putIfAbsent(c1, new HashSet<>())",
+/*18*/ "              if (graph.get(c1).add(c2))",
+/*19*/ "                  degree.put(c2, degree.get(c2) + 1)",
+/*20*/ "              break",
+/*21*/ "      if (j == len && cur.length > next.length) return \"\"",
+/*22*/ "",
+/*23*/ "  // 2 入度为 0 的入队",
+/*24*/ "  for (char c : degree.keySet())",
+/*25*/ "      if (degree.get(c) == 0) queue.offer(c)",
+/*26*/ "",
+/*27*/ "  // 3-4 BFS",
+/*28*/ "  while (!queue.isEmpty())",
+/*29*/ "      cur = queue.poll();  res.append(cur)",
+/*30*/ "      if (graph.containsKey(cur))",
+/*31*/ "          for (char next : graph.get(cur))",
+/*32*/ "              degree.put(next, degree.get(next) - 1)",
+/*33*/ "              if (degree.get(next) == 0) queue.offer(next)",
+/*34*/ "",
+/*35*/ "  // 5 长度对不上 = 有环",
+/*36*/ "  return res.length() == degree.size() ? res.toString() : \"\""
+];
+
+var CASES=[
+ {label:"例 1 · wertf", words:["wrt","wrf","er","ett","rftt"]},
+ {label:"有环 ✗", words:["z","x","z"]},
+ {label:"前缀反序 ✗", words:["abc","ab"]}
+];
+
+function trace(words){
+  var steps=[], graph={}, degree={}, queue=[], res="";
+  function snap(line, note, o){
+    o=o||{};
+    steps.push({
+      line:line, note:note, phase:o.phase||0, tone:o.tone||0,
+      graph:JSON.parse(JSON.stringify(graph)),
+      degree:JSON.parse(JSON.stringify(degree)),
+      queue:queue.slice(), res:res,
+      i:(o.i===undefined?-1:o.i), j:(o.j===undefined?-1:o.j),
+      diff:(o.diff===undefined?-1:o.diff),
+      hitDeg:o.hitDeg||null, hitG:o.hitG||null
+    });
+  }
+
+  snap(1,"三个容器都是空的：<code>graph</code> 记「谁排在谁前面」，<code>degree</code> 记「有几个字母排在我前面」，<code>res</code> 攒结果。",{phase:0});
+
+  // 1a
+  snap(6,"<b>阶段 1a</b>：扫一遍所有单词，把出现过的字母登记进 <code>degree</code>，值设为 0。<b>这一步不加任何边</b> —— 单词内部的字母排列跟字母表顺序无关。",{phase:1});
+  for(var wi=0; wi<words.length; wi++){
+    var w=words[wi], added=[];
+    for(var ci=0; ci<w.length; ci++){
+      if(!(w[ci] in degree)){ degree[w[ci]]=0; added.push(w[ci]); }
+    }
+    snap(8, "扫单词 <code>"+w+"</code>："+(added.length? "新登记字母 <b>"+added.join("、")+"</b>，入度设为 0" : "字母都登记过了，什么都不做"),{phase:1, i:wi});
+  }
+  snap(8,"1a 结束。<code>degree</code> 的 key 就是「总共有哪些字母」，相当于 430 里的 <code>numCourses</code> —— 后面遍历起点和最后判长度都靠它。",{phase:1});
+
+  // 1b
+  snap(11,"<b>阶段 1b</b>：相邻两两比较，推出边。<b>只比相邻的</b> —— 列表已排好序，传递性保证隔着比只能得到推论。",{phase:2});
+  for(var k=0;k+1<words.length;k++){
+    var cur=words[k], nxt=words[k+1], len=Math.min(cur.length,nxt.length), j=0;
+    snap(12,"第 "+(k+1)+" 对：<code>"+cur+"</code> 和 <code>"+nxt+"</code>。逐位往后找<b>第一个不同</b>的字母。",{phase:2,i:k});
+    var broke=false;
+    for(j=0;j<len;j++){
+      var c1=cur[j], c2=nxt[j];
+      if(c1===c2){
+        snap(16,"第 "+(j+1)+" 位：<b class='a'>"+c1+"</b> == <b class='b'>"+c2+"</b>，相同，继续往后。",{phase:2,i:k,j:j});
+      } else {
+        snap(16,"第 "+(j+1)+" 位：<b class='a'>"+c1+"</b> ≠ <b class='b'>"+c2+"</b> —— <b>找到第一个差异</b>。因为 <code>"+cur+"</code> 排在前面，所以 <b>"+c1+" 排在 "+c2+" 前面</b>。",{phase:2,i:k,j:j,diff:j});
+        if(!(c1 in graph)) graph[c1]=[];
+        snap(17,"<code>graph.putIfAbsent("+c1+", new HashSet&lt;&gt;())</code> —— 确保 "+c1+" 名下有个集合可以塞东西。",{phase:2,i:k,j:j,diff:j,hitG:c1});
+        if(graph[c1].indexOf(c2)<0){
+          graph[c1].push(c2);
+          degree[c2]=degree[c2]+1;
+          snap(19,"这条边是新的 → <code>graph["+c1+"]</code> 加入 "+c2+"，同时 <b>degree["+c2+"] 变成 "+degree[c2]+"</b>（多了一个字母排在它前面）。",{phase:2,i:k,j:j,diff:j,hitDeg:c2,hitG:c1});
+        } else {
+          snap(18,"边 "+c1+"→"+c2+" <b>之前已经加过了</b>，<code>Set.add</code> 返回 false → <b>degree 不再加</b>。重复加边会让入度永远减不到 0，无环也报环。",{phase:2,i:k,j:j,diff:j,hitG:c1});
+        }
+        snap(20,"<b>break</b> —— 只取第一个差异。后面的位提供不了任何信息，字典序在第一个差异处就分出胜负了。",{phase:2,i:k,j:j,diff:j});
+        broke=true;
+        break;
+      }
+    }
+    if(!broke){
+      if(cur.length>nxt.length){
+        snap(21,"逐位比完<b>一个差异都没有</b>（j == len），但 <code>"+cur+"</code> 比 <code>"+nxt+"</code> <b>更长却排在前面</b> —— 前缀必须排在前面，输入非法。<b>直接 return \"\"</b>。",{phase:2,i:k,tone:2});
+        snap(36,"返回空字符串。",{phase:5,tone:2});
+        return steps;
+      } else {
+        snap(21,"没有任何差异，<code>"+cur+"</code> 是 <code>"+nxt+"</code> 的前缀，顺序合法 —— 但<b>推不出任何边</b>，什么都不做。",{phase:2,i:k});
+      }
+    }
+  }
+  snap(21,"1b 结束，所有边收集完毕。接下来就跟 Course Schedule II 一模一样了。",{phase:2});
+
+  // 2
+  var letters=Object.keys(degree);
+  snap(24,"<b>阶段 2</b>：遍历 <code>degree.keySet()</code>，把入度为 0 的字母入队 —— <b>没有任何字母排在它前面</b>，可以当第一个。",{phase:3});
+  for(var li=0; li<letters.length; li++){
+    var c=letters[li];
+    if(degree[c]===0){
+      queue.push(c);
+      snap(25,"<b>"+c+"</b> 的入度是 0 → 入队。",{phase:3,hitDeg:c});
+    } else {
+      snap(25,"<b>"+c+"</b> 的入度是 "+degree[c]+"，还有字母排在它前面，暂时不能入队。",{phase:3,hitDeg:c});
+    }
+  }
+
+  // 3-4
+  snap(28,"<b>阶段 3-4</b>：BFS。poll 一个就收进结果，然后给它指向的字母各减 1，<b>减到 0 才入队</b>。",{phase:4});
+  while(queue.length){
+    var u=queue.shift();
+    res+=u;
+    snap(29,"poll 出 <b>"+u+"</b>，追加进 res → <code>"+res+"</code>。<b>能进队列的就已经是「可以排下一个」的字母了。</b>",{phase:4,hitDeg:u});
+    if(u in graph){
+      for(var t=0;t<graph[u].length;t++){
+        var v=graph[u][t];
+        degree[v]=degree[v]-1;
+        if(degree[v]===0){
+          queue.push(v);
+          snap(33,"<b>"+v+"</b> 的入度减到 <b>0</b> → 入队。它前面的字母全都排好了。",{phase:4,hitDeg:v,hitG:u});
+        } else {
+          snap(32,"<b>"+v+"</b> 的入度减 1，变成 <b>"+degree[v]+"</b> —— 还没归零，<b>不能入队</b>。",{phase:4,hitDeg:v,hitG:u});
+        }
+      }
+    } else {
+      snap(30,"<code>graph</code> 里没有 <b>"+u+"</b> 这个 key —— 它不排在任何字母前面，没有要减的。<b>Map 版必须判这一下，否则 get 返回 null 会崩。</b>",{phase:4,hitDeg:u});
+    }
+  }
+
+  // 5
+  var n=Object.keys(degree).length;
+  if(res.length===n) snap(36,"队列空了。<code>res.length()="+res.length+"</code> == <code>degree.size()="+n+"</code> → <b>成功，返回 "+res+"</b>",{phase:5,tone:1});
+  else snap(36,"队列空了，但 <code>res.length()="+res.length+"</code> ≠ <code>degree.size()="+n+"</code> —— <b>剩下的字母卡在环里</b>，入度永远减不到 0。返回空字符串。",{phase:5,tone:2});
+  return steps;
+}
+
+var TR=CASES.map(function(c){ return trace(c.words); });
+var PHASES=["初始","1a 收集字母","1b 推出边","2 入队","3-4 BFS","5 收尾"];
+var cur=0, s=0;
+
+var tb=document.getElementById("tabs");
+CASES.forEach(function(c,i){
+  var b=document.createElement("button"); b.type="button"; b.textContent=c.label;
+  b.setAttribute("role","tab");
+  b.addEventListener("click", function(){ cur=i; s=0; render(); });
+  tb.appendChild(b);
+});
+var pb=document.getElementById("phases");
+PHASES.forEach(function(p,i){
+  var b=document.createElement("button"); b.type="button"; b.textContent=p;
+  b.addEventListener("click", function(){
+    var st=TR[cur]; for(var k=0;k<st.length;k++){ if(st[k].phase===i){ s=k; render(); return; } }
+  });
+  pb.appendChild(b);
+});
+
+function render(){
+  var c=CASES[cur], tr=TR[cur], st=tr[s];
+  Array.prototype.forEach.call(tb.children,function(b,i){ b.setAttribute("aria-selected", i===cur?"true":"false"); });
+  Array.prototype.forEach.call(pb.children,function(b,i){ b.setAttribute("aria-selected", i===st.phase?"true":"false"); });
+
+  var h="";
+  for(var i=0;i<CODE.length;i++){
+    var cls="ln";
+    if(/^\s*\/\//.test(CODE[i])) cls+=" cmt";
+    if(i===st.line) cls = "ln" + (st.tone===2?" bad":" on");
+    h+='<span class="'+cls+'">'+CODE[i].replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</span>';
+  }
+  document.getElementById("code").innerHTML=h;
+
+  var wh="";
+  c.words.forEach(function(w,i){
+    var act = st.i>=0 && st.phase===2 && (i===st.i || i===st.i+1);
+    var solo = st.i>=0 && st.phase===1 && i===st.i;
+    wh+='<div class="wordrow'+(act||solo?" active":"")+'"><span class="lbl">'+i+'</span>';
+    for(var jj=0;jj<w.length;jj++){
+      var cls="ch";
+      if(act){
+        if(st.diff>=0){
+          if(jj<st.diff) cls+=" same";
+          else if(jj===st.diff) cls += (i===st.i ? " d1" : " d2");
+          else cls+=" dim";
+        } else if(st.j>=0){
+          if(jj<st.j) cls+=" same";
+          else if(jj===st.j) cls+=" cmp";
+        } else cls+=" same";
+      }
+      wh+='<span class="'+cls+'">'+w[jj]+'</span>';
+    }
+    wh+='</div>';
+  });
+  document.getElementById("words").innerHTML=wh;
+
+  var dk=Object.keys(st.degree);
+  document.getElementById("deg").innerHTML = dk.length
+    ? dk.map(function(k){ return '<tr'+(k===st.hitDeg?' class="hit"':'')+'><td class="k">'+k+'</td><td class="v">'+st.degree[k]+'</td></tr>'; }).join("")
+    : '<tr><td class="v"><span class="empty">空</span></td></tr>';
+
+  var gk=Object.keys(st.graph);
+  document.getElementById("gph").innerHTML = gk.length
+    ? gk.map(function(k){ return '<tr'+(k===st.hitG?' class="hit"':'')+'><td class="k">'+k+' →</td><td class="v">['+st.graph[k].join(", ")+']</td></tr>'; }).join("")
+    : '<tr><td class="v"><span class="empty">空</span></td></tr>';
+
+  document.getElementById("q").innerHTML = st.queue.length
+    ? st.queue.map(function(x){ return '<span class="chip">'+x+'</span>'; }).join("")
+    : '<span class="empty">空</span>';
+  document.getElementById("res").textContent = st.res || "—";
+
+  var log=document.getElementById("log");
+  log.innerHTML=st.note;
+  log.className="log"+(st.tone===1?" good":(st.tone===2?" bad":""));
+
+  document.getElementById("pos").textContent=(s+1)+" / "+tr.length;
+  document.getElementById("prev").disabled = s===0;
+  document.getElementById("next").disabled = s===tr.length-1;
+}
+document.getElementById("next").addEventListener("click",function(){ if(s<TR[cur].length-1){s++;render();} });
+document.getElementById("prev").addEventListener("click",function(){ if(s>0){s--;render();} });
+document.addEventListener("keydown",function(e){
+  if(e.key==="ArrowRight") document.getElementById("next").click();
+  if(e.key==="ArrowLeft") document.getElementById("prev").click();
+});
+render();
+</script>
+</body>
+</html>
