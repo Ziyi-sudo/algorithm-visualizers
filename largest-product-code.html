@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Largest Product Of Length — 三版代码对照</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8e5df; --card:#fff; --ink:#15191e; --soft:#5d6873; --faint:#98a2ad;
+  --keep:#0f766e; --keep-bg:#e4f2f0; --new:#b8791a; --new-bg:#fdf5e3;
+  --mark:#e8b93c; --bad:#c0392b;
+  --lift:0 1px 2px rgba(21,25,30,.06), 0 6px 16px rgba(21,25,30,.08);
+  --lift-lg:0 2px 4px rgba(21,25,30,.07), 0 14px 34px rgba(21,25,30,.13);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.7;
+  background-image:radial-gradient(circle at 20% 0%, #f2f0ec 0%, var(--bg) 46%, #d8d4cc 100%);
+  background-attachment:fixed;}
+.wrap{max-width:940px;margin:0 auto;padding:50px 20px 90px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+h1{font-size:clamp(25px,4.2vw,36px);line-height:1.18;font-weight:700;margin:0 0 12px;letter-spacing:-.02em}
+.lede{font-size:16px;color:var(--soft);max-width:64ch;margin:0 0 24px}
+code{font-family:"JetBrains Mono",monospace;font-size:.9em;background:rgba(21,25,30,.06);padding:1px 5px;border-radius:3px}
+
+table.cmp{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;
+  box-shadow:var(--lift);overflow:hidden;margin-bottom:26px;font-size:14px}
+table.cmp th{text-align:left;font-weight:500;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);padding:12px 14px;border-bottom:1px solid #f0ede8}
+table.cmp td{padding:11px 14px;border-bottom:1px solid #f7f5f1;color:var(--soft)}
+table.cmp tr:last-child td{border-bottom:0}
+table.cmp td.n{font-family:"JetBrains Mono",monospace;font-size:15px;color:var(--ink);font-weight:500}
+table.cmp td.win{color:var(--keep)}
+table.cmp th.col{color:var(--ink);font-size:13px;text-transform:none;letter-spacing:0}
+
+.switch{display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+.switch button{appearance:none;border:0;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:500;padding:10px 17px;background:var(--card);color:var(--soft);
+  box-shadow:var(--lift);transition:all .16s;text-align:left}
+.switch button:hover{transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.switch button[aria-selected="true"]{background:var(--ink);color:#fff;transform:translateY(-2px);box-shadow:var(--lift-lg)}
+button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+
+.note{padding:14px 17px;border-radius:12px;background:var(--card);box-shadow:var(--lift);
+  font-size:15px;border-left:4px solid var(--ink);margin-bottom:16px}
+
+pre.code{margin:0;background:var(--card);border-radius:12px;box-shadow:var(--lift);
+  padding:16px 4px;font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.85;
+  white-space:pre;overflow-x:auto}
+pre.code .ln{display:block;padding:1px 14px;border-left:4px solid transparent;color:var(--soft)}
+pre.code .ln.keep{background:var(--keep-bg);border-left-color:var(--keep);color:#0b5c55}
+pre.code .ln.new{background:var(--new-bg);border-left-color:var(--new);color:#7d5210;font-weight:500}
+pre.code .tagl{float:right;font-size:10.5px;letter-spacing:.06em;opacity:.75;padding-left:14px}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--soft)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+.takeaway{margin-top:44px;padding-top:26px;border-top:1px solid rgba(21,25,30,.14)}
+h2{font-size:20px;font-weight:500;margin:0 0 12px}
+p{max-width:68ch}
+footer{margin-top:36px;font-size:13px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">laicode 191 · largest product of length</p>
+<h1>三版代码，每版只加一件事</h1>
+<p class="lede">③ <b>不是</b>把 ② 换掉 —— 预处理那几行原封不动留着，只是<b>又加了排序和 break</b>。切换 tab 看高亮：绿色 = 从上一版继承，黄色 = 本版新增。</p>
+
+<table class="cmp">
+  <tr>
+    <th>指标</th>
+    <th class="col">① 基础版</th>
+    <th class="col">② 预处理 mask</th>
+    <th class="col">③ 排序 + 剪枝</th>
+  </tr>
+  <tr><td>位运算判交集</td><td class="n">✓</td><td class="n">✓</td><td class="n">✓</td></tr>
+  <tr><td>mask 预处理</td><td class="n" style="color:var(--faint)">✗</td><td class="n">✓</td><td class="n">✓ <span style="font-size:12px;color:var(--keep)">继承</span></td></tr>
+  <tr><td>排序 + break</td><td class="n" style="color:var(--faint)">✗</td><td class="n" style="color:var(--faint)">✗</td><td class="n">✓ <span style="font-size:12px;color:var(--new)">新增</span></td></tr>
+  <tr><td>字符扫描次数</td><td class="n">95</td><td class="n win">19</td><td class="n win">19</td></tr>
+  <tr><td>比较过的配对</td><td class="n">15</td><td class="n">15</td><td class="n win">4</td></tr>
+  <tr><td>复杂度</td><td class="n" style="font-size:13px">O(n²·m)</td><td class="n" style="font-size:13px">O(n·m + n²)</td><td class="n" style="font-size:13px">同 ②，常数更小</td></tr>
+</table>
+
+<div class="switch" role="tablist" id="tabs"></div>
+<div class="note" id="note"></div>
+<pre class="code" id="code"></pre>
+<div class="legend">
+  <span><i style="background:var(--keep-bg);border:1px solid var(--keep)"></i>从上一版继承下来的优化</span>
+  <span><i style="background:var(--new-bg);border:1px solid var(--new)"></i>本版新增</span>
+</div>
+
+<section class="takeaway">
+  <h2>回答两个疑问</h2>
+  <p><b>「③ 只是多了个 break 吗？」</b> —— 多了三样，但它们是一套：<b>降序排</b>（让乘积在内层单调递减）、<b>循环顺序换成 i 从 1、j 从 0 到 i-1</b>（保证先试长的）、<b>break</b>（提前收工）。<b>排序本身不省时间，它是为了给 break 提供依据</b> —— 不排序的话乘积忽高忽低，看到一个小的也不敢停，因为后面可能还有大的。</p>
+
+  <p><b>「② 的预处理还在吗？」</b> —— 在，而且是 ③ 的地基。切到 tab ③ 看绿色那几行，<code>int[] masks</code> 那段一个字没改。<b>三层优化是叠加的，不是替换的。</b></p>
+
+  <p><b>两种优化砍的是不同维度：</b>② 砍的是「每一对的开销」（mask 不再重算），③ 砍的是「要试多少对」（大片配对根本不看）。所以 ③ 的字符扫描数跟 ② 一样是 19，但比较过的配对从 15 掉到 4。</p>
+
+  <p><b>面试怎么说：</b>① 是必须的（干掉那个 m），②③ 是加分项。最坏复杂度三版都是 O(n²) —— 如果始终找不到无共同字母的配对，largest 一直是 0，永远 break 不了。</p>
+</section>
+
+<footer>字典：["abcde","abcd","ade","xy","fgh","ab"] · 答案 15（abcde × fgh）</footer>
+</div>
+
+<script>
+// k: keep(继承)  n: new(新增)  空: 普通
+var V=[
+{
+ label:"① 基础版（你写的）", sub:"mask 在 check 里现算",
+ note:"位运算已经有了 —— <code>|</code> 把字母装进一个 int，<code>&amp;</code> 判有没有共同字母。<b>这一层是必须的</b>，它把每次比较从 O(m) 降到 O(1)。问题在于 mask 写在 <code>check()</code> 内部，<b>同一个词的 mask 在双层循环里被重算了很多次</b>。",
+ lines:[
+  ["public int largestProduct(String[] dict) {",""],
+  ["    int gMax = 0;",""],
+  ["    for (int i = 0; i < dict.length - 1; i++)",""],
+  ["        for (int j = i + 1; j < dict.length; j++)",""],
+  ["            if (check(dict[i], dict[j]))","","每次都进 check"],
+  ["                gMax = Math.max(gMax, dict[i].length() * dict[j].length());",""],
+  ["    return gMax;",""],
+  ["}",""],
+  ["",""],
+  ["public boolean check(String a, String b) {",""],
+  ["    int maskA = 0;","n"],
+  ["    for (int i = 0; i < a.length(); i++)","n"],
+  ["        maskA |= 1 << (a.charAt(i) - 'a');","n","| 建集合"],
+  ["    int maskB = 0;","n"],
+  ["    for (int i = 0; i < b.length(); i++)","n"],
+  ["        maskB |= 1 << (b.charAt(i) - 'a');","n"],
+  ["    return (maskA & maskB) == 0;","n","& 查交集"],
+  ["}",""]
+ ]
+},
+{
+ label:"② 预处理 mask", sub:"mask 只算一次",
+ note:"唯一的改动：<b>把 mask 提到循环外，一次性算完存进数组</b>。之后双层循环里直接查表。<code>check()</code> 方法整个删掉了，逻辑内联成一行。<b>字符扫描从 95 次降到 19 次</b>（19 就是所有单词的总字符数）。",
+ lines:[
+  ["public int largestProduct(String[] dict) {",""],
+  ["    int n = dict.length;",""],
+  ["",""],
+  ["    int[] masks = new int[n];","n","↓ 新增：一次算完"],
+  ["    for (int i = 0; i < n; i++)","n"],
+  ["        for (char c : dict[i].toCharArray())","n"],
+  ["            masks[i] |= 1 << (c - 'a');","n"],
+  ["",""],
+  ["    int gMax = 0;",""],
+  ["    for (int i = 0; i < n - 1; i++)",""],
+  ["        for (int j = i + 1; j < n; j++)",""],
+  ["            if ((masks[i] & masks[j]) == 0)","n","查表，O(1)"],
+  ["                gMax = Math.max(gMax, dict[i].length() * dict[j].length());",""],
+  ["    return gMax;",""],
+  ["}",""]
+ ]
+},
+{
+ label:"③ 排序 + 剪枝（老师的）", sub:"② 的全部 + 砍掉大量配对",
+ note:"<b>预处理那几行原封不动（绿色）</b>，在它之上加三样：降序排、循环顺序换向、break。三个是一套 —— <b>排序让内层乘积单调递减，break 才有依据</b>。比较过的配对从 15 掉到 4。",
+ lines:[
+  ["public int largestProduct(String[] dict) {",""],
+  ["    int n = dict.length;",""],
+  ["",""],
+  ["    Arrays.sort(dict, (x, y) -> y.length() - x.length());","n","① 降序排"],
+  ["",""],
+  ["    int[] masks = new int[n];","k","↓ ② 继承，一字未改"],
+  ["    for (int i = 0; i < n; i++)","k"],
+  ["        for (char c : dict[i].toCharArray())","k"],
+  ["            masks[i] |= 1 << (c - 'a');","k"],
+  ["",""],
+  ["    int largest = 0;",""],
+  ["    for (int i = 1; i < n; i++) {","n","② i 从 1"],
+  ["        for (int j = 0; j < i; j++) {","n","   j 从最长的开始"],
+  ["            int prod = dict[i].length() * dict[j].length();","n"],
+  ["            if (prod <= largest) break;","n","③ 砍掉整段"],
+  ["            if ((masks[i] & masks[j]) == 0) largest = prod;","n","不用 Math.max"],
+  ["        }",""],
+  ["    }",""],
+  ["    return largest;",""],
+  ["}",""]
+ ]
+}];
+
+var cur=0;
+var tb=document.getElementById("tabs");
+V.forEach(function(v,i){
+  var b=document.createElement("button"); b.type="button";
+  b.innerHTML=v.label+'<br><span style="font-size:11.5px;opacity:.7">'+v.sub+'</span>';
+  b.setAttribute("role","tab");
+  b.addEventListener("click",function(){ cur=i; render(); });
+  tb.appendChild(b);
+});
+
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function render(){
+  var v=V[cur];
+  Array.prototype.forEach.call(tb.children,function(b,i){ b.setAttribute("aria-selected", i===cur?"true":"false"); });
+  document.getElementById("note").innerHTML=v.note;
+  document.getElementById("code").innerHTML = v.lines.map(function(l){
+    var cls="ln"+(l[1]==="k"?" keep":(l[1]==="n"?" new":""));
+    var tag = l[2] ? '<span class="tagl">← '+esc(l[2])+'</span>' : '';
+    return '<span class="'+cls+'">'+tag+esc(l[0])+'</span>';
+  }).join("");
+}
+document.addEventListener("keydown",function(e){
+  if(e.key==="ArrowRight" && cur<V.length-1){ cur++; render(); }
+  if(e.key==="ArrowLeft" && cur>0){ cur--; render(); }
+});
+render();
+</script>
+</body>
+</html>
