@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Distance — 二维 DP 动画图解("sigh" → "asith")</title>
+<style>
+  :root{
+    --bg:#f8f9fb; --card:#fff; --ink:#1a2233; --muted:#6b7487;
+    --accent:#3565e0; --accent-soft:#e3ebfd;
+    --diag:#b0641a;  --diag-bg:#fdf0d5;  --diag-bd:#e8b94a;   /* 替换/白拿 斜上 */
+    --up:#b2314f;    --up-bg:#fbe3e8;    --up-bd:#eea8b8;     /* 删除 上 */
+    --left:#0c7a4d;  --left-bg:#d9f2e5;  --left-bd:#7fd4ab;   /* 插入 左 */
+    --line:#e3e6ee;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    padding:26px 14px 60px;display:flex;flex-direction:column;align-items:center;gap:18px;}
+  h1{font-size:21px;}
+  h2{font-size:15px;margin-bottom:10px;color:var(--ink);}
+  .sub{color:var(--muted);font-size:13.5px;max-width:760px;text-align:center;line-height:1.8;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 22px;max-width:900px;width:100%;}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace;background:#f0f2f7;padding:1px 6px;border-radius:5px;}
+
+  /* ---- 切口图 ---- */
+  .cutfig{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:ui-monospace,monospace;}
+  .cutnums,.cutchars,.cutidx{display:flex;}
+  .cutnums span{width:52px;text-align:left;font-size:12px;color:var(--accent);font-weight:700;}
+  .cutchars{margin-left:1px;}
+  .cutchars b{width:52px;height:44px;border:1.5px solid var(--line);border-left:none;display:flex;align-items:center;justify-content:center;font-size:19px;background:#fff;}
+  .cutchars b:first-child{border-left:1.5px solid var(--line);border-radius:8px 0 0 8px;}
+  .cutchars b:last-child{border-radius:0 8px 8px 0;}
+  .cutidx span{width:52px;text-align:center;font-size:12px;color:var(--muted);}
+  .cutnote{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.9;text-align:center;}
+
+  /* ---- 三操作图例 ---- */
+  .ops{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+  .op{flex:1;min-width:210px;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.8;border:1.5px solid;}
+  .op.diag{background:var(--diag-bg);border-color:var(--diag-bd);color:#7a4a10;}
+  .op.up{background:var(--up-bg);border-color:var(--up-bd);color:#8a2440;}
+  .op.left{background:var(--left-bg);border-color:var(--left-bd);color:#0a5c3b;}
+  .op b{font-size:14px;display:block;margin-bottom:2px;}
+
+  /* ---- DP 表 ---- */
+  .stage{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;align-items:flex-start;}
+  table.grid{border-collapse:separate;border-spacing:4px;}
+  .grid th{font-size:12px;color:var(--muted);font-weight:600;font-family:ui-monospace,monospace;min-width:46px;padding:2px;}
+  .grid th .big{font-size:17px;color:var(--ink);font-weight:700;display:block;}
+  .grid th.hlch .big{color:var(--accent);}
+  .grid th.hlch{background:var(--accent-soft);border-radius:8px;}
+  .grid td{width:48px;height:42px;border-radius:9px;text-align:center;font-size:15px;font-weight:700;
+    border:1.5px solid #e3e6ee;background:#eef0f5;color:#a5adbd;
+    font-family:ui-monospace,monospace;transition:all .18s;position:relative;}
+  td.done{background:#fff;color:var(--ink);}
+  td.cur{outline:2.5px solid var(--accent);outline-offset:1px;background:var(--accent-soft);color:var(--accent);}
+  td.nb-diag{outline:2.5px dashed var(--diag-bd);outline-offset:1px;}
+  td.nb-up{outline:2.5px dashed var(--up-bd);outline-offset:1px;}
+  td.nb-left{outline:2.5px dashed var(--left-bd);outline-offset:1px;}
+  td.path{background:var(--left-bg);border-color:var(--left-bd);color:var(--left-ink,#0a5c3b);}
+  td .tag{position:absolute;top:-9px;right:-6px;font-size:9px;padding:0 4px;border-radius:6px;color:#fff;font-weight:700;}
+  .tag.tdiag{background:var(--diag);} .tag.tup{background:var(--up);} .tag.tleft{background:var(--left);}
+
+  .desc{max-width:900px;width:100%;min-height:84px;border-left:4px solid var(--accent);
+    background:var(--card);border-radius:10px;padding:14px 18px;font-size:14.5px;line-height:1.85;}
+  .desc b{color:var(--accent);}
+  .desc .cdiag{color:var(--diag);font-weight:700;} .desc .cup{color:var(--up);font-weight:700;} .desc .cleft{color:var(--left);font-weight:700;}
+
+  .controls{display:flex;gap:10px;align-items:center;}
+  button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;
+    padding:9px 18px;font-size:14px;cursor:pointer;font-weight:600;}
+  button:hover{border-color:var(--accent);color:var(--accent);}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  button.primary:hover{color:#fff;filter:brightness(1.08);}
+  button:disabled{opacity:.4;cursor:default;}
+  .stepnum{font-size:13px;color:var(--muted);min-width:80px;text-align:center;font-family:ui-monospace,monospace;}
+  .banner{display:none;font-size:16px;font-weight:700;color:#0a5c3b;background:var(--left-bg);
+    border:1.5px solid var(--left-bd);border-radius:12px;padding:12px 26px;text-align:center;line-height:1.8;}
+</style>
+</head>
+<body>
+
+<h1>Edit Distance:二维 DP 动画图解</h1>
+<div class="sub">
+  例子:one = <span class="mono">"sigh"</span> → two = <span class="mono">"asith"</span>,答案 <b>2</b>(插入 a,替换 g→t)。<br>
+  dp[i][j] = 把 one 的<b>前 i 个</b>字符变成 two 的<b>前 j 个</b>字符的最少操作数。
+</div>
+
+<div class="card">
+  <h2>根因① 一张图钉死:i 是「个数 = 长度 = 切口位置」,不是下标</h2>
+  <div class="cutfig">
+    <div class="cutnums"><span>0</span><span>1</span><span>2</span><span>3</span><span>4 ←切口(个数)</span></div>
+    <div class="cutchars"><b>s</b><b>i</b><b>g</b><b>h</b></div>
+    <div class="cutidx"><span>0</span><span>1</span><span>2</span><span>3</span></div>
+  </div>
+  <div class="cutnote">
+    「前 3 个」= sig = 长度 3 = 切口停在 3,而它的尾字符下标是 <b>2</b>。<br>
+    <b>切口有 n+1 个,字符只有 n 个</b> → 数组开 (m+1)×(n+1) 是看出来的,不是背的;<br>
+    <b>尾字符永远是 charAt(i−1)</b> → 减 1 只发生在「读字符」那一行(边境换算)。
+  </div>
+</div>
+
+<div class="card">
+  <h2>根因② 转移不是背的:盯住两串的尾巴,穷举「最后一步操作」</h2>
+  <div class="ops">
+    <div class="op diag"><b>↖ 替换 replace(+1)</b>把 one 尾换成 two 尾 → <u>两边尾巴都消掉</u> → 剩 (i−1, j−1)。尾字符相等时 = 免费白拿,0 代价走同一格。</div>
+    <div class="op up"><b>↑ 删除 delete(+1)</b>删掉 one 的尾 → <u>只消 one 的尾巴</u>,two 原封不动 → 剩 (i−1, j)。</div>
+    <div class="op left"><b>← 插入 insert(+1)</b>one 尾部插一个 = two 尾的字符 → <u>只消 two 的尾巴</u> → 剩 (i, j−1)。</div>
+  </div>
+  <div class="cutnote" style="margin-top:12px">口诀:<b>哪边的尾巴被消掉,哪边的坐标就减一。</b>三个邻居 = 三种操作,一一对应;最后一步是哪种事先不知道 → 三个都算取 min。</div>
+</div>
+
+<div class="stage">
+  <div class="card" style="width:auto">
+    <h2>DP 表(行 = one 的 i,列 = two 的 j)</h2>
+    <table class="grid" id="grid"></table>
+  </div>
+</div>
+
+<div class="desc" id="desc">点「下一步 ▶」开始:先填 base(有一边是空串),再逐格推,最后从右下角<b>回溯</b>还原每一步操作。</div>
+
+<div class="controls">
+  <button id="btnReset">⏮ 重置</button>
+  <button id="btnPrev">◀ 上一步</button>
+  <button id="btnNext" class="primary">下一步 ▶</button>
+  <button id="btnPlay">▶▶ 自动播放</button>
+  <div class="stepnum" id="stepNum"></div>
+</div>
+
+<div class="banner" id="banner"></div>
+
+<script>
+const ONE = "sigh", TWO = "asith";
+const m = ONE.length, n = TWO.length;
+
+// ---------- 计算完整 dp ----------
+const dp = Array.from({length:m+1},()=>Array(n+1).fill(0));
+for(let j=0;j<=n;j++) dp[0][j]=j;
+for(let i=0;i<=m;i++) dp[i][0]=i;
+for(let i=1;i<=m;i++)
+  for(let j=1;j<=n;j++)
+    dp[i][j] = ONE[i-1]===TWO[j-1] ? dp[i-1][j-1]
+             : Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]) + 1;
+
+// ---------- 生成步骤 ----------
+const steps = [];
+// 填格顺序表:先 base 行、base 列,再行优先
+const order = [];
+for(let j=0;j<=n;j++) order.push([0,j]);
+for(let i=1;i<=m;i++) order.push([i,0]);
+steps.push({reveal:n+1, desc:`<b>base 第一批:dp[0][j] = j</b>。one 取前 0 个 = 空串,要变成 two 的前 j 个,唯一办法是<span class="cleft">一路插入</span> j 次。空串是真实状态,所以第 0 行第 0 列必须存在——这就是开 (m+1)×(n+1) 的原因。`});
+steps.push({reveal:n+1+m, desc:`<b>base 第二批:dp[i][0] = i</b>。one 的前 i 个要变成空串,唯一办法是<span class="cup">一路删除</span> i 次。两条 base 都是"问无可问"的尽头:一边已经空了,没有岔路。`});
+
+for(let i=1;i<=m;i++){
+  for(let j=1;j<=n;j++){
+    order.push([i,j]);
+    const a=ONE[i-1], b=TWO[j-1];
+    const eq = a===b;
+    let desc;
+    if(eq){
+      desc = `<b>dp[${i}][${j}]</b>:one 前 ${i} 个(尾 = charAt(${i-1}) = <span class="mono">${a}</span>) vs two 前 ${j} 个(尾 = charAt(${j-1}) = <span class="mono">${b}</span>)。尾字符<b>相等</b> → 什么都不做就消掉双尾,<span class="cdiag">白拿斜上 dp[${i-1}][${j-1}] = ${dp[i-1][j-1]}</span>,0 代价。`;
+    }else{
+      const d=dp[i-1][j-1], u=dp[i-1][j], l=dp[i][j-1];
+      const best=Math.min(d,u,l);
+      const who = best===d?`<span class="cdiag">替换(斜上 ${d})</span>`:best===u?`<span class="cup">删除(上 ${u})</span>`:`<span class="cleft">插入(左 ${l})</span>`;
+      desc = `<b>dp[${i}][${j}]</b>:尾 <span class="mono">${a}</span> vs <span class="mono">${b}</span> 不等,穷举最后一步:<span class="cdiag">替换消双尾 → dp[${i-1}][${j-1}]=${d}</span>;<span class="cup">删除消 one 尾 → dp[${i-1}][${j}]=${u}</span>;<span class="cleft">插入消 two 尾 → dp[${i}][${j-1}]=${l}</span>。取最小 ${who} + 1 = <b>${dp[i][j]}</b>。`;
+    }
+    steps.push({reveal:order.length, cell:[i,j], eq, desc});
+  }
+}
+
+// ---------- 回溯 ----------
+const traceCells=[];
+{
+  let i=m, j=n;
+  const t=[];
+  while(i>0 || j>0){
+    if(i>0 && j>0 && ONE[i-1]===TWO[j-1] && dp[i][j]===dp[i-1][j-1]){
+      t.push({from:[i,j], to:[i-1,j-1], op:'equal', ch:[ONE[i-1],TWO[j-1]]}); i--; j--;
+    } else if(i>0 && j>0 && dp[i][j]===dp[i-1][j-1]+1){
+      t.push({from:[i,j], to:[i-1,j-1], op:'replace', ch:[ONE[i-1],TWO[j-1]]}); i--; j--;
+    } else if(i>0 && dp[i][j]===dp[i-1][j]+1){
+      t.push({from:[i,j], to:[i-1,j], op:'delete', ch:[ONE[i-1]]}); i--;
+    } else {
+      t.push({from:[i,j], to:[i,j-1], op:'insert', ch:[TWO[j-1]]}); j--;
+    }
+  }
+  const total=order.length;
+  const acc=[[m,n]];
+  steps.push({reveal:total, path:acc.slice(), desc:`表填完,答案 = <b>dp[${m}][${n}] = ${dp[m][n]}</b>。但别急——<b>从右下角回溯</b>,能还原最优解每一步到底做了什么操作(这也是自查转移是否真懂的终极办法)。`});
+  for(const st of t){
+    acc.push(st.to);
+    let d;
+    if(st.op==='equal')   d=`(${st.from}) 尾 <span class="mono">${st.ch[0]}</span> = <span class="mono">${st.ch[1]}</span>:<span class="cdiag">相等白拿</span>,免费走斜上 → (${st.to})`;
+    if(st.op==='replace') d=`(${st.from}) 尾 <span class="mono">${st.ch[0]}</span> ≠ <span class="mono">${st.ch[1]}</span>:最优来自斜上 → <span class="cdiag">替换 ${st.ch[0]} → ${st.ch[1]}</span>,记 1 次 → (${st.to})`;
+    if(st.op==='delete')  d=`(${st.from}):最优来自上方 → <span class="cup">删除 one 的 ${st.ch[0]}</span>,记 1 次 → (${st.to})`;
+    if(st.op==='insert')  d=`(${st.from}):最优来自左方 → <span class="cleft">插入 ${st.ch[0]}</span>,记 1 次 → (${st.to})`;
+    steps.push({reveal:total, path:acc.slice(), desc:`<b>回溯:</b>${d}`});
+  }
+  steps.push({reveal:total, path:acc.slice(), final:true,
+    desc:`<b>回溯完成。</b>倒着读就是操作序列:<span class="cleft">插入 a</span> + <span class="cdiag">替换 g→t</span>(其余全是白拿),共 <b>${dp[m][n]}</b> 步 —— "sigh" → "asith" ✓`});
+}
+
+// ---------- 渲染 ----------
+const grid=document.getElementById('grid');
+function build(){
+  let html='<tr><th></th><th>j=0<span class="big">""</span></th>';
+  for(let j=1;j<=n;j++) html+=`<th id="thc${j}">j=${j}<span class="big">${TWO[j-1]}</span><br>下标${j-1}</th>`;
+  html+='</tr>';
+  for(let i=0;i<=m;i++){
+    html+= i===0 ? '<tr><th>i=0<span class="big">""</span></th>'
+                 : `<tr><th id="thr${i}">i=${i}<span class="big">${ONE[i-1]}</span><br>下标${i-1}</th>`;
+    for(let j=0;j<=n;j++) html+=`<td id="c_${i}_${j}"></td>`;
+    html+='</tr>';
+  }
+  grid.innerHTML=html;
+}
+
+let cur=-1, timer=null;
+function render(){
+  const st = cur>=0 ? steps[cur] : null;
+  const reveal = st ? st.reveal : 0;
+  // 格子内容
+  for(let k=0;k<order.length;k++){
+    const [i,j]=order[k];
+    const td=document.getElementById(`c_${i}_${j}`);
+    td.className = k<reveal ? 'done' : '';
+    td.textContent = k<reveal ? dp[i][j] : '';
+    td.innerHTML = td.textContent;
+  }
+  document.querySelectorAll('.grid th').forEach(e=>e.classList.remove('hlch'));
+  // 当前格 & 三邻居
+  if(st && st.cell){
+    const [i,j]=st.cell;
+    document.getElementById(`c_${i}_${j}`).classList.add('cur');
+    const mark=(ii,jj,cls,tag,tcls)=>{
+      const td=document.getElementById(`c_${ii}_${jj}`);
+      td.classList.add(cls);
+      td.innerHTML = dp[ii][jj] + `<span class="tag ${tcls}">${tag}</span>`;
+    };
+    if(st.eq){ mark(i-1,j-1,'nb-diag','白拿','tdiag'); }
+    else{
+      mark(i-1,j-1,'nb-diag','替换','tdiag');
+      mark(i-1,j,'nb-up','删除','tup');
+      mark(i,j-1,'nb-left','插入','tleft');
+    }
+    const thr=document.getElementById('thr'+i), thc=document.getElementById('thc'+j);
+    if(thr) thr.classList.add('hlch');
+    if(thc) thc.classList.add('hlch');
+  }
+  // 回溯路径
+  if(st && st.path){
+    for(const [pi,pj] of st.path) document.getElementById(`c_${pi}_${pj}`).classList.add('path');
+  }
+  document.getElementById('desc').innerHTML = st ? st.desc :
+    '点「下一步 ▶」开始:先填 base(有一边是空串),再逐格推,最后从右下角<b>回溯</b>还原每一步操作。';
+  document.getElementById('stepNum').textContent=`${cur+1} / ${steps.length}`;
+  const banner=document.getElementById('banner');
+  if(st && st.final){banner.style.display='block';banner.innerHTML=`Edit Distance("sigh","asith") = ${dp[m][n]}<br><span style="font-size:13px;font-weight:400">insert a → 白拿 s,i → replace g→t → 白拿 h</span>`;}
+  else banner.style.display='none';
+  document.getElementById('btnPrev').disabled = cur<0;
+  document.getElementById('btnNext').disabled = cur>=steps.length-1;
+}
+function next(){ if(cur<steps.length-1){cur++;render();} else stop(); }
+function prev(){ if(cur>=0){cur--;render();} }
+function stop(){ if(timer){clearInterval(timer);timer=null;document.getElementById('btnPlay').textContent='▶▶ 自动播放';} }
+document.getElementById('btnNext').onclick=()=>{stop();next();};
+document.getElementById('btnPrev').onclick=()=>{stop();prev();};
+document.getElementById('btnReset').onclick=()=>{stop();cur=-1;render();};
+document.getElementById('btnPlay').onclick=function(){
+  if(timer) stop();
+  else{this.textContent='⏸ 暂停';timer=setInterval(next,1600);}
+};
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'){stop();next();}
+  if(e.key==='ArrowLeft'){stop();prev();}
+});
+build(); render();
+</script>
+</body>
+</html>
