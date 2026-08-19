@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Method 2:二维回文表 + 查表切割 动画图解</title>
+<style>
+  :root{
+    --bg:#f8f9fb; --card:#ffffff; --ink:#1a2233; --muted:#6b7487;
+    --accent:#3565e0; --accent-soft:#e3ebfd;
+    --true-bg:#d9f2e5; --true-ink:#0c7a4d; --true-border:#7fd4ab;
+    --false-bg:#fbe3e8; --false-ink:#b2314f; --false-border:#eea8b8;
+    --amber-bg:#fdf0d5; --amber-border:#e8b94a;
+    --line:#e3e6ee;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    padding:24px 16px 48px; display:flex; flex-direction:column; align-items:center; gap:18px;}
+  h1{font-size:20px; font-weight:700;}
+  .sub{color:var(--muted); font-size:13px; max-width:720px; text-align:center; line-height:1.7;}
+  .phase-tabs{display:flex; gap:8px;}
+  .phase-tab{padding:5px 14px; border-radius:99px; font-size:13px; border:1px solid var(--line);
+    background:var(--card); color:var(--muted);}
+  .phase-tab.on{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;}
+  .stage{display:flex; gap:28px; flex-wrap:wrap; justify-content:center; align-items:flex-start;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px;}
+  .card h3{font-size:13px; color:var(--muted); font-weight:600; margin-bottom:12px; letter-spacing:.04em;}
+
+  /* string row */
+  .str-row{display:flex; gap:6px; justify-content:center;}
+  .ch{width:44px; text-align:center;}
+  .ch .c{width:44px; height:44px; border:1.5px solid var(--line); border-radius:10px; background:var(--card);
+    display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700;
+    font-family:ui-monospace,Menlo,Consolas,monospace; transition:all .25s;}
+  .ch .idx{font-size:11px; color:var(--muted); margin-top:4px; font-family:ui-monospace,monospace;}
+  .ch.hl .c{border-color:var(--accent); background:var(--accent-soft); color:var(--accent);}
+  .ch.cutR .c{border-color:#e8b94a; background:var(--amber-bg);}
+  .cutbar{width:3px; border-radius:2px; background:transparent; margin:0 -3px; height:44px; align-self:flex-start; transition:background .25s;}
+  .cutbar.on{background:#e05656;}
+
+  /* grid */
+  table.grid{border-collapse:separate; border-spacing:5px;}
+  .grid th{font-size:11px; color:var(--muted); font-weight:600; font-family:ui-monospace,monospace; min-width:40px;}
+  .grid td{width:44px; height:40px; border-radius:9px; text-align:center; font-size:15px; font-weight:700;
+    border:1.5px solid transparent; transition:all .2s; font-family:ui-monospace,monospace;}
+  td.empty{background:transparent;}
+  td.unfilled{background:#eef0f5; border-color:#e3e6ee;}
+  td.t{background:var(--true-bg); color:var(--true-ink); border-color:var(--true-border);}
+  td.f{background:var(--false-bg); color:var(--false-ink); border-color:var(--false-border);}
+  td.cur{outline:2.5px solid var(--accent); outline-offset:1px;}
+  td.inner{outline:2.5px dashed #e8b94a; outline-offset:1px;}
+  td.query{outline:2.5px solid var(--accent); outline-offset:1px; box-shadow:0 0 0 4px var(--accent-soft);}
+
+  /* M row */
+  .m-row{display:flex; gap:6px; justify-content:center;}
+  .mcell{width:52px; text-align:center;}
+  .mcell .v{height:44px; border:1.5px solid var(--line); border-radius:10px; background:#eef0f5;
+    display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:700;
+    font-family:ui-monospace,monospace; color:#a5adbd; transition:all .25s;}
+  .mcell.done .v{background:var(--card); color:var(--ink);}
+  .mcell.hlM .v{border-color:var(--accent); background:var(--accent-soft); color:var(--accent);}
+  .mcell.readM .v{border-color:#e8b94a; background:var(--amber-bg); color:#8a6410;}
+  .mcell .lab{font-size:11px; color:var(--muted); margin-top:4px; font-family:ui-monospace,monospace;}
+  .temp-line{margin-top:10px; text-align:center; font-size:13px; color:var(--muted); font-family:ui-monospace,monospace; min-height:18px;}
+
+  /* description */
+  .desc{max-width:860px; width:100%; min-height:76px; border-left:4px solid var(--accent);
+    background:var(--card); border-radius:10px; padding:14px 18px; font-size:14.5px; line-height:1.8;}
+  .desc b{color:var(--accent);}
+  .desc .mono{font-family:ui-monospace,Menlo,monospace; background:#f0f2f7; padding:1px 6px; border-radius:5px;}
+
+  /* controls */
+  .controls{display:flex; gap:10px; align-items:center;}
+  button{border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:10px;
+    padding:9px 18px; font-size:14px; cursor:pointer; font-weight:600;}
+  button:hover{border-color:var(--accent); color:var(--accent);}
+  button.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+  button.primary:hover{color:#fff; filter:brightness(1.08);}
+  button:disabled{opacity:.4; cursor:default;}
+  .stepnum{font-size:13px; color:var(--muted); min-width:82px; text-align:center; font-family:ui-monospace,monospace;}
+
+  .legend{display:flex; gap:16px; flex-wrap:wrap; justify-content:center; font-size:12px; color:var(--muted);}
+  .legend span{display:inline-flex; align-items:center; gap:5px;}
+  .sw{width:14px; height:14px; border-radius:4px; display:inline-block; border:1.5px solid transparent;}
+  .banner{display:none; font-size:16px; font-weight:700; color:var(--true-ink); background:var(--true-bg);
+    border:1.5px solid var(--true-border); border-radius:12px; padding:12px 26px;}
+</style>
+</head>
+<body>
+
+<h1>Method 2:先建二维回文表,再查表切割</h1>
+<div class="sub">
+  例子:<span style="font-family:ui-monospace,monospace;font-weight:700">"abaab"</span>。
+  第一阶段用<b>区间 dp</b> 把「任意下标段 [i..j] 是否回文」全部填成一张表(大回文 = 两端相等 && 内层是回文);
+  第二阶段做原来的切割 dp,但 check 从 O(n) 现算变成 <b>O(1) 查表</b>。总复杂度 O(n³) → O(n²),代价是 O(n²) 空间。
+</div>
+
+<div class="phase-tabs">
+  <div class="phase-tab" id="tab1">阶段 1:填回文表 isPal</div>
+  <div class="phase-tab" id="tab2">阶段 2:切割 dp 查表</div>
+</div>
+
+<div class="stage">
+  <div class="card">
+    <h3>字符串(下标)</h3>
+    <div class="str-row" id="strRow"></div>
+    <div class="temp-line" id="tempLine"></div>
+  </div>
+
+  <div class="card">
+    <h3>isPal 表:行 = 起点 i,列 = 终点 j(只用上三角)</h3>
+    <table class="grid" id="grid"></table>
+  </div>
+
+  <div class="card" id="mCard">
+    <h3>M 表:M[len] = 前 len 个字符的最少刀数</h3>
+    <div class="m-row" id="mRow"></div>
+  </div>
+</div>
+
+<div class="desc" id="desc">点「下一步 ▶」开始。阶段 1 从<b>最下面一行往上</b>填——因为格子 [i][j] 要问内层 [i+1][j−1],它在自己的<b>左下方</b>,必须先算好。</div>
+
+<div class="controls">
+  <button id="btnReset">⏮ 重置</button>
+  <button id="btnPrev">◀ 上一步</button>
+  <button id="btnNext" class="primary">下一步 ▶</button>
+  <button id="btnPlay">▶▶ 自动播放</button>
+  <div class="stepnum" id="stepNum"></div>
+</div>
+
+<div class="legend">
+  <span><span class="sw" style="background:var(--true-bg);border-color:var(--true-border)"></span>是回文 ✓</span>
+  <span><span class="sw" style="background:var(--false-bg);border-color:var(--false-border)"></span>不是 ✗</span>
+  <span><span class="sw" style="background:#eef0f5;border-color:#e3e6ee"></span>还没填</span>
+  <span><span class="sw" style="outline:2px solid var(--accent);outline-offset:-2px"></span>当前格 / 查表格</span>
+  <span><span class="sw" style="outline:2px dashed #e8b94a;outline-offset:-2px"></span>被引用的内层格</span>
+</div>
+
+<div class="banner" id="banner"></div>
+
+<script>
+const S = "abaab";
+const n = S.length;
+
+// ---------- 预生成全部步骤 ----------
+const pal = Array.from({length:n},()=>Array(n).fill(false));
+const steps = [];
+
+// 阶段1:i 从 n-1 降到 0,j 从 i 到 n-1
+for(let i=n-1;i>=0;i--){
+  for(let j=i;j<n;j++){
+    let res, why, inner=null, chs=[i,j];
+    const seg = S.slice(i,j+1);
+    if(i===j){
+      res = true;
+      why = `单个字符 <span class="mono">"${S[i]}"</span> 必是回文,直接 ✓(这是对角线 base)`;
+      chs=[i];
+    } else if(j===i+1){
+      res = S[i]===S[j];
+      why = `长度 2 没有内层:只比两端 <span class="mono">'${S[i]}'</span> vs <span class="mono">'${S[j]}'</span> → ${res?'相等 ✓':'不等 ✗'}(第二条 base)`;
+    } else {
+      const eq = S[i]===S[j];
+      if(eq){
+        inner=[i+1,j-1];
+        res = pal[i+1][j-1];
+        why = `两端 <span class="mono">'${S[i]}'</span>=<span class="mono">'${S[j]}'</span> 相等,还不够——再问内层 <b>isPal[${i+1}][${j-1}]</b>(<span class="mono">"${S.slice(i+1,j)}"</span>):${res?'内层 ✓ → 整段 ✓':'内层 ✗ → 整段 ✗'}。<b>大回文由小回文推出,这就是查左下方的原因。</b>`;
+      } else {
+        res = false;
+        why = `两端 <span class="mono">'${S[i]}'</span> vs <span class="mono">'${S[j]}'</span> 不等 → 直接 ✗,内层看都不用看`;
+      }
+    }
+    pal[i][j]=res;
+    steps.push({phase:1, cell:[i,j], inner, chs,
+      desc:`<b>填 isPal[${i}][${j}]</b> —— 下标 ${i}..${j},即 <span class="mono">"${seg}"</span>:${why}`});
+  }
+}
+
+// 阶段2:切割dp。M[len] = 前len个字符最少刀数
+const M = Array(n+1).fill(null);
+M[0]=0;
+steps.push({phase:2, mset:{idx:0,val:0},
+  desc:`阶段 2 开始:回文表已备好,以后每次"这段是不是回文"都是 <b>O(1) 查表</b>。M[0]=0(空串)。老师这版没用 −1 虚拟起点,而是走另一条等价路线:<b>整段前缀是回文就直接 M=0 特判</b>,其余切点 j 从 1 起。`});
+
+for(let len=1;len<=n;len++){
+  const snapshotBefore = M.slice();
+  if(pal[0][len-1]){
+    M[len]=0;
+    steps.push({phase:2, len, query:[0,len-1], mset:{idx:len,val:0}, chsPrefix:len,
+      desc:`<b>算 M[${len}]</b>(前缀 <span class="mono">"${S.slice(0,len)}"</span>):先查 <b>isPal[0][${len-1}]</b> = ✓ ——整个前缀本身就是回文 → <b>M[${len}] = 0</b>,一刀不用切,收工(这就是替代 −1 的特判)。`});
+    continue;
+  }
+  steps.push({phase:2, len, query:[0,len-1], chsPrefix:len,
+    desc:`<b>算 M[${len}]</b>(前缀 <span class="mono">"${S.slice(0,len)}"</span>):先查 <b>isPal[0][${len-1}]</b> = ✗ ——整段不是回文,只能开始逐个切点 j 试。temp 竖高靶 = ∞。`});
+  let temp = Infinity;
+  for(let j=1;j<len;j++){
+    const p = pal[j][len-1];
+    const right = S.slice(j,len);
+    if(p){
+      const cand = M[j]+1;
+      const better = cand < temp;
+      const old = temp===Infinity ? '∞' : temp;
+      temp = Math.min(temp,cand);
+      steps.push({phase:2, len, j, query:[j,len-1], readM:j, temp, cut:j, chsPrefix:len,
+        desc:`切点 j=${j}:左段查 M 表(<span class="mono">M[${j}]=${M[j]}</span>),右段 <span class="mono">"${right}"</span> 查回文表 <b>isPal[${j}][${len-1}]</b> = ✓ → 候选 = M[${j}]+1 = <b>${cand}</b>${better?`,打败 ${old} → temp 降为 <b>${cand}</b>`:`,没打过 temp=${temp},不更新`}`});
+    } else {
+      steps.push({phase:2, len, j, query:[j,len-1], temp, cut:j, chsPrefix:len,
+        desc:`切点 j=${j}:右段 <span class="mono">"${right}"</span> 查表 <b>isPal[${j}][${len-1}]</b> = ✗ → 这一刀切出来的右段不是回文,<b>不合法,跳过</b>`});
+    }
+  }
+  M[len]=temp;
+  steps.push({phase:2, len, mset:{idx:len,val:temp}, temp, chsPrefix:len,
+    desc:`切点试完 → <b>M[${len}] = ${temp}</b> 落表。`});
+}
+steps.push({phase:3,
+  desc:`<b>完成!</b>答案 = M[${n}] = <b>${M[n]}</b>。对应切法:<span class="mono">a | baab</span> —— 注意 <span class="mono">"baab"</span> 是回文这件事,正是靠表里 isPal[1][4] = 两端 b=b && 内层 isPal[2][3]("aa") ✓ 一层层推出来的。每格 O(1) 查,总共 O(n²)。`});
+
+// 每步记录 M 快照 & 回文表揭示进度
+{
+  let mNow = Array(n+1).fill(null);
+  let revealCount = 0;
+  for(const st of steps){
+    if(st.phase===1) revealCount++;
+    if(st.mset) mNow[st.mset.idx]=st.mset.val;
+    st.reveal = revealCount;
+    st.mSnap = mNow.slice();
+  }
+}
+
+// ---------- 渲染 ----------
+let cur = -1; // 当前已执行到的步骤下标
+let timer = null;
+
+const strRow = document.getElementById('strRow');
+const grid = document.getElementById('grid');
+const mRow = document.getElementById('mRow');
+
+function build(){
+  // 字符串行(带切刀条)
+  strRow.innerHTML='';
+  for(let i=0;i<n;i++){
+    if(i>0){
+      const bar=document.createElement('div'); bar.className='cutbar'; bar.id='cut'+i;
+      strRow.appendChild(bar);
+    }
+    const d=document.createElement('div'); d.className='ch'; d.id='ch'+i;
+    d.innerHTML=`<div class="c">${S[i]}</div><div class="idx">${i}</div>`;
+    strRow.appendChild(d);
+  }
+  // 表格
+  let html='<tr><th></th>';
+  for(let j=0;j<n;j++) html+=`<th>j=${j}</th>`;
+  html+='</tr>';
+  for(let i=0;i<n;i++){
+    html+=`<tr><th>i=${i}</th>`;
+    for(let j=0;j<n;j++){
+      html+= j<i ? `<td class="empty"></td>` : `<td id="cell_${i}_${j}" class="unfilled"></td>`;
+    }
+    html+='</tr>';
+  }
+  grid.innerHTML=html;
+  // M行
+  mRow.innerHTML='';
+  for(let k=0;k<=n;k++){
+    const d=document.createElement('div'); d.className='mcell'; d.id='m'+k;
+    d.innerHTML=`<div class="v">·</div><div class="lab">M[${k}]</div>`;
+    mRow.appendChild(d);
+  }
+}
+
+// 阶段1的格子揭示顺序表
+const revealOrder = [];
+for(let i=n-1;i>=0;i--) for(let j=i;j<n;j++) revealOrder.push([i,j]);
+
+function render(){
+  const st = cur>=0 ? steps[cur] : null;
+  // 清高亮
+  document.querySelectorAll('.ch').forEach(e=>e.classList.remove('hl','cutR'));
+  document.querySelectorAll('.cutbar').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.mcell').forEach(e=>e.classList.remove('hlM','readM'));
+
+  // 回文表状态
+  const reveal = st ? st.reveal : 0;
+  for(let k=0;k<revealOrder.length;k++){
+    const [i,j]=revealOrder[k];
+    const td=document.getElementById(`cell_${i}_${j}`);
+    td.className = k<reveal ? (pal[i][j]?'t':'f') : 'unfilled';
+    td.textContent = k<reveal ? (pal[i][j]?'✓':'✗') : '';
+  }
+  // M 状态
+  const mSnap = st ? st.mSnap : Array(n+1).fill(null);
+  for(let k=0;k<=n;k++){
+    const mc=document.getElementById('m'+k);
+    mc.classList.toggle('done', mSnap[k]!==null);
+    mc.querySelector('.v').textContent = mSnap[k]===null?'·':mSnap[k];
+  }
+  document.getElementById('tempLine').textContent =
+    (st && st.phase===2 && st.temp!==undefined) ? `temp(高靶) = ${st.temp===Infinity?'∞':st.temp}` : '';
+
+  // 本步高亮
+  if(st){
+    if(st.phase===1){
+      const [i,j]=st.cell;
+      document.getElementById(`cell_${i}_${j}`).classList.add('cur');
+      if(st.inner) document.getElementById(`cell_${st.inner[0]}_${st.inner[1]}`).classList.add('inner');
+      (st.chs||[]).forEach(c=>document.getElementById('ch'+c).classList.add('hl'));
+    }
+    if(st.phase===2){
+      if(st.query) document.getElementById(`cell_${st.query[0]}_${st.query[1]}`).classList.add('query');
+      if(st.mset) document.getElementById('m'+st.mset.idx).classList.add('hlM');
+      if(st.readM!==undefined) document.getElementById('m'+st.readM).classList.add('readM');
+      if(st.cut) document.getElementById('cut'+st.cut).classList.add('on');
+      if(st.cut!==undefined){
+        for(let c=st.cut;c<st.len;c++) document.getElementById('ch'+c).classList.add('cutR');
+      }
+    }
+  }
+  // 描述 & 计数 & tab
+  document.getElementById('desc').innerHTML = st ? st.desc :
+    '点「下一步 ▶」开始。阶段 1 从<b>最下面一行往上</b>填——因为格子 [i][j] 要问内层 [i+1][j−1],它在自己的<b>左下方</b>,必须先算好。';
+  document.getElementById('stepNum').textContent = `${cur+1} / ${steps.length}`;
+  const ph = st? st.phase : 0;
+  document.getElementById('tab1').classList.toggle('on', ph===1 || ph===0);
+  document.getElementById('tab2').classList.toggle('on', ph>=2);
+  const banner=document.getElementById('banner');
+  if(st && st.phase===3){ banner.style.display='block'; banner.textContent=`最少刀数 = ${M[n]}   ( a | baab )`; }
+  else banner.style.display='none';
+
+  document.getElementById('btnPrev').disabled = cur<0;
+  document.getElementById('btnNext').disabled = cur>=steps.length-1;
+}
+
+function next(){ if(cur<steps.length-1){cur++; render();} else stop(); }
+function prev(){ if(cur>=0){cur--; render();} }
+function reset(){ stop(); cur=-1; render(); }
+function stop(){ if(timer){clearInterval(timer); timer=null; document.getElementById('btnPlay').textContent='▶▶ 自动播放';} }
+document.getElementById('btnNext').onclick=()=>{stop(); next();};
+document.getElementById('btnPrev').onclick=()=>{stop(); prev();};
+document.getElementById('btnReset').onclick=reset;
+document.getElementById('btnPlay').onclick=function(){
+  if(timer){ stop(); }
+  else{ this.textContent='⏸ 暂停'; timer=setInterval(next, 1500); }
+};
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'){stop();next();}
+  if(e.key==='ArrowLeft'){stop();prev();}
+});
+
+build(); render();
+</script>
+</body>
+</html>
