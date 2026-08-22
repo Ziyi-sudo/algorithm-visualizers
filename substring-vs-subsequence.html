@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Substring vs Subsequence — 差别只有一行</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8e5df; --card:#fff; --ink:#15191e; --soft:#5d6873; --faint:#98a2ad;
+  --hit:#0f766e; --hit-bg:#e4f2f0; --miss:#c2405f; --miss-bg:#fbe9ee;
+  --par:#2563a8; --par-bg:#e8f0f9; --best:#b8791a; --best-bg:#fbf0dc; --mark:#e8b93c;
+  --lift:0 1px 2px rgba(21,25,30,.06), 0 6px 16px rgba(21,25,30,.08);
+  --lift-lg:0 2px 4px rgba(21,25,30,.07), 0 14px 34px rgba(21,25,30,.13);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.7;
+  background-image:radial-gradient(circle at 20% 0%, #f2f0ec 0%, var(--bg) 46%, #d8d4cc 100%);
+  background-attachment:fixed;}
+.wrap{max-width:960px;margin:0 auto;padding:50px 20px 90px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+h1{font-size:clamp(25px,4.2vw,36px);line-height:1.18;font-weight:700;margin:0 0 12px;letter-spacing:-.02em}
+.lede{font-size:16px;color:var(--soft);max-width:64ch;margin:0 0 20px}
+code{font-family:"JetBrains Mono",monospace;font-size:.9em;background:rgba(21,25,30,.06);padding:1px 5px;border-radius:3px}
+
+.switch{display:flex;gap:9px;margin-bottom:12px;flex-wrap:wrap}
+.switch button{appearance:none;border:0;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:500;padding:10px 17px;background:var(--card);color:var(--soft);
+  box-shadow:var(--lift);transition:all .16s;text-align:left}
+.switch button:hover{transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.switch button[aria-selected="true"]{background:var(--ink);color:#fff;transform:translateY(-2px);box-shadow:var(--lift-lg)}
+button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+
+.controls{display:flex;align-items:center;gap:11px;margin:0 0 14px;flex-wrap:wrap}
+.controls button{appearance:none;background:var(--card);border:0;border-radius:9px;font-family:inherit;font-size:14px;
+  padding:9px 20px;cursor:pointer;color:var(--ink);box-shadow:var(--lift);transition:all .15s}
+.controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.controls button:disabled{opacity:.4;cursor:default;box-shadow:none}
+.pos{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--faint)}
+.verdict{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:500;color:var(--best)}
+
+.log{padding:13px 16px;border-radius:12px;background:var(--card);box-shadow:var(--lift);
+  font-size:14.5px;min-height:56px;border-left:4px solid var(--ink);margin-bottom:16px}
+.log.hit{border-left-color:var(--hit)}
+.log.miss{border-left-color:var(--miss)}
+.log.best{border-left-color:var(--best);background:#fffcf4}
+.log b.h{color:var(--hit)} .log b.p{color:var(--par)} .log b.m{color:var(--miss)} .log b.b{color:var(--best)}
+
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,270px);gap:16px;align-items:start}
+@media(max-width:800px){.stage{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:16px 18px;box-shadow:var(--lift)}
+.card+.card{margin-top:11px}
+.card h3{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 12px;font-weight:500}
+
+table.grid{border-collapse:separate;border-spacing:4px;font-family:"JetBrains Mono",monospace;font-size:14px}
+table.grid th{font-weight:500;color:var(--soft);font-size:14px;width:36px;height:28px;text-align:center}
+table.grid th.corner,table.grid th.pad{color:var(--faint);font-size:11px}
+table.grid td{width:36px;height:32px;text-align:center;border-radius:6px;background:#f4f2ee;color:#cdc7bd;
+  transition:all .22s;border:2px solid transparent}
+td.pos{background:var(--hit-bg);color:var(--hit);font-weight:500}
+td.padcell{background:#efece7;color:#b8b2a8}
+td.now{border-color:var(--mark);transform:translateY(-1px);box-shadow:0 3px 8px rgba(21,25,30,.12)}
+td.parent{border-color:var(--par);background:var(--par-bg);color:var(--par)}
+td.best{background:var(--best-bg);color:var(--best);font-weight:700;border-color:var(--best)}
+
+.rule{font-family:"JetBrains Mono",monospace;font-size:12px;line-height:1.9}
+.rule div{padding:3px 8px;border-radius:5px}
+.rule div.on{background:#fdf7e6;font-weight:500;color:var(--ink)}
+.rule div.off{color:var(--faint)}
+.stat{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;font-size:13.5px;color:var(--soft);border-bottom:1px solid #f5f2ee}
+.stat:last-child{border-bottom:0}
+.stat b{font-family:"JetBrains Mono",monospace;font-size:16px;color:var(--ink);font-weight:500}
+
+.takeaway{margin-top:44px;padding-top:26px;border-top:1px solid rgba(21,25,30,.14)}
+h2{font-size:20px;font-weight:500;margin:0 0 12px}
+p{max-width:68ch}
+pre{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.8;background:var(--card);
+  padding:14px 16px;border-radius:12px;box-shadow:var(--lift);overflow-x:auto;margin:14px 0}
+table.cmp{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;
+  box-shadow:var(--lift);overflow:hidden;margin:16px 0;font-size:14px}
+table.cmp th{text-align:left;font-weight:500;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);padding:11px 14px;border-bottom:1px solid #f0ede8}
+table.cmp td{padding:10px 14px;border-bottom:1px solid #f7f5f1;color:var(--soft)}
+table.cmp tr:last-child td{border-bottom:0}
+table.cmp td.k{color:var(--ink)}
+table.cmp code{font-size:12.5px}
+footer{margin-top:36px;font-size:13px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">laicode 176 / 177 · substring vs subsequence</p>
+<h1>差别只有「不相等时怎么办」这一行</h1>
+<p class="lede">同样两个字符串 <code>s = "abcde"</code>、<code>t = "ace"</code>。相同字符时两者都是继承左上角 +1；<b>不同字符时，子串归零、子序列继承</b> —— 一行之差，答案从 1 变成 3。</p>
+
+<div class="switch" role="tablist" id="tabs"></div>
+
+<div class="controls">
+  <button id="prev" type="button">上一步</button>
+  <button id="next" type="button">下一步</button>
+  <button id="auto" type="button">自动播放</button>
+  <span class="pos" id="pos"></span>
+  <span class="verdict" id="verdict"></span>
+</div>
+
+<div class="log" id="log"></div>
+
+<div class="stage">
+  <div class="card"><h3 id="gtitle">dp 表</h3><div id="grid"></div></div>
+  <div>
+    <div class="card"><h3>induction rule</h3><div class="rule" id="rule"></div></div>
+    <div class="card"><h3>状态</h3><div id="stats"></div></div>
+  </div>
+</div>
+
+<section class="takeaway">
+  <h2>三处差别</h2>
+
+  <table class="cmp">
+    <tr><th>　</th><th>Substring（要连续）</th><th>Subsequence（不要连续）</th></tr>
+    <tr><td class="k">相同字符</td><td><code>dp[i-1][j-1] + 1</code></td><td><code>dp[i-1][j-1] + 1</code>　← 一样</td></tr>
+    <tr><td class="k">不同字符</td><td><code>0</code>　断了从头再来</td><td><code>max(dp[i-1][j], dp[i][j-1])</code>　断了还能继承</td></tr>
+    <tr><td class="k">看几个大哥</td><td>1 个（左上）</td><td>3 个（左上 / 上 / 左）</td></tr>
+    <tr><td class="k">答案在哪</td><td>边填边记 globalMax</td><td><code>dp[m][n]</code> 右下角</td></tr>
+    <tr><td class="k">表的大小</td><td>不加 padding，手动判 <code>i==0||j==0</code></td><td><b>加一圈 0</b>，<code>(m+1)×(n+1)</code></td></tr>
+  </table>
+
+  <p><b>为什么答案位置不同 —— 这是最容易混的一处。</b></p>
+  <p><b>Substring：</b><code>dp[i][j]</code> 的含义是「<b>同时以 s[i]、t[j] 结尾</b>的公共子串长度」。右下角那格只代表「以最后两个字符结尾」这一种情况，<b>最长的那段可能出现在表的任何位置</b> —— 所以必须全程维护 globalMax。这跟一维 LAS「有过 reset 就必须用 globalMax」是同一条。</p>
+  <p><b>Subsequence：</b><code>dp[i][j]</code> 的含义是「<b>s 的前 i 个 vs t 的前 j 个</b>的公共子序列长度」—— 注意是"前 i 个"不是"以 i 结尾"。它全程只增不减（不相等时继承而非归零），<b>所以右下角一定是最大的</b>。</p>
+
+  <p><b>「加一圈 0」的 padding 技巧（老师注释里那句）：</b></p>
+  <pre>int[][] dp = new int[s.length() + 1][t.length() + 1];   // 多开一行一列
+for (int i = 1; i <= s.length(); i++)
+    for (int j = 1; j <= t.length(); j++)
+        if (s.charAt(i-1) == t.charAt(j-1))  ...          // 注意 -1
+
+好处：第 0 行第 0 列天然全是 0（Java 默认值），代表"空字符串"
+      → dp[i-1][j-1] 永远不越界，不用写 if (i==0 || j==0)
+代价：dp 的下标和字符串的下标错开 1 —— charAt 要写 i-1
+
+这就是讲义那条：「i 表示长度 → dp 长度 = input 长度 + 1」
+              「跟 string 相关 prefer i 表示 len，能表达 empty string」</pre>
+
+  <p><b>跟一维的对照（这才是这张卡真正的价值）：</b></p>
+  <pre>一维                              二维
+LAS  子数组，要连续    look back 1     LCSubstring    不同就归零
+LIS  子序列，不要连续  look back all   LCSubsequence  不同就继承
+
+"连续 vs 不连续"这个对立，在一维和二维里是同一个道理：
+    要连续 → 断了就没法接，只能从头再来（归零 / 只看紧邻的那个）
+    不连续 → 断了还能跳过去接，所以要看更多的前驱</pre>
+
+  <p><b>复杂度：</b>两者都是 Time O(s·t)、Space O(s·t)。因为只依赖上一行，空间都能优化到 O(min(s,t))（滚动数组）。</p>
+</section>
+
+<footer>s = "abcde"，t = "ace" · 最长公共子串 "a"（长度 1） · 最长公共子序列 "ace"（长度 3）</footer>
+</div>
+
+<script>
+var S="abcde", T="ace";
+
+function buildSubstring(){
+  var m=S.length, n=T.length, g=[], steps=[], longest=0, start=0;
+  for(var i=0;i<m;i++){ g.push([]); for(var j=0;j<n;j++) g[i].push(0); }
+  function snap(o){ o.g=JSON.parse(JSON.stringify(g)); o.longest=longest; o.start=start; steps.push(o); }
+  snap({i:-1,j:-1,rule:-1,note:"表全是 0。<code>common[i][j]</code> = <b>同时以 s[i] 和 t[j] 结尾</b>的最长公共子串长度。<b>没有 padding</b>，所以 i 或 j 为 0 时要手动处理。",tone:0});
+  for(var i=0;i<m;i++) for(var j=0;j<n;j++){
+    if(S[i]===T[j]){
+      if(i===0||j===0){
+        g[i][j]=1;
+        snap({i:i,j:j,rule:1,note:"<b class='h'>s["+i+"]='"+S[i]+"' == t["+j+"]='"+T[j]+"'</b>，但 i 或 j 是 0，左上角不存在 → 直接记 <b>1</b>",tone:1});
+      } else {
+        g[i][j]=g[i-1][j-1]+1;
+        snap({i:i,j:j,par:[[i-1,j-1]],rule:0,note:"<b class='h'>s["+i+"]='"+S[i]+"' == t["+j+"]='"+T[j]+"'</b> → 继承左上角 <b class='p'>"+g[i-1][j-1]+"</b> 再 +1 = <b>"+g[i][j]+"</b>",tone:1});
+      }
+      if(g[i][j]>longest){
+        longest=g[i][j]; start=i-longest+1;
+        snap({i:i,j:j,best:true,rule:3,note:"<b class='b'>刷新记录</b>：longest = <b>"+longest+"</b>，start = <b>"+start+"</b>。<b>边填边记 —— 最长那段可能在表里任何位置，右下角靠不住。</b>",tone:2});
+      }
+    } else {
+      g[i][j]=0;
+      snap({i:i,j:j,rule:2,note:"<b class='m'>'"+S[i]+"' != '"+T[j]+"'</b> → <b>归零</b>。子串必须连续，断一次就得从头再来。",tone:3});
+    }
+  }
+  snap({i:-1,j:-1,done:true,rule:-1,note:"填完。longest = <b>"+longest+"</b> → <code>s.substring("+start+", "+(start+longest)+")</code> = <b>\""+S.substring(start,start+longest)+"\"</b>。注意最大值 <b>不在右下角</b>。",tone:2});
+  return {steps:steps,m:m,n:n,pad:false,ans:longest,
+    rules:["s[i] == t[j] → common[i][j] = common[i-1][j-1] + 1",
+           "  （i==0 || j==0 时直接记 1）",
+           "s[i] != t[j] → common[i][j] = 0",
+           "边填边记 longest / start"]};
+}
+
+function buildSubsequence(){
+  var m=S.length, n=T.length, g=[], steps=[];
+  for(var i=0;i<=m;i++){ g.push([]); for(var j=0;j<=n;j++) g[i].push(0); }
+  function snap(o){ o.g=JSON.parse(JSON.stringify(g)); steps.push(o); }
+  snap({i:-1,j:-1,rule:-1,note:"表是 <b>(m+1)×(n+1)</b>，<b>第 0 行第 0 列天然全 0</b>，代表「空字符串」。这样 <code>dp[i-1][j-1]</code> 永远不越界，不用写 <code>if (i==0||j==0)</code>。代价是 <code>charAt</code> 要写 <code>i-1</code>。",tone:0});
+  for(var i=1;i<=m;i++) for(var j=1;j<=n;j++){
+    if(S[i-1]===T[j-1]){
+      g[i][j]=g[i-1][j-1]+1;
+      snap({i:i,j:j,par:[[i-1,j-1]],rule:0,note:"<b class='h'>s["+(i-1)+"]='"+S[i-1]+"' == t["+(j-1)+"]='"+T[j-1]+"'</b> → 继承左上角 <b class='p'>"+g[i-1][j-1]+"</b> +1 = <b>"+g[i][j]+"</b>　（跟子串这一支<b>完全一样</b>）",tone:1});
+    } else {
+      var up=g[i-1][j], left=g[i][j-1];
+      g[i][j]=Math.max(up,left);
+      snap({i:i,j:j,par:[[i-1,j],[i,j-1]],rule:1,
+        note:"<b class='m'>'"+S[i-1]+"' != '"+T[j-1]+"'</b> → <b>不归零</b>，从上面 <b class='p'>"+up+"</b> 和左边 <b class='p'>"+left+"</b> 里取大的 = <b>"+g[i][j]+"</b>。<b>子序列不要求连续，前面攒的还能接着用。</b>",tone:3});
+    }
+  }
+  snap({i:-1,j:-1,done:true,rule:2,note:"填完。答案就是<b>右下角 dp["+m+"]["+n+"] = "+g[m][n]+"</b>（\"ace\"）。<b>不用 globalMax</b> —— 表只增不减，右下角一定最大。",tone:2});
+  return {steps:steps,m:m,n:n,pad:true,ans:g[m][n],
+    rules:["s[i-1] == t[j-1] → dp[i][j] = dp[i-1][j-1] + 1",
+           "s[i-1] != t[j-1] → dp[i][j] = max(dp[i-1][j], dp[i][j-1])",
+           "result = dp[m][n]  右下角"]};
+}
+
+var V=[
+ {label:"① 子串 Substring", sub:"要连续 → 断了归零", build:buildSubstring},
+ {label:"② 子序列 Subsequence", sub:"不要连续 → 断了继承", build:buildSubsequence}
+];
+V.forEach(function(v){ v.data=v.build(); });
+
+var cur=0, s=0, timer=null;
+var tb=document.getElementById("tabs");
+V.forEach(function(v,i){
+  var b=document.createElement("button"); b.type="button";
+  b.innerHTML=v.label+'<br><span style="font-size:11.5px;opacity:.7">'+v.sub+'</span>';
+  b.setAttribute("role","tab");
+  b.addEventListener("click",function(){ cur=i; s=0; stopAuto(); render(); });
+  tb.appendChild(b);
+});
+function stopAuto(){ if(timer){ clearInterval(timer); timer=null; document.getElementById("auto").textContent="自动播放"; } }
+
+function render(){
+  var v=V[cur], d=v.data, st=d.steps[s];
+  Array.prototype.forEach.call(tb.children,function(b,i){ b.setAttribute("aria-selected", i===cur?"true":"false"); });
+  document.getElementById("gtitle").textContent = d.pad ? "dp 表 · (m+1)×(n+1)，带一圈 0" : "common 表 · m×n，无 padding";
+
+  var rows = d.pad ? d.m+1 : d.m, cols = d.pad ? d.n+1 : d.n;
+  var h='<table class="grid"><tr><th class="corner">'+(d.pad?"":"s＼t")+'</th>';
+  for(var j=0;j<cols;j++){
+    var lab = d.pad ? (j===0 ? "ε" : T[j-1]) : T[j];
+    h+='<th'+(d.pad&&j===0?' class="pad"':'')+'>'+lab+'</th>';
+  }
+  h+='</tr>';
+  for(var i=0;i<rows;i++){
+    var rlab = d.pad ? (i===0 ? "ε" : S[i-1]) : S[i];
+    h+='<tr><th'+(d.pad&&i===0?' class="pad"':'')+'>'+rlab+'</th>';
+    for(var j=0;j<cols;j++){
+      var val=st.g[i][j], cls = val>0 ? "pos" : "";
+      if(d.pad && (i===0||j===0)) cls="padcell";
+      if(st.i===i && st.j===j) cls += st.best ? " best" : " now";
+      if(st.par) st.par.forEach(function(p){ if(p[0]===i&&p[1]===j) cls+=" parent"; });
+      h+='<td class="'+cls+'">'+val+'</td>';
+    }
+    h+='</tr>';
+  }
+  document.getElementById("grid").innerHTML=h+'</table>';
+
+  document.getElementById("rule").innerHTML = d.rules.map(function(r,k){
+    return '<div class="'+(k===st.rule?"on":"off")+'">'+r.replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</div>';
+  }).join("");
+
+  var sh='';
+  if(d.pad){
+    sh += '<div class="stat"><span>右下角 dp[m][n]</span><b>'+st.g[d.m][d.n]+'</b></div>';
+    sh += '<div class="stat"><span>答案在哪</span><b style="font-size:13px">右下角</b></div>';
+  } else {
+    sh += '<div class="stat"><span>longest（globalMax）</span><b>'+st.longest+'</b></div>';
+    sh += '<div class="stat"><span>start（在 s 中）</span><b>'+st.start+'</b></div>';
+    sh += '<div class="stat"><span>当前答案</span><b>"'+S.substring(st.start,st.start+st.longest)+'"</b></div>';
+  }
+  document.getElementById("stats").innerHTML=sh;
+
+  var log=document.getElementById("log");
+  log.innerHTML=st.note;
+  log.className="log"+(st.tone===1?" hit":(st.tone===2?" best":(st.tone===3?" miss":"")));
+
+  document.getElementById("pos").textContent=(s+1)+" / "+d.steps.length;
+  document.getElementById("prev").disabled = s===0;
+  document.getElementById("next").disabled = s===d.steps.length-1;
+  document.getElementById("verdict").textContent = st.done ? ("答案 "+d.ans) : "";
+}
+document.getElementById("next").addEventListener("click",function(){ var d=V[cur].data; if(s<d.steps.length-1){s++;render();} });
+document.getElementById("prev").addEventListener("click",function(){ if(s>0){s--;render();} });
+document.getElementById("auto").addEventListener("click",function(){
+  if(timer){ stopAuto(); return; }
+  this.textContent="暂停";
+  timer=setInterval(function(){
+    var d=V[cur].data;
+    if(s<d.steps.length-1){ s++; render(); } else stopAuto();
+  }, 650);
+});
+document.addEventListener("keydown",function(e){
+  if(e.key==="ArrowRight") document.getElementById("next").click();
+  if(e.key==="ArrowLeft") document.getElementById("prev").click();
+});
+render();
+</script>
+</body>
+</html>
