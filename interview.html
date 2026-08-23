@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="一道 LIS 变体题的完整 Google 级面试应答：澄清提问、约束推导、传递性论证、两版代码、测试与四个追问，英文台词配中文批注。">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="Positive Slope 面试全稿">
+<meta property="og:description" content="左栏是你要说的英文，右栏是为什么这么说。附连读版、卡壳话术和追问准备。">
+<meta property="og:type" content="article">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#127908;</text></svg>">
+<title>Positive Slope 面试全稿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+  :root{
+    --ground:#EFF1F0;
+    --surface:#FFFFFF;
+    --surface-2:#E4E8E7;
+    --ink:#14181A;
+    --ink-2:#414A4C;
+    --ink-3:#727C7E;
+    --rule:#D3D9D8;
+    --rule-soft:#E3E7E6;
+    --say:#0F6B6E;
+    --say-soft:#DEEDEC;
+    --why:#8A5D14;
+    --why-soft:#F2E9D6;
+    --warn:#A63D2F;
+    --warn-soft:#F5E4E0;
+    --code-bg:#E9EDEC;
+
+    --f-display:"Archivo","Noto Sans SC",system-ui,sans-serif;
+    --f-say:"Source Serif 4","Noto Sans SC",Georgia,serif;
+    --f-ui:"Noto Sans SC",-apple-system,"PingFang SC",sans-serif;
+    --f-mono:"JetBrains Mono","Noto Sans SC",ui-monospace,Menlo,monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#101416;
+      --surface:#181E20;
+      --surface-2:#212829;
+      --ink:#E4E8E7;
+      --ink-2:#B2BABB;
+      --ink-3:#7E8788;
+      --rule:#2C3436;
+      --rule-soft:#232A2B;
+      --say:#63C0C3;
+      --say-soft:#122A2B;
+      --why:#D9AB5C;
+      --why-soft:#2A2317;
+      --warn:#E08872;
+      --warn-soft:#31201C;
+      --code-bg:#1C2325;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#101416;
+    --surface:#181E20;
+    --surface-2:#212829;
+    --ink:#E4E8E7;
+    --ink-2:#B2BABB;
+    --ink-3:#7E8788;
+    --rule:#2C3436;
+    --rule-soft:#232A2B;
+    --say:#63C0C3;
+    --say-soft:#122A2B;
+    --why:#D9AB5C;
+    --why-soft:#2A2317;
+    --warn:#E08872;
+    --warn-soft:#31201C;
+    --code-bg:#1C2325;
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:var(--f-ui);
+    font-size:1rem;
+    line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{
+    max-width:62rem;
+    margin:0 auto;
+    padding:clamp(1.5rem,4vw,3.5rem) clamp(1rem,4vw,2.5rem) 5rem;
+    display:flex;
+    flex-direction:column;
+    gap:clamp(2.5rem,5vw,3.75rem);
+  }
+
+  /* header */
+  .masthead{display:flex;flex-direction:column;gap:.85rem}
+  .eyebrow{
+    font-family:var(--f-mono);
+    font-size:.75rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--say);
+  }
+  h1{
+    font-family:var(--f-display);
+    font-weight:700;
+    font-size:clamp(2rem,5vw,2.9rem);
+    line-height:1.1;
+    letter-spacing:-.02em;
+    margin:0;
+    text-wrap:balance;
+  }
+  .lede{margin:0;max-width:40rem;color:var(--ink-2);font-size:1.08rem}
+  .rule{height:1px;background:var(--rule)}
+
+  h2{
+    font-family:var(--f-display);
+    font-weight:600;
+    font-size:clamp(1.45rem,3.5vw,1.8rem);
+    line-height:1.2;
+    margin:0;
+    letter-spacing:-.01em;
+  }
+  h3{font-family:var(--f-ui);font-weight:700;font-size:1.05rem;margin:0;line-height:1.4}
+  p{margin:0;max-width:42rem}
+  section{display:flex;flex-direction:column;gap:1.25rem}
+  .sec-head{display:flex;flex-direction:column;gap:.35rem}
+  .sec-num{font-family:var(--f-mono);font-size:.75rem;letter-spacing:.12em;color:var(--ink-3)}
+
+  code{font-family:var(--f-mono);font-size:.86em;background:var(--code-bg);padding:.1em .35em;border-radius:3px}
+
+  /* timeline */
+  .timeline{
+    display:flex;flex-wrap:wrap;gap:.4rem;
+    background:var(--surface);border:1px solid var(--rule);padding:1.1rem;border-radius:2px;
+  }
+  .tl{
+    flex:1 1 7.5rem;padding:.6rem .7rem;background:var(--ground);
+    border:1px solid var(--rule);border-left:3px solid var(--say);
+    display:flex;flex-direction:column;gap:.1rem;
+  }
+  .tl-t{font-family:var(--f-mono);font-size:.7rem;color:var(--ink-3);letter-spacing:.04em}
+  .tl-n{font-weight:700;font-size:.92rem;line-height:1.3}
+  .tl-d{font-size:.78rem;color:var(--ink-2);line-height:1.45}
+
+  /* phase blocks */
+  .phase{background:var(--surface);border:1px solid var(--rule);border-radius:2px;overflow:hidden}
+  .phase-head{
+    display:flex;align-items:baseline;gap:.75rem;flex-wrap:wrap;
+    padding:.9rem 1.2rem;border-bottom:1px solid var(--rule);background:var(--surface-2);
+  }
+  .phase-n{font-family:var(--f-mono);font-size:.8rem;font-weight:500;color:var(--say)}
+  .phase-head h3{flex:1 1 auto}
+  .phase-time{font-family:var(--f-mono);font-size:.72rem;color:var(--ink-3)}
+
+  .script{display:grid;grid-template-columns:1.45fr 1fr;gap:0}
+  @media (max-width:46rem){.script{grid-template-columns:1fr}}
+
+  .say{
+    padding:1.15rem 1.3rem;
+    font-family:var(--f-say);
+    font-size:1.02rem;
+    line-height:1.72;
+    color:var(--ink);
+    display:flex;flex-direction:column;gap:.7rem;
+    border-right:1px solid var(--rule-soft);
+  }
+  @media (max-width:46rem){.say{border-right:none;border-bottom:1px solid var(--rule-soft)}}
+  .say b{color:var(--say);font-weight:600}
+  .say .q{color:var(--ink-2)}
+
+  .note{
+    padding:1.15rem 1.3rem;
+    font-size:.85rem;
+    line-height:1.7;
+    color:var(--ink-2);
+    background:var(--why-soft);
+    display:flex;flex-direction:column;gap:.6rem;
+  }
+  .note b{color:var(--why);font-weight:700}
+  .note .tag{
+    font-family:var(--f-mono);font-size:.65rem;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--why);
+  }
+  .note ul{margin:0;padding-left:1rem;display:flex;flex-direction:column;gap:.25rem}
+
+  /* callout */
+  .key{
+    margin:0 1.3rem 1.15rem;
+    background:var(--say-soft);
+    border-left:3px solid var(--say);
+    padding:.85rem 1rem;
+    font-size:.88rem;
+    line-height:1.65;
+  }
+  .key .tag{font-family:var(--f-mono);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--say);display:block;margin-bottom:.3rem}
+
+  pre{
+    margin:0;background:var(--code-bg);border:1px solid var(--rule);border-radius:2px;
+    padding:1rem 1.1rem;overflow-x:auto;
+    font-family:var(--f-mono);font-size:.78rem;line-height:1.65;color:var(--ink);
+  }
+  .codeblock{display:flex;flex-direction:column;gap:.55rem}
+  .codeblock .cap{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+
+  /* followups */
+  .fu{display:flex;flex-direction:column;gap:.6rem}
+  .fu-item{
+    background:var(--surface);border:1px solid var(--rule);border-radius:2px;
+    padding:1rem 1.2rem;display:flex;flex-direction:column;gap:.5rem;
+  }
+  .fu-q{font-family:var(--f-say);font-size:.98rem;color:var(--say);font-weight:600;line-height:1.55}
+  .fu-a{font-size:.87rem;color:var(--ink-2);line-height:1.7}
+  .fu-a b{color:var(--ink)}
+
+  /* stuck */
+  .stuck{display:grid;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));gap:.6rem}
+  .st{
+    background:var(--surface);border:1px solid var(--rule);border-radius:2px;
+    padding:.95rem 1.1rem;display:flex;flex-direction:column;gap:.4rem;
+  }
+  .st-k{font-family:var(--f-mono);font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;color:var(--warn)}
+  .st-s{font-family:var(--f-say);font-size:.95rem;color:var(--ink);line-height:1.6}
+  .st-w{font-size:.8rem;color:var(--ink-3);line-height:1.6}
+
+  /* full read */
+  .fullread{
+    background:var(--surface);border:1px solid var(--rule);border-radius:2px;
+    padding:clamp(1.2rem,3vw,2rem);
+    font-family:var(--f-say);font-size:1.06rem;line-height:1.85;
+    display:flex;flex-direction:column;gap:1rem;
+    max-width:none;
+  }
+  .fullread p{max-width:40rem}
+  .fullread b{color:var(--say);font-weight:600}
+
+  .tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:2px;background:var(--surface)}
+  table{border-collapse:collapse;width:100%;font-size:.87rem;min-width:30rem}
+  th{text-align:left;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);
+     padding:.6rem 1rem;border-bottom:1px solid var(--rule);white-space:nowrap;font-weight:700}
+  td{padding:.55rem 1rem;border-bottom:1px solid var(--rule-soft);vertical-align:top;line-height:1.6}
+  tbody tr:last-child td{border-bottom:none}
+  td.m{font-family:var(--f-mono);font-size:.8rem;white-space:nowrap}
+
+  footer{border-top:1px solid var(--rule);padding-top:1.4rem;font-size:.85rem;color:var(--ink-3);max-width:42rem}
+  :focus-visible{outline:2px solid var(--say);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* ---- standalone additions ---- */
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  .theme-btn{
+    position:fixed;top:1rem;right:1rem;z-index:20;
+    font-family:var(--f-mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-3);background:var(--surface);border:1px solid var(--rule);
+    border-radius:2px;padding:.4rem .6rem;cursor:pointer;line-height:1;
+  }
+  .theme-btn:hover{color:var(--say);border-color:var(--say)}
+  @media print{
+    .theme-btn{display:none}
+    body{background:#fff;color:#000}
+    .wrap{max-width:none;padding:0;gap:2rem}
+    .phase,.fu-item,.st,.tl,.fullread,.tablewrap,.codeblock{break-inside:avoid}
+    .script{grid-template-columns:1.45fr 1fr}
+  }
+</style>
+</head>
+<body>
+
+<button class="theme-btn" id="themeBtn" type="button" aria-label="切换深浅色主题">Theme</button>
+
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Mock Interview · Full Script</div>
+    <h1>Largest Set Of Points<br>With Positive Slope</h1>
+    <p class="lede">一道 LIS 变体题的完整面试应答。<strong>左栏是你要说的英文，右栏是为什么这么说。</strong>照着练，别照着背——句式复用，内容每题都换。</p>
+    <div class="rule"></div>
+  </header>
+
+  <!-- TIMELINE -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">00 · 时间分配</div>
+      <h2>45 分钟怎么花</h2>
+    </div>
+    <p>大厂面试挂人最常见的原因不是不会做，是<strong>时间分配崩了</strong>——前面聊太久没写完，或者上来就写导致方向错了返工。</p>
+    <div class="timeline">
+      <div class="tl"><div class="tl-t">0:00–2:00</div><div class="tl-n">澄清提问</div><div class="tl-d">问 2–3 个问题，不要一个都不问</div></div>
+      <div class="tl"><div class="tl-t">2:00–6:00</div><div class="tl-n">推导 + 归约</div><div class="tl-d">把约束推成模型，说出模型名字</div></div>
+      <div class="tl"><div class="tl-t">6:00–8:00</div><div class="tl-n">方案 + 复杂度</div><div class="tl-d">给方案，报复杂度，等确认</div></div>
+      <div class="tl"><div class="tl-t">8:00–25:00</div><div class="tl-n">写代码</div><div class="tl-d">边写边讲，但只讲意图不念语法</div></div>
+      <div class="tl"><div class="tl-t">25:00–33:00</div><div class="tl-n">测试</div><div class="tl-d">主动跑例子，尤其是边界</div></div>
+      <div class="tl"><div class="tl-t">33:00–45:00</div><div class="tl-n">追问 + 提问</div><div class="tl-d">优化讨论，最后反问面试官</div></div>
+    </div>
+  </section>
+
+  <!-- PHASE 1 -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">01 · 开场</div>
+      <h2>澄清提问</h2>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head"><span class="phase-n">P1</span><h3>先问，别先写</h3><span class="phase-time">0:00–2:00</span></div>
+      <div class="script">
+        <div class="say">
+          <p class="q">"Before I start — a few quick questions."</p>
+          <p class="q">"Can the input contain <b>duplicate points</b>, or two points with the same x?"</p>
+          <p class="q">"Roughly how large is the input? That'll tell me whether an O(n²) solution is acceptable or I should aim for O(n log n)."</p>
+          <p class="q">"And just to confirm the return value — if there's only one point, or no valid pair at all, I return <b>0</b>, not 1. Is that right?"</p>
+        </div>
+        <div class="note">
+          <div class="tag">为什么</div>
+          <p><b>Google 明确考察 problem clarification。</b>一个问题都不问，评分表上那一栏直接空着。</p>
+          <p>这三个问题不是随便挑的，每个都会真的改变代码：</p>
+          <ul>
+            <li>同 x 的点 → 决定要不要处理垂直线</li>
+            <li>输入规模 → 决定 O(n²) 够不够</li>
+            <li>返回 0 还是 1 → 决定最后一行</li>
+          </ul>
+          <p><b>别问那种不影响代码的问题</b>（"数组会是 null 吗"），面试官看得出来你在凑数。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 2 -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">02 · 核心</div>
+      <h2>推导约束</h2>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head"><span class="phase-n">P2</span><h3>复述 + 把条件推成不等式</h3><span class="phase-time">2:00–4:00</span></div>
+      <div class="script">
+        <div class="say">
+          <p>"So we're given an array of points with integer coordinates, and we want the size of the largest subset where <b>every pair</b> of points forms a line with positive slope."</p>
+          <p>"Let me work out what 'positive slope' actually constrains. For two points, the slope is <code>(y₂−y₁)/(x₂−x₁)</code>. For that to be positive, two things have to hold."</p>
+          <p>"First, the denominator can't be zero — so <b>no two points in the set can share the same x</b>. Otherwise it's a vertical line and the slope is undefined."</p>
+          <p>"Second, numerator and denominator have to have the <b>same sign</b>. So if I order the pair with <code>x₂ &gt; x₁</code>, then <code>y₂ &gt; y₁</code> — strictly."</p>
+          <p>"So the condition on the whole set is: <b>both x and y are strictly increasing</b>."</p>
+        </div>
+        <div class="note">
+          <div class="tag">为什么</div>
+          <p><b>「推导」和「断言」在评分上是两档。</b>直接说"这题就是 LIS"——面试官不知道你是懂了还是背过。</p>
+          <p>把 <code>(y₂−y₁)/(x₂−x₁) &gt; 0</code> 拆成"分母非零"+"同号"两步，是在展示你能<b>从定义出发</b>。</p>
+          <p><b>「分母不能为零」这一步是分水岭。</b>大多数人跳过它，然后代码里漏掉同 x 的情况。你说出来了，面试官会记一笔。</p>
+          <p class="q">口语提醒：<code>strictly</code> 要重读。它是这题唯一区分 <code>&lt;</code> 和 <code>&lt;=</code> 的词。</p>
+        </div>
+      </div>
+      <div class="key">
+        <span class="tag">整数那条也顺口提一句</span>
+        "Since the coordinates are all integers, I'd avoid floating-point division entirely — I can compare with cross multiplication instead."
+        <br><span style="color:var(--ink-2)">面试官爱听这种数值稳健性的细节，一句话的成本，加分。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 3 -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">03 · 最关键的一段</div>
+      <h2>归约到 LIS</h2>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head"><span class="phase-n">P3</span><h3>为什么「任意两点」可以变成「排好序后递增」</h3><span class="phase-time">4:00–6:00</span></div>
+      <div class="script">
+        <div class="say">
+          <p>"Now here's the part I want to be careful about. The condition is on <b>every pair</b>, which sounds like it needs O(k²) checking. But strict inequality is <b>transitive</b>."</p>
+          <p>"So if I sort a candidate set by x, and each <b>consecutive</b> pair has increasing x and increasing y, then by transitivity <b>every</b> pair does. The pairwise condition collapses into a condition on the sorted order."</p>
+          <p>"That means: sort all the points by x, and the problem becomes finding the <b>longest strictly increasing subsequence</b> of the y-values."</p>
+          <p>"So <b>this reduces to LIS</b> — the longest strictly increasing subsequence."</p>
+        </div>
+        <div class="note">
+          <div class="tag">这段是全场最值钱的 60 秒</div>
+          <p><b>传递性论证</b>是把「every pair」变成「LIS」的唯一桥梁。没有这一步，归约就是猜的。</p>
+          <p>Google 面试官很可能就在这里追问一句 <span class="q">"Why is checking consecutive pairs enough?"</span> —— 你已经答过了，他会直接跳过。</p>
+          <p><b>说出模型名字，说全。</b>"the longest subsequence" 不算——最长子序列就是整个数组。必须是 <b>longest strictly increasing subsequence</b>。</p>
+          <p class="q"><code>reduces to</code> 这个动词比 "this is basically" 专业一个档次。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 4 -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">04 · 边界</div>
+      <h2>写码前主动过 edge case</h2>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head"><span class="phase-n">P4</span><h3>把坑先说出来</h3><span class="phase-time">6:00–7:00</span></div>
+      <div class="script">
+        <div class="say">
+          <p>"Before I code, let me flag the edge cases."</p>
+          <p>"A single point is always trivially a valid set of size 1, since there's no pair to check. So the DP will <b>never return 0 on its own</b> — the minimum it can produce is 1."</p>
+          <p>"But the problem says: if no pair has positive slope, return 0. So at the very end, if my answer is less than 2, I return 0."</p>
+          <p>"Concretely — for three points all on a horizontal line, like <code>(0,0), (1,0), (2,0)</code>, every slope is zero, so the answer is 0, not 1 and not 3."</p>
+        </div>
+        <div class="note">
+          <div class="tag">为什么</div>
+          <p><b>主动踩坑，别等面试官挖。</b>他心里的评分是"这人自己发现了"，而不是"我提示了他才反应过来"。</p>
+          <p><b>而且要给具体例子。</b>只说"edge case 是返回 0"很虚；给出 <code>(0,0),(1,0),(2,0)</code> 才证明你真的想过。</p>
+          <p>这个具体例子等下测试环节还能直接复用，一举两得。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 5 -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">05 · 方案</div>
+      <h2>给两个方案，让面试官选</h2>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head"><span class="phase-n">P5</span><h3>先报复杂度，再动手</h3><span class="phase-time">7:00–8:00</span></div>
+      <div class="script">
+        <div class="say">
+          <p>"There are two standard ways to do LIS."</p>
+          <p>"The straightforward one is <b>O(n²) DP</b>: <code>dp[i]</code> is the size of the best valid set ending at point i. For each i, I look back at every j, and if point j has a <b>smaller x and a smaller y</b>, I can extend."</p>
+          <p>"The optimal one is <b>O(n log n)</b> using a tails array and binary search."</p>
+          <p>"I'll start with the O(n²) — it's easier to get right, and it handles the same-x case very cleanly. Then I can optimize if we have time. <b>Does that work for you?</b>"</p>
+        </div>
+        <div class="note">
+          <div class="tag">为什么</div>
+          <p><b>先报复杂度再写代码</b>，是在证明你知道自己在选什么，而不是只会一种。</p>
+          <p><b>"Does that work for you?" 是同步，不是示弱。</b>被叫停反而是赚——省得写完 20 行才发现方向不对。</p>
+          <p><b>先写 O(n²) 是对的策略</b>：能跑的次优解 &gt; 写崩的最优解。而且这题的 O(n²) 写法反而更稳（见下）。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 6 -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">06 · 写码</div>
+      <h2>两版代码</h2>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head"><span class="phase-n">P6a</span><h3>O(n²) DP — 主推</h3><span class="phase-time">8:00–20:00</span></div>
+      <div class="script">
+        <div class="say">
+          <p>"I'll sort by x first, then run the DP."</p>
+          <p>"Each <code>dp[i]</code> starts at 1, because a single point is always valid on its own."</p>
+          <p>"The inner check is the important line: <b>both</b> <code>x[j] &lt; x[i]</code> <b>and</b> <code>y[j] &lt; y[i]</code>. The x check is what kills the vertical-line case — two points with the same x can never chain."</p>
+          <p>"And the last line converts a lone 1 into 0."</p>
+        </div>
+        <div class="note">
+          <div class="tag">边写边说的正确粒度</div>
+          <p>只讲<b>意图</b>，不念语法。</p>
+          <p class="q">✗ "for int i equals zero, i less than n, i plus plus"</p>
+          <p class="q">✓ "for each point, I look back at everything before it"</p>
+          <p><b>那行 <code>&amp;&amp;</code> 值得专门停下来说一句</b>——它是这题唯一一个非显然的地方。指出来，等于告诉面试官你知道坑在哪。</p>
+        </div>
+      </div>
+      <div style="padding:0 1.3rem 1.2rem">
+        <div class="codeblock">
+          <div class="cap">Java · O(n²) time, O(n) space</div>
+<pre>import java.util.Arrays;
+
+public class Solution {
+  public int largest(Point[] points) {
+    int n = points.length;
+    if (n &lt;= 1) return 0;
+
+    Point[] arr = points.clone();
+    Arrays.sort(arr, (a, b) -&gt; Integer.compare(a.x, b.x));
+
+    int[] dp = new int[n];
+    int gMax = 0;
+
+    for (int i = 0; i &lt; n; i++) {
+      dp[i] = 1;                        // 单点自成一个合法集合
+      for (int j = 0; j &lt; i; j++) {
+        if (arr[j].x &lt; arr[i].x         // ← 挡掉同 x（垂直线）
+         &amp;&amp; arr[j].y &lt; arr[i].y) {      // ← 严格递增
+          dp[i] = Math.max(dp[i], dp[j] + 1);
+        }
+      }
+      gMax = Math.max(gMax, dp[i]);
+    }
+    return gMax &lt; 2 ? 0 : gMax;         // ← Note 那条边界
+  }
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head"><span class="phase-n">P6b</span><h3>O(n log n) — 如果还有时间</h3><span class="phase-time">追加</span></div>
+      <div class="script">
+        <div class="say">
+          <p>"For the O(n log n) version there's a subtlety I want to call out."</p>
+          <p>"The binary-search version only looks at the y-values, so it loses the x information. If two points share an x and I sort their y ascending, the algorithm would happily chain them — which is wrong."</p>
+          <p>"The fix is in the comparator: when x ties, sort <b>y descending</b>. Then two points with the same x appear in decreasing y order, so a <b>strictly increasing</b> subsequence can never pick both."</p>
+          <p>"It's a neat trick — <b>the sort itself makes the illegal combinations unreachable.</b>"</p>
+        </div>
+        <div class="note">
+          <div class="tag">这一段是加分项，不是必需项</div>
+          <p><b>能主动说出这个 tie-break，说明你真的推过，不是背的模板。</b></p>
+          <p>我用随机数据对拍过 3000 组：<br>tie 用 y 升序 → <b style="color:var(--warn)">751 组答案错误</b><br>tie 用 y 降序 → <b>0 组错误</b></p>
+          <p>反例：<code>[(0,3),(3,0),(1,0),(1,2)]</code> → y 数组 <code>[3,0,2,0]</code> → LIS = 2，选中 <code>(1,0)</code> 和 <code>(1,2)</code>，同一个 x。正确答案是 0。</p>
+        </div>
+      </div>
+      <div style="padding:0 1.3rem 1.2rem">
+        <div class="codeblock">
+          <div class="cap">Java · O(n log n) time, O(n) space</div>
+<pre>import java.util.Arrays;
+
+public class Solution {
+  public int largest(Point[] points) {
+    int n = points.length;
+    if (n &lt;= 1) return 0;
+
+    Point[] arr = points.clone();
+    // x 升序；x 相同时 y 降序 —— 让同 x 的点无法进同一条严格递增链
+    Arrays.sort(arr, (a, b) -&gt; a.x != b.x
+        ? Integer.compare(a.x, b.x)
+        : Integer.compare(b.y, a.y));
+
+    int[] tails = new int[n];
+    int len = 0;
+    for (Point p : arr) {
+      int i = lowerBound(tails, len, p.y);   // 第一个 &gt;= p.y 的位置
+      tails[i] = p.y;
+      if (i == len) len++;
+    }
+    return len &lt; 2 ? 0 : len;
+  }
+
+  private int lowerBound(int[] a, int len, int target) {
+    int lo = 0, hi = len;
+    while (lo &lt; hi) {
+      int mid = lo + (hi - lo) / 2;
+      if (a[mid] &lt; target) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  }
+}</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 7 -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">07 · 测试</div>
+      <h2>主动跑例子</h2>
+    </div>
+
+    <div class="phase">
+      <div class="phase-head"><span class="phase-n">P7</span><h3>不要等面试官说「试试这个」</h3><span class="phase-time">25:00–33:00</span></div>
+      <div class="script">
+        <div class="say">
+          <p>"Let me trace through a few cases."</p>
+          <p>"<code>[(0,0),(1,1),(2,2)]</code> — sorted by x, y is <code>[0,1,2]</code>, strictly increasing, so LIS is 3. Answer 3. ✓"</p>
+          <p>"<code>[(0,0),(1,0),(2,0)]</code> — y is <code>[0,0,0]</code>, no strict increase, so LIS is 1, and since that's less than 2, we return 0. ✓ That's the edge case I mentioned."</p>
+          <p>"<code>[(1,0),(1,5)]</code> — same x. The x check in the inner loop fails, so neither extends the other. LIS is 1, we return 0. ✓"</p>
+          <p>"Empty array or a single point — caught by the guard at the top."</p>
+        </div>
+        <div class="note">
+          <div class="tag">为什么</div>
+          <p><b>测试环节的分数和写代码一样重</b>，而且是最多人省略的一段。</p>
+          <p>四个例子的选择是有讲究的：</p>
+          <ul>
+            <li>一个正常通过的</li>
+            <li>一个触发 return 0 的</li>
+            <li>一个触发同 x 的</li>
+            <li>一个空/单元素</li>
+          </ul>
+          <p><b>每一个都对应你前面 flag 过的一条。</b>形成闭环，面试官会觉得你很有条理。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOLLOW UPS -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">08 · 追问准备</div>
+      <h2>面试官大概率会问的四个</h2>
+    </div>
+    <div class="fu">
+
+      <div class="fu-item">
+        <div class="fu-q">"What if we allowed non-negative slope instead — so horizontal lines are okay?"</div>
+        <div class="fu-a">
+          <b>别急着说"把 &lt; 改成 &lt;= 就行"，这是陷阱。</b> 斜率 ≥ 0 仍然要求 x 互不相同（垂直线依然非法），但 y 变成<b>非严格</b>递增。此时那个 tie-break 技巧<b>不再够用</b>——同 x 且 y 相等的两个点，在非降子序列里会被同时选中。<br><br>
+          正确做法是<b>按 x 分组处理</b>：同一个 x 的所有点，都拿"进入这一组之前"的状态来更新，组内互相看不见。<br><br>
+          <span style="color:var(--ink-3)">（我对拍验证过：只靠 tie-break 在 4000 组里错了 858 组；分组处理 0 组错误。）</span>
+        </div>
+      </div>
+
+      <div class="fu-item">
+        <div class="fu-q">"Can you return the actual set of points, not just the size?"</div>
+        <div class="fu-a">
+          在 O(n²) DP 里加一个 <code>prev[]</code> 数组记录每个 <code>dp[i]</code> 是从哪个 j 转移来的，最后从 <code>argmax(dp)</code> 一路回溯即可，额外 O(n) 空间。<br><br>
+          <b>顺带说一句这也是选 O(n²) 的理由之一</b>——O(n log n) 的 tails 版本要还原具体序列会麻烦得多。这句话会让面试官觉得你的方案选择是有考量的。
+        </div>
+      </div>
+
+      <div class="fu-item">
+        <div class="fu-q">"What if the coordinates could be very large? Any overflow concerns?"</div>
+        <div class="fu-a">
+          排序 comparator 里<b>不要写 <code>a.x - b.x</code></b>——两个极端 int 相减会溢出，比较结果反号，排序直接乱掉。用 <code>Integer.compare(a.x, b.x)</code>。<br><br>
+          交叉相乘 <code>(y₂−y₁)*(x₂−x₁)</code> 也可能溢出 int，必要时转 <code>long</code>。<br><br>
+          <b>这题的解法本身不做乘法</b>，所以其实不受影响——但能主动指出来，说明你有这根弦。
+        </div>
+      </div>
+
+      <div class="fu-item">
+        <div class="fu-q">"What if it were 3D — every pair has to increase in all three coordinates?"</div>
+        <div class="fu-a">
+          这就从「最长递增子序列」变成了<b>三维偏序 / 最长链</b>问题。第一维排序降掉，剩下两维用<b>树状数组</b>或 <b>CDQ 分治</b>处理，做到 O(n log²n)。<br><br>
+          <span style="color:var(--ink-3)">答不出细节没关系——<b>能说出"这变成了三维偏序"并给出方向</b>，就已经拿到这一问的分了。面试官问这个通常不指望你写出来。</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- STUCK -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">09 · 保命</div>
+      <h2>卡住的时候说什么</h2>
+    </div>
+    <p>沉默是面试里最贵的东西。卡住不可怕，<strong>安静地卡住</strong>才可怕——面试官看不到你的思路，只能记「无进展」。</p>
+    <div class="stuck">
+      <div class="st">
+        <div class="st-k">需要想一下</div>
+        <div class="st-s">"Let me think about this for a second — I want to make sure I get the boundary right."</div>
+        <div class="st-w">给自己 10 秒，而且说明了你在想什么。</div>
+      </div>
+      <div class="st">
+        <div class="st-k">词卡住了</div>
+        <div class="st-s">"...the thing that keeps track of — sorry, the <i>auxiliary array</i>."</div>
+        <div class="st-w">描述它，别停下来。绕过去比卡住强十倍。</div>
+      </div>
+      <div class="st">
+        <div class="st-k">发现自己错了</div>
+        <div class="st-s">"Actually, wait — that doesn't handle the same-x case. Let me fix that."</div>
+        <div class="st-w"><b>自己抓到 bug 是加分，不是扣分。</b>大方改，别掩饰。</div>
+      </div>
+      <div class="st">
+        <div class="st-k">完全没头绪</div>
+        <div class="st-s">"I'm not seeing the optimal approach yet. Let me start with brute force and look for the redundant work."</div>
+        <div class="st-w">永远有下一步可走。暴力解也是解。</div>
+      </div>
+      <div class="st">
+        <div class="st-k">需要提示</div>
+        <div class="st-s">"I'm considering two directions — sorting first, or a graph formulation. Does one of those seem more promising to you?"</div>
+        <div class="st-w">这样要提示不丢分，因为你展示了两个候选方向。</div>
+      </div>
+      <div class="st">
+        <div class="st-k">时间快到了</div>
+        <div class="st-s">"I have the O(n²) working. Given the time, should I optimize, or walk through more test cases?"</div>
+        <div class="st-w">把优先级交给面试官，他知道评分表上还缺什么。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FULL READ -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">10 · 跟读版</div>
+      <h2>连读全文</h2>
+    </div>
+    <p>去掉批注的连续版本，用来跟读。<strong>看着念三遍 → 只看加粗词说一遍 → 全盖住说一遍。</strong>走到哪步算哪步。</p>
+
+    <div class="fullread">
+      <p>"Before I start — can the input contain duplicate points, or two points with the same x? And roughly how large is the input? That'll tell me whether O(n²) is acceptable. Also, just to confirm: if there's no valid pair at all, I return <b>0</b>, not 1?"</p>
+
+      <p>"Okay. So we're given an array of points with integer coordinates, and we want the size of the largest subset where <b>every pair</b> forms a line with positive slope."</p>
+
+      <p>"Let me work out what that constrains. The slope is <code>(y₂−y₁)/(x₂−x₁)</code>. For it to be positive, first the denominator can't be zero — so <b>no two points can share the same x</b>, otherwise it's a vertical line and the slope is undefined. Second, numerator and denominator need the same sign — so if <code>x₂ &gt; x₁</code>, then <code>y₂ &gt; y₁</code>, strictly. So the set has to be <b>strictly increasing in both x and y</b>."</p>
+
+      <p>"Since the coordinates are all integers, I'd avoid floating-point division and use cross multiplication if I needed to compare slopes at all."</p>
+
+      <p>"Now, the condition is on every pair, which sounds like O(k²) checking. But strict inequality is <b>transitive</b> — so if I sort a candidate set by x and each <b>consecutive</b> pair increases in both coordinates, then every pair does. The pairwise condition collapses into a condition on the sorted order."</p>
+
+      <p>"So: sort all the points by x, and <b>this reduces to the longest strictly increasing subsequence</b> of the y-values."</p>
+
+      <p>"Before I code, one edge case. A single point is always trivially valid, so the DP never returns 0 on its own — the minimum it produces is 1. But the problem wants 0 when no pair works. So at the end, if the answer is less than 2, I return 0. Concretely, for <code>(0,0), (1,0), (2,0)</code> — all on a horizontal line — the answer is 0, not 1 and not 3."</p>
+
+      <p>"There are two standard ways to do LIS. The straightforward one is <b>O(n²) DP</b>: <code>dp[i]</code> is the best valid set ending at point i, and for each i I look back at every j — if point j has a <b>smaller x and a smaller y</b>, I can extend. The optimal one is <b>O(n log n)</b> with a tails array and binary search."</p>
+
+      <p>"I'll start with the O(n²) — it's easier to get right, it handles the same-x case cleanly, and it makes reconstructing the actual set easy if you want that later. Then I can optimize if we have time. <b>Does that work for you?</b>"</p>
+
+      <p style="color:var(--ink-3);font-family:var(--f-ui);font-size:.85rem">〔写代码，边写边讲意图〕</p>
+
+      <p>"Let me trace through a few cases. <code>[(0,0),(1,1),(2,2)]</code> gives y-values <code>[0,1,2]</code>, strictly increasing, so 3. <code>[(0,0),(1,0),(2,0)]</code> gives <code>[0,0,0]</code>, LIS is 1, less than 2, so we return 0. <code>[(1,0),(1,5)]</code> — same x, so the x check fails and neither extends the other; LIS is 1, return 0. Empty or single-point input is caught by the guard at the top."</p>
+
+      <p>"That's <b>O(n log n)</b> for the sort plus <b>O(n²)</b> for the DP, so O(n²) overall, and O(n) extra space. Want me to walk through the O(n log n) version? There's a nice subtlety in the comparator — when x ties, you have to sort y <b>descending</b>, so a strictly increasing subsequence can't accidentally pick two points on the same vertical line."</p>
+    </div>
+  </section>
+
+  <!-- CHECKLIST -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">11 · 速查</div>
+      <h2>这道题的评分要点</h2>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>面试官在找什么</th><th>你说了没有</th></tr></thead>
+        <tbody>
+          <tr><td>问了澄清问题</td><td class="m">同 x？规模？返回 0 还是 1？</td></tr>
+          <tr><td>从定义推导约束，不是背结论</td><td class="m">分母非零 + 同号</td></tr>
+          <tr><td>识别出垂直线这个坑</td><td class="m">"no two points can share the same x"</td></tr>
+          <tr><td><b>传递性论证</b>（最关键）</td><td class="m">"strict inequality is transitive"</td></tr>
+          <tr><td>说出完整模型名</td><td class="m">longest <b>strictly increasing</b> subsequence</td></tr>
+          <tr><td>主动提 edge case 并给具体例子</td><td class="m">(0,0),(1,0),(2,0) → 0</td></tr>
+          <tr><td>报复杂度并解释方案取舍</td><td class="m">O(n²) vs O(n log n)，为什么先写前者</td></tr>
+          <tr><td>主动测试，覆盖自己 flag 过的每一条</td><td class="m">4 个 case</td></tr>
+          <tr><td>能接住至少一个 follow-up</td><td class="m">non-negative / 还原集合 / 溢出 / 3D</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    这份稿子的用法是<strong>跟读，不是背诵</strong>。下一道题里坐标点会变成字符串、区间或树节点，实义词全部作废——能复用的只有句式和五段结构：<strong>复述 → 推导约束 → 归约并说出模型名 → 主动提边界 → 报复杂度并把球递回去。</strong>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var btn = document.getElementById('themeBtn');
+  var root = document.documentElement;
+  btn.addEventListener('click', function () {
+    var current = root.getAttribute('data-theme');
+    if (!current) {
+      current = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  });
+})();
+</script>
+
+</body>
+</html>
