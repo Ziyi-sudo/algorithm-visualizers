@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>为什么区间 DP 按 j−i 填表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8e5df; --card:#fff; --ink:#15191e; --soft:#5d6873; --faint:#98a2ad;
+  --d1:#e8f0f9; --d1t:#2563a8; --d2:#e4f2f0; --d2t:#0f766e;
+  --d3:#fbf0dc; --d3t:#b8791a; --d4:#fbe9ee; --d4t:#c2405f;
+  --now:#e8b93c; --bad:#c0392b; --bad-bg:#fbe9e6;
+  --lift:0 1px 2px rgba(21,25,30,.06), 0 6px 16px rgba(21,25,30,.08);
+  --lift-lg:0 2px 4px rgba(21,25,30,.07), 0 14px 34px rgba(21,25,30,.13);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.7;
+  background-image:radial-gradient(circle at 20% 0%, #f2f0ec 0%, var(--bg) 46%, #d8d4cc 100%);
+  background-attachment:fixed;}
+.wrap{max-width:980px;margin:0 auto;padding:50px 20px 90px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+h1{font-size:clamp(25px,4.2vw,36px);line-height:1.18;font-weight:700;margin:0 0 12px;letter-spacing:-.02em}
+.lede{font-size:16px;color:var(--soft);max-width:64ch;margin:0 0 22px}
+code{font-family:"JetBrains Mono",monospace;font-size:.9em;background:rgba(21,25,30,.06);padding:1px 5px;border-radius:3px}
+
+.switch{display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+.switch button{appearance:none;border:0;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:500;padding:10px 17px;background:var(--card);color:var(--soft);
+  box-shadow:var(--lift);transition:all .16s}
+.switch button:hover{transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.switch button[aria-selected="true"]{background:var(--ink);color:#fff;transform:translateY(-2px);box-shadow:var(--lift-lg)}
+button:focus-visible{outline:3px solid var(--now);outline-offset:2px}
+
+.controls{display:flex;align-items:center;gap:11px;margin:0 0 14px;flex-wrap:wrap}
+.controls button{appearance:none;background:var(--card);border:0;border-radius:9px;font-family:inherit;font-size:14px;
+  padding:9px 20px;cursor:pointer;color:var(--ink);box-shadow:var(--lift);transition:all .15s}
+.controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.controls button:disabled{opacity:.4;cursor:default;box-shadow:none}
+.pos{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--faint)}
+
+.log{padding:13px 16px;border-radius:12px;background:var(--card);box-shadow:var(--lift);
+  font-size:14.5px;min-height:62px;border-left:4px solid var(--ink);margin-bottom:16px}
+.log.bad{border-left-color:var(--bad);background:#fffaf9;color:var(--bad)}
+.log b.a{color:var(--d1t)} .log b.b{color:var(--d2t)} .log b.c{color:var(--d3t)}
+
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,300px);gap:16px;align-items:start}
+@media(max-width:820px){.stage{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:16px 18px;box-shadow:var(--lift)}
+.card+.card{margin-top:11px}
+.card h3{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 12px;font-weight:500}
+
+table.grid{border-collapse:separate;border-spacing:5px;font-family:"JetBrains Mono",monospace;font-size:12px}
+table.grid th{font-weight:500;color:var(--faint);font-size:11.5px;height:24px;text-align:center;min-width:74px}
+table.grid td{width:74px;height:56px;text-align:center;border-radius:7px;background:#f4f2ee;color:#cdc7bd;
+  transition:all .2s;border:2px solid transparent;padding:3px;vertical-align:middle;cursor:default}
+td.na{background:transparent;border-color:transparent}
+td.dim{opacity:.32}
+td .big{font-size:15px;font-weight:600;line-height:1.25}
+td .sub{font-size:9.5px;opacity:.8;line-height:1.3}
+td.now{border-color:var(--now);transform:translateY(-2px);box-shadow:0 4px 12px rgba(21,25,30,.14)}
+td.dep{border-color:var(--d1t)}
+td.missing{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+
+.band{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:13.5px;color:var(--soft);
+  border-bottom:1px solid #f5f2ee}
+.band:last-child{border-bottom:0}
+.band i{display:inline-block;width:14px;height:14px;border-radius:4px;flex:none}
+.band b{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--ink);font-weight:500}
+.band.on{background:#fdf9ee;border-radius:6px;padding:6px 8px;margin:0 -8px}
+
+.arr{display:flex;gap:6px;font-family:"JetBrains Mono",monospace;font-size:13px;flex-wrap:wrap;margin-bottom:6px}
+.arr div{padding:6px 0;width:46px;text-align:center;border-radius:6px;background:#f4f2ee;color:var(--soft)}
+.arr div small{display:block;font-size:9px;color:var(--faint)}
+.arr div.hl{background:var(--d3);color:var(--d3t);font-weight:600}
+
+.takeaway{margin-top:44px;padding-top:26px;border-top:1px solid rgba(21,25,30,.14)}
+h2{font-size:20px;font-weight:500;margin:0 0 12px}
+p{max-width:68ch}
+pre{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.8;background:var(--card);
+  padding:14px 16px;border-radius:12px;box-shadow:var(--lift);overflow-x:auto;margin:14px 0}
+footer{margin-top:36px;font-size:13px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">区间型 dp · 填表顺序</p>
+<h1><code>j − i</code> 就是「这段有多长」</h1>
+<p class="lede">所以按 <code>j − i</code> 从小到大填，等价于<b>按区间从短到长算</b> —— 这就是 DP 那句"小问题先算"。表上看起来是一条斜线一条斜线地往右上推。示例 <code>A = [0, 2, 4, 7, 10]</code>。</p>
+
+<div class="switch" role="tablist" id="tabs"></div>
+
+<div class="controls">
+  <button id="prev" type="button">上一步</button>
+  <button id="next" type="button">下一步</button>
+  <button id="auto" type="button">自动播放</button>
+  <span class="pos" id="pos"></span>
+</div>
+
+<div class="log" id="log"></div>
+
+<div class="stage">
+  <div class="card"><h3 id="gtitle">dp 表</h3><div id="grid"></div></div>
+  <div>
+    <div class="card"><h3>helper 数组 A</h3><div class="arr" id="arr"></div></div>
+    <div class="card"><h3>按 j − i 分组</h3><div id="bands"></div></div>
+  </div>
+</div>
+
+<section class="takeaway">
+  <h2>三句话说清</h2>
+
+  <p><b>① <code>j − i</code> 是什么。</b><code>dp[i][j]</code> 管的是木头上 <code>A[i]</code> 到 <code>A[j]</code> 这一段。<code>j − i</code> 表示这段里<b>有几个「格子」</b>（相邻切点之间的空隙），也就是<b>切完之后会碎成几块</b>。<code>j − i − 1</code> 就是这段里面要切的刀数。</p>
+
+  <pre>j − i = 1   →  0 刀   base case，不用切，代价 0
+j − i = 2   →  1 刀
+j − i = 3   →  2 刀
+j − i = 4   →  3 刀   整根木头，就是答案</pre>
+
+  <p><b>② 为什么按它增长。</b><code>dp[i][j]</code> 的公式是 <code>min over k (dp[i][k] + dp[k][j])</code>，其中 <code>i &lt; k &lt; j</code>。两个子段的 <code>j − i</code> <b>都严格小于原来的</b>（因为 k 被夹在中间）。<b>所以只要"所有更短的都算完了"，当前这格的依赖必然齐全。</b>按 <code>j − i</code> 递增填，就是在保证这一点。</p>
+
+  <p><b>③ 为什么不能按行填。</b>切到第三个 tab 看：按行从左往右走，算到 <code>dp[0][4]</code> 时，它需要 <code>dp[1][4]</code>、<code>dp[2][4]</code>、<code>dp[3][4]</code> —— <b>那三格在后面的行，还没算</b>。行序保证不了"短的先算"。</p>
+
+  <pre>for (int len = 2; len &lt; n; len++)        // ← 斜线编号 = j − i
+    for (int i = 0; i + len &lt; n; i++) {   // ← 沿着这条斜线滑
+        int j = i + len;
+        ...
+    }
+
+len=2:  (0,2) (1,3) (2,4)
+len=3:  (0,3) (1,4)
+len=4:  (0,4)              ← 答案</pre>
+
+  <p><b>对比一下三类 DP 的「小问题」是什么：</b></p>
+  <pre>一维线性     小 = 下标小       dp[i] 依赖 dp[i-1]        → 从左往右
+二维双序列   小 = 前缀短       dp[i][j] 依赖左上/上/左    → 从上到下、从左往右
+区间型       小 = 区间短       dp[i][j] 依赖所有子区间    → 按 j−i 递增，从对角线往外扩</pre>
+
+  <p><b>一句话：每类 DP 的填表方向，都是由「谁算小问题」决定的。</b>区间型的"小"是长度，不是下标 —— 所以它的填表方向跟前面几类都不一样。</p>
+</section>
+
+<footer>A = [0, 2, 4, 7, 10]（cuts = [2,4,7] 补上两端 0 和 10）</footer>
+</div>
+
+<script>
+var A=[0,2,4,7,10], n=A.length;
+var DP=[[0,0,4,11,20],[0,0,0,5,13],[0,0,0,0,6],[0,0,0,0,0],[0,0,0,0,0]];
+var COL=[null,{bg:"#eeece7",fg:"#98a2ad"},{bg:"var(--d1)",fg:"var(--d1t)"},
+         {bg:"var(--d2)",fg:"var(--d2t)"},{bg:"var(--d3)",fg:"var(--d3t)"}];
+
+/* ---------- tab 1: 每格什么意思 ---------- */
+function buildMeaning(){
+  var st=[];
+  st.push({show:[],note:"表里每一格 <code>dp[i][j]</code> 都代表<b>木头上的一段</b>：从 <code>A[i]</code> 到 <code>A[j]</code>。下面逐格点亮，看它们分别是哪一段。"});
+  for(var d=1; d<n; d++){
+    for(var i=0; i+d<n; i++){
+      var j=i+d;
+      st.push({show:[[i,j]], cur:[i,j], band:d, hlArr:[i,j],
+        note:"<b class='c'>dp["+i+"]["+j+"]</b> → 木头 <b>"+A[i]+" ~ "+A[j]+"</b>，长 "+(A[j]-A[i])+
+             "　|　<code>j − i = "+d+"</code> 表示这段<b>有 "+d+" 个格子</b>，里面有 <b>"+(d-1)+" 个切点</b>要切"+
+             (d===1?"　← <b>base case，不用切，代价 0</b>":"")});
+    }
+  }
+  st.push({show:"all",note:"看出来了吗 —— <b>同一条斜线上的格子，<code>j − i</code> 相同，也就是「一样长」</b>。<code>j − i</code> 越大，这段越长、要切的刀越多。"});
+  return st;
+}
+
+/* ---------- tab 2: 按斜线填 ---------- */
+function buildFill(){
+  var st=[], done=[];
+  st.push({done:[],note:"开始填表。规则：<b>按 <code>j − i</code> 从小到大</b>，也就是<b>从短的区间开始算</b>。"});
+  for(var d=1; d<n; d++){
+    var lineCells=[];
+    for(var i=0;i+d<n;i++) lineCells.push([i,i+d]);
+    st.push({done:done.slice(), band:d, lineHL:lineCells.slice(),
+      note:"轮到第 <b class='c'>"+d+"</b> 条斜线：<code>j − i = "+d+"</code>，共 "+lineCells.length+" 格 —— "+
+           lineCells.map(function(c){return "dp["+c[0]+"]["+c[1]+"]";}).join("、")+
+           (d===1?"　<b>全是 base case = 0</b>":"")});
+    for(var t=0;t<lineCells.length;t++){
+      var i=lineCells[t][0], j=lineCells[t][1];
+      done.push([i,j]);
+      var deps=[];
+      for(var k=i+1;k<j;k++){ deps.push([i,k]); deps.push([k,j]); }
+      st.push({done:done.slice(), cur:[i,j], band:d, dep:deps, hlArr:[i,j],
+        note: d===1
+          ? "<b class='c'>dp["+i+"]["+j+"] = 0</b>　中间没有切点，不用切。"
+          : "<b class='c'>dp["+i+"]["+j+"] = "+DP[i][j]+"</b>　它依赖的子段（蓝框）<b>都在更短的斜线上，已经算好了</b>。"});
+    }
+  }
+  st.push({done:done.slice(), cur:[0,n-1], note:"填完。答案 <b class='b'>dp[0]["+(n-1)+"] = "+DP[0][n-1]+"</b> —— <code>j − i = "+(n-1)+"</code>，最长的那一段，也就是整根木头。"});
+  return st;
+}
+
+/* ---------- tab 3: 按行填为什么不行 ---------- */
+function buildRowFail(){
+  var st=[], done=[];
+  st.push({done:[],note:"换个填法试试：<b>按行走，每行从左往右</b>（就像前面几类 DP 那样）。"});
+  for(var j=1;j<n;j++){ done.push([0,j]); }
+  st.push({done:[[0,1]],note:"第 0 行：先算 <code>dp[0][1] = 0</code>（base case）。"});
+  st.push({done:[[0,1],[0,2]],cur:[0,2],dep:[[0,1],[1,2]],note:"<code>dp[0][2]</code> 依赖 <code>dp[0][1]</code> 和 <code>dp[1][2]</code>。<code>dp[1][2]</code> 是 base case（=0），<b>侥幸没事</b>。"});
+  st.push({done:[[0,1],[0,2],[0,3]],cur:[0,3],dep:[[0,1],[1,3],[0,2],[2,3]],miss:[[1,3]],
+    note:"<code>dp[0][3]</code> 需要 <b>dp[1][3]</b> —— <b>它在第 1 行，还没算！</b>"});
+  st.push({done:[[0,1],[0,2],[0,3],[0,4]],cur:[0,4],dep:[[0,1],[1,4],[0,2],[2,4],[0,3],[3,4]],miss:[[1,4],[2,4]],
+    tone:1,
+    note:"<code>dp[0][4]</code> 更糟：需要 <b>dp[1][4]</b>、<b>dp[2][4]</b> —— <b>两个都在后面的行，全都还没算。</b><br>⇒ <b>按行填保证不了「短的先算」，公式直接用到空值。</b>"});
+  st.push({done:[],note:"所以区间型必须<b>按 <code>j − i</code> 递增</b>填 —— 那才是这类问题里「小问题」的定义。"});
+  return st;
+}
+
+var TABS=[
+ {label:"① 每格是什么意思", build:buildMeaning},
+ {label:"② 按斜线填（正确）", build:buildFill},
+ {label:"③ 按行填（会崩）", build:buildRowFail}
+];
+TABS.forEach(function(t){ t.steps=t.build(); });
+
+var cur=0, s=0, timer=null;
+var tb=document.getElementById("tabs");
+TABS.forEach(function(t,i){
+  var b=document.createElement("button"); b.type="button"; b.textContent=t.label;
+  b.setAttribute("role","tab");
+  b.addEventListener("click",function(){ cur=i; s=0; stopAuto(); render(); });
+  tb.appendChild(b);
+});
+function stopAuto(){ if(timer){ clearInterval(timer); timer=null; document.getElementById("auto").textContent="自动播放"; } }
+
+function has(list,i,j){ if(list==="all") return true; if(!list) return false;
+  for(var t=0;t<list.length;t++) if(list[t][0]===i&&list[t][1]===j) return true; return false; }
+
+function render(){
+  var T=TABS[cur], st=T.steps[s];
+  Array.prototype.forEach.call(tb.children,function(b,i){ b.setAttribute("aria-selected", i===cur?"true":"false"); });
+  document.getElementById("gtitle").textContent = cur===2 ? "dp 表 · 按行填（演示失败）" : "dp 表 · 行 i × 列 j";
+
+  var h='<table class="grid"><tr><th>i＼j</th>';
+  for(var j=0;j<n;j++) h+='<th>'+j+'</th>';
+  h+='</tr>';
+  for(var i=0;i<n;i++){
+    h+='<tr><th>'+i+'</th>';
+    for(var j=0;j<n;j++){
+      if(j<=i && !(j===i)){ h+='<td class="na"></td>'; continue; }
+      if(j===i){ h+='<td class="na"></td>'; continue; }
+      var d=j-i, c=COL[d];
+      var visible = (cur===0) ? has(st.show,i,j) : has(st.done,i,j);
+      var cls="", style="", inner="";
+      if(visible){
+        style='background:'+c.bg+';color:'+c.fg;
+        inner='<div class="big">'+(cur===0? "j−i="+d : DP[i][j])+'</div>'+
+              '<div class="sub">'+A[i]+"~"+A[j]+'</div>';
+      } else if(cur===1 && st.lineHL && has(st.lineHL,i,j)){
+        style='background:'+c.bg+';color:'+c.fg+';opacity:.45';
+        inner='<div class="big">?</div><div class="sub">'+A[i]+"~"+A[j]+'</div>';
+      } else {
+        cls="dim"; inner='<div class="sub" style="opacity:.55">'+A[i]+"~"+A[j]+'</div>';
+      }
+      if(has(st.dep,i,j)) cls+=" dep";
+      if(has(st.miss,i,j)){ cls+=" missing"; style=""; inner='<div class="big">?</div><div class="sub">还没算</div>'; }
+      if(st.cur && st.cur[0]===i && st.cur[1]===j) cls+=" now";
+      h+='<td class="'+cls+'" style="'+style+'">'+inner+'</td>';
+    }
+    h+='</tr>';
+  }
+  document.getElementById("grid").innerHTML=h+'</table>';
+
+  document.getElementById("arr").innerHTML = A.map(function(v,t){
+    var hl = st.hlArr && (st.hlArr[0]===t || st.hlArr[1]===t);
+    return '<div class="'+(hl?"hl":"")+'">'+v+'<small>A['+t+']</small></div>';
+  }).join("");
+
+  var bh="";
+  for(var d=1; d<n; d++){
+    var cells=[]; for(var i=0;i+d<n;i++) cells.push("("+i+","+(i+d)+")");
+    bh+='<div class="band'+(st.band===d?" on":"")+'"><i style="background:'+COL[d].bg+'"></i>'+
+        '<b>j−i='+d+'</b><span style="font-size:12px">'+(d-1)+' 刀 · '+cells.join(" ")+'</span></div>';
+  }
+  document.getElementById("bands").innerHTML=bh;
+
+  var log=document.getElementById("log");
+  log.innerHTML=st.note;
+  log.className="log"+(st.tone===1?" bad":"");
+
+  document.getElementById("pos").textContent=(s+1)+" / "+T.steps.length;
+  document.getElementById("prev").disabled = s===0;
+  document.getElementById("next").disabled = s===T.steps.length-1;
+}
+document.getElementById("next").addEventListener("click",function(){ var T=TABS[cur]; if(s<T.steps.length-1){s++;render();} });
+document.getElementById("prev").addEventListener("click",function(){ if(s>0){s--;render();} });
+document.getElementById("auto").addEventListener("click",function(){
+  if(timer){ stopAuto(); return; }
+  this.textContent="暂停";
+  timer=setInterval(function(){ var T=TABS[cur]; if(s<T.steps.length-1){ s++; render(); } else stopAuto(); }, 850);
+});
+document.addEventListener("keydown",function(e){
+  if(e.key==="ArrowRight") document.getElementById("next").click();
+  if(e.key==="ArrowLeft") document.getElementById("prev").click();
+});
+render();
+</script>
+</body>
+</html>
