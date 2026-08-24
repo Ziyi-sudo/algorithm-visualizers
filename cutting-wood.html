@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cutting Wood I — 补两端，枚举第一刀</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8e5df; --card:#fff; --ink:#15191e; --soft:#5d6873; --faint:#98a2ad;
+  --cut:#c2405f; --cut-bg:#fbe9ee; --pad:#2563a8; --pad-bg:#e8f0f9;
+  --now:#b8791a; --now-bg:#fbf0dc; --done:#0f766e; --done-bg:#e4f2f0; --mark:#e8b93c;
+  --lift:0 1px 2px rgba(21,25,30,.06), 0 6px 16px rgba(21,25,30,.08);
+  --lift-lg:0 2px 4px rgba(21,25,30,.07), 0 14px 34px rgba(21,25,30,.13);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.7;
+  background-image:radial-gradient(circle at 20% 0%, #f2f0ec 0%, var(--bg) 46%, #d8d4cc 100%);
+  background-attachment:fixed;}
+.wrap{max-width:960px;margin:0 auto;padding:50px 20px 90px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+h1{font-size:clamp(25px,4.2vw,36px);line-height:1.18;font-weight:700;margin:0 0 12px;letter-spacing:-.02em}
+.lede{font-size:16px;color:var(--soft);max-width:64ch;margin:0 0 22px}
+code{font-family:"JetBrains Mono",monospace;font-size:.9em;background:rgba(21,25,30,.06);padding:1px 5px;border-radius:3px}
+
+.controls{display:flex;align-items:center;gap:11px;margin:0 0 14px;flex-wrap:wrap}
+.controls button{appearance:none;background:var(--card);border:0;border-radius:9px;font-family:inherit;font-size:14px;
+  padding:9px 20px;cursor:pointer;color:var(--ink);box-shadow:var(--lift);transition:all .15s}
+.controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.controls button:disabled{opacity:.4;cursor:default;box-shadow:none}
+button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+.pos{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--faint)}
+.verdict{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:500;color:var(--done)}
+
+.log{padding:13px 16px;border-radius:12px;background:var(--card);box-shadow:var(--lift);
+  font-size:14.5px;min-height:60px;border-left:4px solid var(--ink);margin-bottom:16px}
+.log.now{border-left-color:var(--now);background:#fffcf4}
+.log.done{border-left-color:var(--done)}
+.log b.c{color:var(--cut)} .log b.n{color:var(--now)} .log b.d{color:var(--done)} .log b.p{color:var(--pad)}
+
+.card{background:var(--card);border-radius:12px;padding:16px 18px;box-shadow:var(--lift);margin-bottom:12px}
+.card h3{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 12px;font-weight:500}
+
+/* wood bar */
+.bar{position:relative;height:46px;background:linear-gradient(180deg,#efe6d8,#e2d5c1);border-radius:7px;
+  margin:26px 0 30px;box-shadow:inset 0 1px 3px rgba(0,0,0,.08)}
+.bar .seg{position:absolute;top:0;bottom:0;border-radius:5px;transition:all .3s}
+.bar .seg.hl{background:var(--now-bg);box-shadow:inset 0 0 0 2px var(--now)}
+.tick{position:absolute;top:-8px;bottom:-8px;width:2px;background:var(--cut);border-radius:1px}
+.tick.pad{background:var(--pad)}
+.tick span{position:absolute;top:-21px;left:50%;transform:translateX(-50%);font-family:"JetBrains Mono",monospace;
+  font-size:11px;color:var(--cut);white-space:nowrap}
+.tick.pad span{color:var(--pad)}
+.tick .idx{top:auto;bottom:-21px;color:var(--faint);font-size:10px}
+.tick.kcut{width:4px;background:var(--now);box-shadow:0 0 0 4px var(--now-bg)}
+.tick.kcut span{color:var(--now);font-weight:700}
+
+.arr{display:flex;gap:6px;font-family:"JetBrains Mono",monospace;font-size:14px;flex-wrap:wrap}
+.arr div{padding:7px 0;width:44px;text-align:center;border-radius:6px;background:#f4f2ee;color:var(--soft)}
+.arr div.pad{background:var(--pad-bg);color:var(--pad);font-weight:500}
+.arr div small{display:block;font-size:9.5px;color:var(--faint);margin-top:2px}
+
+table.grid{border-collapse:separate;border-spacing:4px;font-family:"JetBrains Mono",monospace;font-size:13px}
+table.grid th{font-weight:500;color:var(--faint);font-size:11.5px;width:42px;height:26px;text-align:center}
+table.grid td{width:42px;height:32px;text-align:center;border-radius:6px;background:#f4f2ee;color:#cdc7bd;
+  transition:all .2s;border:2px solid transparent}
+td.na{background:transparent}
+td.base{background:#eeece7;color:var(--faint)}
+td.filled{background:var(--done-bg);color:var(--done);font-weight:500}
+td.now{background:var(--now-bg);color:var(--now);font-weight:700;border-color:var(--now);transform:translateY(-1px)}
+td.dep{border-color:var(--pad);background:var(--pad-bg);color:var(--pad)}
+
+.krow{display:flex;gap:8px;flex-wrap:wrap;min-height:32px;font-family:"JetBrains Mono",monospace;font-size:13px}
+.kchip{padding:5px 11px;border-radius:7px;background:#f4f2ee;color:var(--soft)}
+.kchip.on{background:var(--now-bg);color:var(--now);font-weight:600}
+.kchip.best{background:var(--done-bg);color:var(--done);font-weight:600}
+
+.takeaway{margin-top:44px;padding-top:26px;border-top:1px solid rgba(21,25,30,.14)}
+h2{font-size:20px;font-weight:500;margin:0 0 12px}
+p{max-width:68ch}
+pre{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.8;background:var(--card);
+  padding:14px 16px;border-radius:12px;box-shadow:var(--lift);overflow-x:auto;margin:14px 0}
+table.cmp{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;
+  box-shadow:var(--lift);overflow:hidden;margin:16px 0;font-size:14px}
+table.cmp th{text-align:left;font-weight:500;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);padding:11px 14px;border-bottom:1px solid #f0ede8}
+table.cmp td{padding:10px 14px;border-bottom:1px solid #f7f5f1;color:var(--soft)}
+table.cmp tr:last-child td{border-bottom:0}
+table.cmp td.k{color:var(--ink)}
+footer{margin-top:36px;font-size:13px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">laicode 137 · cutting wood i · 区间型 dp</p>
+<h1>补两端，然后枚举第一刀</h1>
+<p class="lede">木头长 10，必须在 <code>2, 4, 7</code> 处切开。每切一刀的代价 = <b>当前这段木头的长度</b>，所以顺序会影响总价。难点不在公式，在于<b>把「木头的位置」换成「切点的下标」</b>。</p>
+
+<div class="controls">
+  <button id="prev" type="button">上一步</button>
+  <button id="next" type="button">下一步</button>
+  <button id="auto" type="button">自动播放</button>
+  <span class="pos" id="pos"></span>
+  <span class="verdict" id="verdict"></span>
+</div>
+
+<div class="log" id="log"></div>
+
+<div class="card">
+  <h3>木头 · 红线是必须切的位置，蓝线是补上的两端</h3>
+  <div class="bar" id="bar"></div>
+  <h3 style="margin-top:4px">helper 数组 A（补两端后）</h3>
+  <div class="arr" id="arr"></div>
+</div>
+
+<div class="card">
+  <h3 id="ktitle">枚举第一刀切在哪个 k</h3>
+  <div class="krow" id="krow"></div>
+</div>
+
+<div class="card">
+  <h3>dp 表 · dp[i][j] = 切开 A[i] 和 A[j] 之间所有点的最小代价</h3>
+  <div id="grid"></div>
+</div>
+
+<section class="takeaway">
+  <h2>五个要点</h2>
+
+  <table class="cmp">
+    <tr><th>格</th><th>内容</th></tr>
+    <tr><td class="k">物理意义</td><td><code>dp[i][j]</code> = 把 <code>A[i]</code> 到 <code>A[j]</code> 这一段木头，切开<b>中间所有切点</b>，所需的最小总代价</td></tr>
+    <tr><td class="k">表大小</td><td><code>int[n][n]</code>，n = cuts.length + 2。不开 padding，i/j 都是 A 上的下标，只用 <code>i &lt; j</code> 的右上三角</td></tr>
+    <tr><td class="k">base case</td><td><code>j - i &lt;= 1 → dp[i][j] = 0</code>　中间没有切点，不用切。<b>Java 默认值就是 0，不用手写</b></td></tr>
+    <tr><td class="k">induction</td><td><code>dp[i][j] = min over k (dp[i][k] + dp[k][j]) + (A[j] - A[i])</code>，<code>i &lt; k &lt; j</code></td></tr>
+    <tr><td class="k">result</td><td><code>dp[0][n-1]</code>　整根木头</td></tr>
+  </table>
+
+  <p><b>① 「补两端」是全题的钥匙。</b>你卡在定义不出 dp，根因是想用「木头的位置/长度」当下标 —— 那样下标空间是 L（可能很大），而且区间端点跟切点对不齐。把 <code>0</code> 和 <code>L</code> 补进 cuts 数组之后，<b>任意一段木头都能用 A 上的两个下标表示</b>，一段的长度就是 <code>A[j] - A[i]</code>。</p>
+
+  <p><b>② <code>A[j] - A[i]</code> 为什么能提到 min 外面。</b>不管你先切哪个 k，<b>这一刀都是在整段 [i,j] 上切的</b>，代价固定等于整段长度，跟 k 无关。所以 min 里只需要比较两个子段的代价。</p>
+
+  <p><b>③ 为什么 <code>dp[i][k] + dp[k][j]</b></code> 不重不漏。切完 k 这一刀，左右两段就<b>彻底独立</b>了，互不影响 —— 这是"切割型"区间 DP 成立的前提。</p>
+
+  <p><b>④ 填表顺序。</b><code>dp[i][j]</code> 依赖 <code>dp[i][k]</code> 和 <code>dp[k][j]</code>，其中 <code>i &lt; k &lt; j</code> —— 都是<b>更短的区间</b>。所以按区间跨度从小到大填：</p>
+
+  <pre>for (int len = 2; len &lt; n; len++)          // 跨度，从 2 开始（跨度 1 是 base）
+    for (int i = 0; i + len &lt; n; i++) {
+        int j = i + len;
+        int best = Integer.MAX_VALUE;
+        for (int k = i + 1; k &lt; j; k++)      // 枚举第一刀
+            best = Math.min(best, dp[i][k] + dp[k][j]);
+        dp[i][j] = best + (A[j] - A[i]);
+    }
+return dp[0][n - 1];</pre>
+
+  <p><b>老师那版是等价的另一种写法</b>：外层 <code>i</code> 从 1 递增当作右端点、内层 <code>j</code> 从 <code>i-1</code> 倒着走当作左端点，用 <code>minCost[j][i]</code>（j 小 i 大）。<b>本质都是「行从下往上、列从左往右、从对角线开始」</b>，只是命名相反。老师标的 TC 是 O(n²)，<b>实际是 O(n³)</b>（多了枚举 k 那层）。</p>
+
+  <p><b>⑤ 跟前面几类 DP 的差别 —— 多了一层枚举。</b></p>
+
+  <table class="cmp">
+    <tr><th>类型</th><th>dp 下标是什么</th><th>依赖谁</th><th>填表方向</th><th>TC</th></tr>
+    <tr><td class="k">一维线性</td><td>一个位置 / 长度</td><td><code>dp[i-1]</code> 或 <code>dp[0..i-1]</code></td><td>从左往右</td><td>O(n) / O(n²)</td></tr>
+    <tr><td class="k">二维双序列</td><td>两个串各自的进度</td><td>左上 / 上 / 左</td><td>从上到下、从左往右</td><td>O(mn)</td></tr>
+    <tr><td class="k">区间型</td><td><b>同一数组上的一段范围</b></td><td><b>所有更短的子区间</b></td><td><b>从对角线往外扩</b></td><td><b>O(n³)</b></td></tr>
+  </table>
+
+  <p><b>为什么区间型要从对角线开始：</b>在这张表上，<b>「离对角线的距离」就是「区间长度」</b>。对角线是长度最小的区间，DP 铁律是小问题先算 —— 所以从对角线出发，一圈圈往右上方扩，这就是"中心开花"。</p>
+</section>
+
+<footer>示例：length = 10，cuts = [2, 4, 7] · 最小总代价 20</footer>
+</div>
+
+<script>
+var L=10, CUTS=[2,4,7];
+var A=[0].concat(CUTS).concat([L]);
+var n=A.length;
+
+var steps=[];
+(function(){
+  var dp=[]; for(var i=0;i<n;i++){ dp.push([]); for(var j=0;j<n;j++) dp[i].push(null); }
+  for(var i=0;i+1<n;i++) dp[i][i+1]=0;
+  for(var i=0;i<n;i++) dp[i][i]=0;
+
+  function snap(o){ o.dp=JSON.parse(JSON.stringify(dp)); steps.push(o); }
+
+  snap({i:-1,j:-1,phase:0,
+    note:"原始 cuts 是 <code>[2, 4, 7]</code>。<b class='p'>把 0 和 L=10 补进去</b>，得到 <code>A = [0, 2, 4, 7, 10]</code> —— 这样<b>任意一段木头都能用 A 上的两个下标表示</b>，一段的长度就是 <code>A[j] - A[i]</code>。"});
+  snap({i:-1,j:-1,phase:0,
+    note:"<b>base case 白送</b>：<code>j - i &lt;= 1</code> 表示 i 和 j 之间没有切点，不用切，代价 <b>0</b>。Java 数组默认值就是 0，一行都不用写。"});
+
+  for(var len=2; len<n; len++){
+    for(var i=0; i+len<n; i++){
+      var j=i+len;
+      snap({i:i,j:j,phase:1,len:len,ks:[],best:null,
+        note:"轮到 <b class='n'>dp["+i+"]["+j+"]</b>：木头从位置 <b>"+A[i]+"</b> 到 <b>"+A[j]+"</b>，中间有 "+(len-1)+" 个切点要切。<b>枚举第一刀切在哪个 k。</b>"});
+      var best=Infinity, ks=[], bestK=null;
+      for(var k=i+1;k<j;k++){
+        var v=dp[i][k]+dp[k][j];
+        ks.push({k:k,v:v,l:dp[i][k],r:dp[k][j]});
+        if(v<best){ best=v; bestK=k; }
+        snap({i:i,j:j,phase:2,len:len,ks:ks.slice(),curK:k,best:bestK,dep:[[i,k],[k,j]],
+          note:"第一刀切在 <b class='n'>A["+k+"]="+A[k]+"</b> → 分成两段：<code>dp["+i+"]["+k+"]="+dp[i][k]+"</code> 和 <code>dp["+k+"]["+j+"]="+dp[k][j]+"</code>，合计 <b>"+v+"</b>"+(bestK===k?"　← <b class='d'>目前最优</b>":"")});
+      }
+      var cost=A[j]-A[i];
+      dp[i][j]=best+cost;
+      snap({i:i,j:j,phase:3,len:len,ks:ks.slice(),best:bestK,
+        note:"子段最小是 <b class='d'>"+best+"</b>（k="+bestK+"）。再加上<b>这一刀本身的代价</b> <code>A["+j+"] - A["+i+"] = "+A[j]+" - "+A[i]+" = "+cost+"</code> —— <b>不管切哪个 k，这一刀都是在整段上切的，代价固定</b>。<br>⇒ <b class='n'>dp["+i+"]["+j+"] = "+best+" + "+cost+" = "+dp[i][j]+"</b>"});
+    }
+  }
+  snap({i:0,j:n-1,phase:4,done:true,ans:dp[0][n-1],
+    note:"填完。答案是 <b class='d'>dp[0]["+(n-1)+"] = "+dp[0][n-1]+"</b> —— 整根木头。<br>验证：先切 4（代价 10）→ 再切 2（代价 4）→ 再切 7（代价 6），合计 <b>20</b>。"});
+})();
+
+var s=0, timer=null;
+
+function render(){
+  var st=steps[s];
+
+  // wood bar
+  var bh="";
+  if(st.i>=0 && st.phase>=1){
+    var lo=A[st.i]/L*100, hi=A[st.j]/L*100;
+    bh+='<div class="seg hl" style="left:'+lo+'%;width:'+(hi-lo)+'%"></div>';
+  }
+  for(var t=0;t<n;t++){
+    var isPad = (t===0 || t===n-1);
+    var isK = (st.phase===2 && st.curK===t);
+    bh+='<div class="tick'+(isPad?" pad":"")+(isK?" kcut":"")+'" style="left:'+(A[t]/L*100)+'%">'+
+        '<span>'+A[t]+'</span><span class="idx">A['+t+']</span></div>';
+  }
+  document.getElementById("bar").innerHTML=bh;
+
+  document.getElementById("arr").innerHTML = A.map(function(v,t){
+    var isPad=(t===0||t===n-1);
+    return '<div class="'+(isPad?"pad":"")+'">'+v+'<small>A['+t+']</small></div>';
+  }).join("");
+
+  // k chips
+  document.getElementById("ktitle").textContent =
+    st.phase>=1 && st.i>=0 ? "枚举第一刀 k（i="+st.i+", j="+st.j+"）" : "枚举第一刀切在哪个 k";
+  var kr = (st.ks||[]).map(function(o){
+    var cls="kchip";
+    if(st.phase===2 && st.curK===o.k) cls+=" on";
+    else if(st.best===o.k) cls+=" best";
+    return '<span class="'+cls+'">k='+o.k+' → '+o.l+'+'+o.r+' = '+o.v+'</span>';
+  }).join("");
+  document.getElementById("krow").innerHTML = kr || '<span style="color:var(--faint);font-size:13px">—</span>';
+
+  // grid
+  var h='<table class="grid"><tr><th>i＼j</th>';
+  for(var j=0;j<n;j++) h+='<th>'+j+'</th>';
+  h+='</tr>';
+  for(var i=0;i<n;i++){
+    h+='<tr><th>'+i+'</th>';
+    for(var j=0;j<n;j++){
+      var cls="", txt="";
+      if(j<i){ cls="na"; }
+      else if(j-i<=1){ cls="base"; txt="0"; }
+      else if(st.dp[i][j]!==null){ cls="filled"; txt=st.dp[i][j]; }
+      else { txt="·"; }
+      if(st.i===i && st.j===j && st.phase>=1) cls="now", txt = st.dp[i][j]!==null ? st.dp[i][j] : "?";
+      if(st.dep) st.dep.forEach(function(d){ if(d[0]===i&&d[1]===j && !(st.i===i&&st.j===j)) cls="dep"; });
+      h+='<td class="'+cls+'">'+txt+'</td>';
+    }
+    h+='</tr>';
+  }
+  document.getElementById("grid").innerHTML=h+'</table>';
+
+  var log=document.getElementById("log");
+  log.innerHTML=st.note;
+  log.className="log"+(st.done?" done":(st.phase>=1?" now":""));
+
+  document.getElementById("pos").textContent=(s+1)+" / "+steps.length;
+  document.getElementById("prev").disabled = s===0;
+  document.getElementById("next").disabled = s===steps.length-1;
+  document.getElementById("verdict").textContent = st.done ? ("最小总代价 "+st.ans) : "";
+}
+function stopAuto(){ if(timer){ clearInterval(timer); timer=null; document.getElementById("auto").textContent="自动播放"; } }
+document.getElementById("next").addEventListener("click",function(){ if(s<steps.length-1){s++;render();} });
+document.getElementById("prev").addEventListener("click",function(){ if(s>0){s--;render();} });
+document.getElementById("auto").addEventListener("click",function(){
+  if(timer){ stopAuto(); return; }
+  this.textContent="暂停";
+  timer=setInterval(function(){ if(s<steps.length-1){ s++; render(); } else stopAuto(); }, 900);
+});
+document.addEventListener("keydown",function(e){
+  if(e.key==="ArrowRight") document.getElementById("next").click();
+  if(e.key==="ArrowLeft") document.getElementById("prev").click();
+});
+render();
+</script>
+</body>
+</html>
