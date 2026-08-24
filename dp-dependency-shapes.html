@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>每种 DP 依赖谁 — 依赖形状对照</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8e5df; --card:#fff; --ink:#15191e; --soft:#5d6873; --faint:#98a2ad;
+  --now:#b8791a; --now-bg:#fbf0dc;
+  --left:#2563a8; --left-bg:#e8f0f9;
+  --down:#0f766e; --down-bg:#e4f2f0;
+  --mark:#e8b93c;
+  --lift:0 1px 2px rgba(21,25,30,.06), 0 6px 16px rgba(21,25,30,.08);
+  --lift-lg:0 2px 4px rgba(21,25,30,.07), 0 14px 34px rgba(21,25,30,.13);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.7;
+  background-image:radial-gradient(circle at 20% 0%, #f2f0ec 0%, var(--bg) 46%, #d8d4cc 100%);
+  background-attachment:fixed;}
+.wrap{max-width:980px;margin:0 auto;padding:50px 20px 90px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+h1{font-size:clamp(25px,4.2vw,36px);line-height:1.18;font-weight:700;margin:0 0 12px;letter-spacing:-.02em}
+.lede{font-size:16px;color:var(--soft);max-width:66ch;margin:0 0 22px}
+code{font-family:"JetBrains Mono",monospace;font-size:.9em;background:rgba(21,25,30,.06);padding:1px 5px;border-radius:3px}
+
+.switch{display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+.switch button{appearance:none;border:0;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:500;padding:10px 16px;background:var(--card);color:var(--soft);
+  box-shadow:var(--lift);transition:all .16s;text-align:left}
+.switch button:hover{transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.switch button[aria-selected="true"]{background:var(--ink);color:#fff;transform:translateY(-2px);box-shadow:var(--lift-lg)}
+button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+
+.controls{display:flex;align-items:center;gap:11px;margin:0 0 14px;flex-wrap:wrap}
+.controls button{appearance:none;background:var(--card);border:0;border-radius:9px;font-family:inherit;font-size:14px;
+  padding:9px 20px;cursor:pointer;color:var(--ink);box-shadow:var(--lift);transition:all .15s}
+.controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--lift-lg)}
+.controls button:disabled{opacity:.4;cursor:default;box-shadow:none}
+.pos{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--faint)}
+
+.log{padding:13px 16px;border-radius:12px;background:var(--card);box-shadow:var(--lift);
+  font-size:14.5px;min-height:60px;border-left:4px solid var(--ink);margin-bottom:16px}
+.log b.n{color:var(--now)} .log b.l{color:var(--left)} .log b.d{color:var(--down)}
+
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,290px);gap:16px;align-items:start}
+@media(max-width:820px){.stage{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:16px 18px;box-shadow:var(--lift)}
+.card+.card{margin-top:11px}
+.card h3{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 12px;font-weight:500}
+
+table.grid{border-collapse:separate;border-spacing:5px;font-family:"JetBrains Mono",monospace;font-size:12.5px}
+table.grid th{font-weight:500;color:var(--faint);font-size:11.5px;width:52px;height:24px;text-align:center}
+table.grid td{width:52px;height:42px;text-align:center;border-radius:7px;background:#f4f2ee;color:#c9c3b9;
+  transition:all .22s;border:2.5px solid transparent}
+td.na{background:transparent}
+td.now{background:var(--now-bg);color:var(--now);font-weight:700;border-color:var(--now);
+  transform:translateY(-2px);box-shadow:0 4px 12px rgba(21,25,30,.14)}
+td.dl{background:var(--left-bg);color:var(--left);font-weight:600;border-color:var(--left)}
+td.dd{background:var(--down-bg);color:var(--down);font-weight:600;border-color:var(--down)}
+td.faint{opacity:.34}
+
+.pair{display:flex;gap:8px;flex-wrap:wrap;min-height:34px;font-family:"JetBrains Mono",monospace;font-size:13px}
+.pchip{padding:6px 11px;border-radius:7px;background:#f4f2ee;color:var(--soft)}
+.pchip.on{background:var(--now-bg);color:var(--now);font-weight:600}
+.pchip.past{background:#eeece7;color:var(--faint)}
+
+.shape{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.85;color:var(--soft);white-space:pre}
+.shape b{color:var(--ink)}
+
+.takeaway{margin-top:44px;padding-top:26px;border-top:1px solid rgba(21,25,30,.14)}
+h2{font-size:20px;font-weight:500;margin:0 0 12px}
+p{max-width:68ch}
+pre{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.8;background:var(--card);
+  padding:14px 16px;border-radius:12px;box-shadow:var(--lift);overflow-x:auto;margin:14px 0}
+table.cmp{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;
+  box-shadow:var(--lift);overflow:hidden;margin:16px 0;font-size:14px}
+table.cmp th{text-align:left;font-weight:500;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);padding:11px 13px;border-bottom:1px solid #f0ede8}
+table.cmp td{padding:10px 13px;border-bottom:1px solid #f7f5f1;color:var(--soft)}
+table.cmp tr:last-child td{border-bottom:0}
+table.cmp td.k{color:var(--ink)}
+footer{margin-top:36px;font-size:13px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">dp 依赖形状 · 三种对照</p>
+<h1>「依赖谁」不是固定几个邻居</h1>
+<p class="lede">你之前看的回文那题，确实只依赖<b>一个</b>格子（左下角）。但 Cut Wood 不一样 —— 它依赖<b>同一行左边的一整串</b> 和 <b>同一列下面的一整串</b>，成对使用。切换 tab 看三种形状。</p>
+
+<div class="switch" role="tablist" id="tabs"></div>
+
+<div class="controls">
+  <button id="prev" type="button">上一步</button>
+  <button id="next" type="button">下一步</button>
+  <button id="auto" type="button">自动播放</button>
+  <span class="pos" id="pos"></span>
+</div>
+
+<div class="log" id="log"></div>
+
+<div class="stage">
+  <div class="card"><h3 id="gtitle">dp 表</h3><div id="grid"></div></div>
+  <div>
+    <div class="card"><h3 id="ptitle">配对情况</h3><div class="pair" id="pair"></div></div>
+    <div class="card"><h3>依赖形状</h3><div class="shape" id="shape"></div></div>
+  </div>
+</div>
+
+<section class="takeaway">
+  <h2>三种形状对照</h2>
+
+  <table class="cmp">
+    <tr><th>类型</th><th>公式</th><th>依赖几个</th><th>形状</th></tr>
+    <tr>
+      <td class="k">回文判断</td>
+      <td><code>dp[i][j] = dp[i+1][j-1]</code></td>
+      <td><b>1 个</b></td>
+      <td>正左下方那一格</td>
+    </tr>
+    <tr>
+      <td class="k">LCSubsequence</td>
+      <td><code>dp[i-1][j-1]</code> 或 <code>max(dp[i-1][j], dp[i][j-1])</code></td>
+      <td><b>最多 3 个</b></td>
+      <td>左上、上、左（贴身邻居）</td>
+    </tr>
+    <tr>
+      <td class="k">Cut Wood</td>
+      <td><code>min over k (dp[i][k] + dp[k][j])</code></td>
+      <td><b>2×(j−i−1) 个</b></td>
+      <td><b>同行左边一串 + 同列下边一串，配对</b></td>
+    </tr>
+  </table>
+
+  <p><b>为什么 Cut Wood 的依赖是"一串"而不是"几个邻居"：</b>因为第一刀可以切在中间<b>任何一个</b> k 上，每个 k 对应一种劈法。<b>有多少个可选的 k，就有多少对依赖。</b></p>
+
+  <pre>dp[i][j] 依赖的两串：
+
+    dp[i][k]   k = i+1 .. j-1     ← 同一行 i，列在 j 左边   （左段）
+    dp[k][j]   k = i+1 .. j-1     ← 同一列 j，行在 i 下面   （右段）
+
+它们【成对】使用：k 选定了，左段和右段就同时确定
+    k=1 → dp[i][1] 配 dp[1][j]
+    k=2 → dp[i][2] 配 dp[2][j]
+    ...</pre>
+
+  <p><b>但它们有个共同点 —— 这才是关键：</b>不管形状是一格、三格还是一整串，<b>所有依赖的 <code>j − i</code> 都严格小于当前格</b>。因为 k 被夹在 i 和 j 中间，<code>k − i &lt; j − i</code> 且 <code>j − k &lt; j − i</code>。</p>
+
+  <p><b>⇒ 所以按 <code>j − i</code> 递增填，不管依赖多少个、什么形状，都保证它们已经算好了。</b></p>
+
+  <p><b>顺带解释 TC 的差别：</b>回文和 LCS 每格只看常数个依赖，所以 O(n²)；Cut Wood 每格要看 <code>O(n)</code> 对，所以是 <b>O(n³)</b>。<b>「依赖是一串」和「多一层循环」是同一件事的两种说法。</b></p>
+</section>
+
+<footer>示例 A = [0, 2, 4, 7, 10]，表为 5×5，只用 i &lt; j 的右上三角</footer>
+</div>
+
+<script>
+var n=5, A=[0,2,4,7,10];
+
+/* ---- tab 1: Cut Wood ---- */
+function buildCut(){
+  var st=[], I=0, J=4;
+  st.push({i:I,j:J,ks:[],note:"要算 <b class='n'>dp[0][4]</b>（整根木头）。第一刀可以切在 <code>k = 1, 2, 3</code> 里任意一个 —— <b>每个 k 都对应一对依赖</b>。"});
+  for(var k=I+1;k<J;k++){
+    st.push({i:I,j:J,curK:k,ks:rangeK(I,J,k),
+      dl:[[I,k]], dd:[[k,J]],
+      note:"第一刀切 <b class='n'>k="+k+"</b>（位置 A["+k+"]="+A[k]+"）→ 左段 <b class='l'>dp["+I+"]["+k+"]</b>（同一行，左边）+ 右段 <b class='d'>dp["+k+"]["+J+"]</b>（同一列，下面）"});
+  }
+  var dl=[],dd=[];
+  for(var k=I+1;k<J;k++){ dl.push([I,k]); dd.push([k,J]); }
+  st.push({i:I,j:J,ks:rangeK(I,J,null),dl:dl,dd:dd,all:true,
+    note:"全部依赖合起来是这个形状：<b class='l'>同一行左边的一串</b> + <b class='d'>同一列下面的一串</b>，一共 "+(2*(J-I-1))+" 个格子，<b>成对使用</b>。<br>注意它们<b>全都在更短的斜线上</b>（j−i 更小），所以早就算好了。"});
+  return st;
+}
+function rangeK(i,j,cur){
+  var r=[]; for(var k=i+1;k<j;k++) r.push({k:k,on:(k===cur),past:(cur!==null&&k<cur)}); return r;
+}
+
+/* ---- tab 2: 回文 ---- */
+function buildPal(){
+  var st=[];
+  st.push({i:0,j:4,ks:[],note:"回文判断：<code>dp[i][j] = dp[i+1][j-1]</code> —— <b>只依赖一个格子</b>。"});
+  st.push({i:0,j:4,ks:[],dl:[[1,3]],
+    note:"<b class='n'>dp[0][4]</b> 只看 <b class='l'>dp[1][3]</b> —— 正左下方那一格。含义是<b>剥掉两头，看里面那段是不是回文</b>。"});
+  st.push({i:1,j:4,ks:[],dl:[[2,3]],
+    note:"<b class='n'>dp[1][4]</b> 只看 <b class='l'>dp[2][3]</b>。<b>每格只有一个依赖 ⇒ 不需要枚举 ⇒ TC 是 O(n²)。</b>"});
+  return st;
+}
+
+/* ---- tab 3: LCS ---- */
+function buildLcs(){
+  var st=[];
+  st.push({i:2,j:3,ks:[],lcs:true,note:"LCSubsequence：<code>dp[i][j]</code> 只看<b>三个贴身邻居</b>。注意这是另一种表（行=s 的前 i 个，列=t 的前 j 个），<b>整张表都用，没有三角形</b>。"});
+  st.push({i:2,j:3,ks:[],lcs:true,dl:[[1,2]],
+    note:"字符相同 → 只看 <b class='l'>左上角 dp[i-1][j-1]</b>（两边各退一格）。"});
+  st.push({i:2,j:3,ks:[],lcs:true,dl:[[1,3]],dd:[[2,2]],
+    note:"字符不同 → 看 <b class='l'>上面 dp[i-1][j]</b> 和 <b class='d'>左边 dp[i][j-1]</b>，取大的（丢一个字符，丢谁更划算）。"});
+  st.push({i:2,j:3,ks:[],lcs:true,dl:[[1,2],[1,3]],dd:[[2,2]],
+    note:"合起来最多 <b>3 个</b>，而且都是<b>贴身</b>的。<b>常数个依赖 ⇒ TC O(mn)。</b>"});
+  return st;
+}
+
+var TABS=[
+ {label:"① Cut Wood", sub:"一整串，成对", build:buildCut},
+ {label:"② 回文判断", sub:"只有 1 个", build:buildPal},
+ {label:"③ LCSubsequence", sub:"3 个贴身邻居", build:buildLcs}
+];
+TABS.forEach(function(t){ t.steps=t.build(); });
+
+var cur=0, s=0, timer=null;
+var tb=document.getElementById("tabs");
+TABS.forEach(function(t,i){
+  var b=document.createElement("button"); b.type="button";
+  b.innerHTML=t.label+'<br><span style="font-size:11.5px;opacity:.7">'+t.sub+'</span>';
+  b.setAttribute("role","tab");
+  b.addEventListener("click",function(){ cur=i; s=0; stopAuto(); render(); });
+  tb.appendChild(b);
+});
+function stopAuto(){ if(timer){ clearInterval(timer); timer=null; document.getElementById("auto").textContent="自动播放"; } }
+function has(list,i,j){ if(!list) return false;
+  for(var t=0;t<list.length;t++) if(list[t][0]===i&&list[t][1]===j) return true; return false; }
+
+var SHAPES=[
+"当前格   dp[i][j]\n\n<b>左段串</b>  dp[i][k]   k=i+1..j-1\n         同一行，列在左边\n\n<b>右段串</b>  dp[k][j]   k=i+1..j-1\n         同一列，行在下面\n\n成对使用，共 2×(j−i−1) 个",
+"当前格   dp[i][j]\n\n<b>唯一依赖</b>  dp[i+1][j-1]\n           正左下方一格\n\n剥掉两头，看里面\n\n只有 1 个 ⇒ 不用枚举",
+"当前格   dp[i][j]\n\n<b>左上</b>  dp[i-1][j-1]   字符相同时\n<b>上</b>    dp[i-1][j]     字符不同时\n<b>左</b>    dp[i][j-1]     字符不同时\n\n最多 3 个，全是贴身邻居"
+];
+
+function render(){
+  var T=TABS[cur], st=T.steps[s];
+  Array.prototype.forEach.call(tb.children,function(b,i){ b.setAttribute("aria-selected", i===cur?"true":"false"); });
+  document.getElementById("gtitle").textContent = st.lcs ? "dp 表 · 整张都用" : "dp 表 · 只用 i < j 的右上三角";
+  document.getElementById("ptitle").textContent = cur===0 ? "枚举第一刀 k" : "依赖列表";
+
+  var h='<table class="grid"><tr><th>i＼j</th>';
+  for(var j=0;j<n;j++) h+='<th>'+j+'</th>';
+  h+='</tr>';
+  for(var i=0;i<n;i++){
+    h+='<tr><th>'+i+'</th>';
+    for(var j=0;j<n;j++){
+      if(!st.lcs && j<=i){ h+='<td class="na"></td>'; continue; }
+      var cls="", txt=i+","+j;
+      if(st.i===i && st.j===j) cls="now";
+      else if(has(st.dl,i,j)) cls="dl";
+      else if(has(st.dd,i,j)) cls="dd";
+      else cls="faint";
+      h+='<td class="'+cls+'">'+txt+'</td>';
+    }
+    h+='</tr>';
+  }
+  document.getElementById("grid").innerHTML=h+'</table>';
+
+  var ph="";
+  if(cur===0){
+    ph = (st.ks||[]).map(function(o){
+      return '<span class="pchip'+(o.on?" on":(o.past?" past":""))+'">k='+o.k+
+             ' → dp['+st.i+']['+o.k+'] + dp['+o.k+']['+st.j+']</span>';
+    }).join("");
+  } else {
+    var all=(st.dl||[]).concat(st.dd||[]);
+    ph = all.map(function(c){ return '<span class="pchip on">dp['+c[0]+']['+c[1]+']</span>'; }).join("");
+  }
+  document.getElementById("pair").innerHTML = ph || '<span style="color:var(--faint);font-size:13px">—</span>';
+
+  document.getElementById("shape").innerHTML = SHAPES[cur];
+
+  document.getElementById("log").innerHTML=st.note;
+
+  document.getElementById("pos").textContent=(s+1)+" / "+T.steps.length;
+  document.getElementById("prev").disabled = s===0;
+  document.getElementById("next").disabled = s===T.steps.length-1;
+}
+document.getElementById("next").addEventListener("click",function(){ var T=TABS[cur]; if(s<T.steps.length-1){s++;render();} });
+document.getElementById("prev").addEventListener("click",function(){ if(s>0){s--;render();} });
+document.getElementById("auto").addEventListener("click",function(){
+  if(timer){ stopAuto(); return; }
+  this.textContent="暂停";
+  timer=setInterval(function(){ var T=TABS[cur]; if(s<T.steps.length-1){ s++; render(); } else stopAuto(); }, 950);
+});
+document.addEventListener("keydown",function(e){
+  if(e.key==="ArrowRight") document.getElementById("next").click();
+  if(e.key==="ArrowLeft") document.getElementById("prev").click();
+});
+render();
+</script>
+</body>
+</html>
