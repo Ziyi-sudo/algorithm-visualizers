@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="用图解讲清区间 DP：吃披萨那题为什么转移要跨两步、dp 表怎么填、两端收缩与中心开花的区别。">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="区间 DP 图解">
+<meta property="og:description" content="转移为什么跨两步、表怎么填、两端收缩 vs 中心开花。">
+<meta property="og:type" content="article">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#127829;</text></svg>">
+<title>区间 DP 图解</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+
+<style>
+  :root{
+    --ground:#E9ECF1;
+    --surface:#FFFFFF;
+    --surface-2:#DEE3EB;
+    --ink:#191D26;
+    --ink-2:#454D5E;
+    --ink-3:#767E8F;
+    --rule:#C9D0DC;
+    --rule-soft:#DCE1E9;
+    --me:#3A4CA8;
+    --me-soft:#E1E5F6;
+    --friend:#BE5A38;
+    --friend-soft:#F7E6DE;
+    --ans:#2E7357;
+    --ans-soft:#DCEEE5;
+    --code-bg:#E3E8EF;
+
+    --f-display:"Bricolage Grotesque","Noto Sans SC",system-ui,sans-serif;
+    --f-ui:"Instrument Sans","Noto Sans SC",-apple-system,"PingFang SC",sans-serif;
+    --f-mono:"DM Mono","Noto Sans SC",ui-monospace,Menlo,monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#12151C;
+      --surface:#1A1F29;
+      --surface-2:#222835;
+      --ink:#E6E9EF;
+      --ink-2:#B0B7C6;
+      --ink-3:#7C8497;
+      --rule:#2E3542;
+      --rule-soft:#232935;
+      --me:#8B9CEF;
+      --me-soft:#1D2442;
+      --friend:#E29470;
+      --friend-soft:#3A2419;
+      --ans:#6FC29B;
+      --ans-soft:#153025;
+      --code-bg:#1E242F;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#12151C;
+    --surface:#1A1F29;
+    --surface-2:#222835;
+    --ink:#E6E9EF;
+    --ink-2:#B0B7C6;
+    --ink-3:#7C8497;
+    --rule:#2E3542;
+    --rule-soft:#232935;
+    --me:#8B9CEF;
+    --me-soft:#1D2442;
+    --friend:#E29470;
+    --friend-soft:#3A2419;
+    --ans:#6FC29B;
+    --ans-soft:#153025;
+    --code-bg:#1E242F;
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:var(--f-ui);
+    font-size:1rem;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{
+    max-width:58rem;
+    margin:0 auto;
+    padding:clamp(1.5rem,4vw,3.5rem) clamp(1rem,4vw,2.5rem) 5rem;
+    display:flex;flex-direction:column;
+    gap:clamp(2.5rem,5vw,3.75rem);
+  }
+
+  .masthead{display:flex;flex-direction:column;gap:.85rem}
+  .eyebrow{font-family:var(--f-mono);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--me)}
+  h1{
+    font-family:var(--f-display);font-weight:700;
+    font-size:clamp(2rem,5.5vw,3rem);line-height:1.08;letter-spacing:-.02em;
+    margin:0;text-wrap:balance;
+  }
+  .lede{margin:0;max-width:40rem;color:var(--ink-2);font-size:1.08rem}
+  .rule{height:1px;background:var(--rule)}
+
+  section{display:flex;flex-direction:column;gap:1.2rem}
+  h2{font-family:var(--f-display);font-weight:700;font-size:clamp(1.4rem,3.4vw,1.8rem);line-height:1.2;margin:0;letter-spacing:-.01em}
+  h3{font-family:var(--f-ui);font-weight:600;font-size:1.05rem;margin:0}
+  p{margin:0;max-width:42rem}
+  .sec-head{display:flex;flex-direction:column;gap:.3rem}
+  .sec-num{font-family:var(--f-mono);font-size:.75rem;letter-spacing:.12em;color:var(--ink-3)}
+
+  code{font-family:var(--f-mono);font-size:.87em;background:var(--code-bg);padding:.1em .35em;border-radius:3px}
+  strong{font-weight:600}
+  .c-me{color:var(--me);font-weight:600}
+  .c-fr{color:var(--friend);font-weight:600}
+  .c-ans{color:var(--ans);font-weight:600}
+
+  /* figures */
+  figure{
+    margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:3px;
+    padding:1.3rem 1.2rem 1rem;display:flex;flex-direction:column;gap:.9rem;
+  }
+  figure svg{display:block;width:100%;max-width:100%;height:auto}
+  figcaption{font-size:.85rem;color:var(--ink-2);line-height:1.65;border-top:1px solid var(--rule-soft);padding-top:.75rem}
+  figcaption b{color:var(--ink)}
+
+  .svg-scroll{overflow-x:auto}
+
+  /* svg semantic classes */
+  .bar-me{fill:var(--me-soft);stroke:var(--me);stroke-width:1.5}
+  .bar-fr{fill:var(--friend-soft);stroke:var(--friend);stroke-width:1.5;stroke-dasharray:5 4}
+  .bar-n{fill:var(--surface-2);stroke:var(--rule);stroke-width:1.5}
+  .bar-k{fill:var(--ans-soft);stroke:var(--ans);stroke-width:1.5}
+  .ln{stroke:var(--ink-2);stroke-width:1.5;fill:none}
+  .ln-fr{stroke:var(--friend);stroke-width:1.5;fill:none}
+  .ln-me{stroke:var(--me);stroke-width:1.5;fill:none}
+  .t{font-family:var(--f-ui);font-size:13px;fill:var(--ink)}
+  .t-s{font-family:var(--f-ui);font-size:11.5px;fill:var(--ink-2)}
+  .t-m{font-family:var(--f-mono);font-size:13px;fill:var(--ink)}
+  .t-me{font-family:var(--f-ui);font-size:13px;font-weight:600;fill:var(--me)}
+  .t-fr{font-family:var(--f-ui);font-size:13px;font-weight:600;fill:var(--friend)}
+  .t-ans{font-family:var(--f-ui);font-size:13px;font-weight:600;fill:var(--ans)}
+  .t-hd{font-family:var(--f-display);font-size:15px;font-weight:700;fill:var(--ink)}
+
+  /* trace (concrete walkthrough) */
+  .traces{display:grid;grid-template-columns:repeat(auto-fit,minmax(19rem,1fr));gap:.75rem}
+  .trace{background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:.7rem}
+  .trace-h{font-weight:600;font-size:.98rem;display:flex;justify-content:space-between;align-items:baseline;gap:.5rem}
+  .trace-h .tot{font-family:var(--f-mono);font-size:.9rem}
+  .step{display:flex;flex-direction:column;gap:.3rem}
+  .chips{display:flex;gap:.3rem;flex-wrap:wrap}
+  .chip{
+    font-family:var(--f-mono);font-size:.82rem;
+    min-width:2.4rem;text-align:center;padding:.22rem .4rem;
+    border:1px solid var(--rule);border-radius:2px;background:var(--surface-2);color:var(--ink-2);
+    font-variant-numeric:tabular-nums;
+  }
+  .chip.gone{opacity:.32;text-decoration:line-through}
+  .chip.take-me{background:var(--me-soft);border-color:var(--me);color:var(--me);font-weight:500}
+  .chip.take-fr{background:var(--friend-soft);border-color:var(--friend);color:var(--friend);font-weight:500}
+  .chip.left{background:var(--ans-soft);border-color:var(--ans);color:var(--ans)}
+  .step-t{font-size:.82rem;color:var(--ink-2)}
+  .trace-sum{border-top:1px solid var(--rule-soft);padding-top:.6rem;font-family:var(--f-mono);font-size:.87rem}
+  .trace.win{border-color:var(--ans);border-width:1.5px}
+
+  /* dp table */
+  .tablewrap{overflow-x:auto}
+  table.dp{border-collapse:collapse;font-family:var(--f-mono);font-size:.9rem;font-variant-numeric:tabular-nums;background:var(--surface)}
+  table.dp th{padding:.5rem .8rem;color:var(--ink-3);font-weight:400;font-size:.8rem;border:1px solid var(--rule-soft)}
+  table.dp td{padding:.55rem .9rem;text-align:center;border:1px solid var(--rule-soft);min-width:3.6rem}
+  table.dp td.empty{background:var(--surface-2);color:var(--ink-3)}
+  table.dp td.ans{background:var(--ans-soft);color:var(--ans);font-weight:500;border-color:var(--ans)}
+  table.dp td.src{background:var(--me-soft);color:var(--me);font-weight:500;border-color:var(--me)}
+
+  /* generic table */
+  .plainwrap{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+  table.pt{border-collapse:collapse;width:100%;font-size:.88rem;min-width:32rem}
+  table.pt th{text-align:left;font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);padding:.6rem 1rem;border-bottom:1px solid var(--rule);white-space:nowrap}
+  table.pt td{padding:.6rem 1rem;border-bottom:1px solid var(--rule-soft);vertical-align:top;line-height:1.6}
+  table.pt tbody tr:last-child td{border-bottom:none}
+  table.pt td.m{font-family:var(--f-mono);font-size:.82rem}
+
+  pre{margin:0;background:var(--code-bg);border:1px solid var(--rule);border-radius:3px;padding:1rem 1.1rem;overflow-x:auto;font-family:var(--f-mono);font-size:.79rem;line-height:1.65;color:var(--ink)}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));gap:.75rem}
+  .card{background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:.55rem}
+  .card-k{font-family:var(--f-mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}
+  .card.a .card-k{color:var(--me)}
+  .card.b .card-k{color:var(--ans)}
+  .card p{font-size:.87rem;color:var(--ink-2)}
+  .card ul{margin:0;padding-left:1.05rem;font-size:.85rem;color:var(--ink-2);display:flex;flex-direction:column;gap:.2rem}
+
+  .note{background:var(--me-soft);border-left:3px solid var(--me);padding:.9rem 1.1rem;border-radius:0 3px 3px 0;font-size:.9rem;line-height:1.7}
+  .note b{color:var(--me)}
+
+  ol.checks{margin:0;padding-left:1.3rem;display:flex;flex-direction:column;gap:.45rem;font-size:.92rem}
+  ol.checks li::marker{color:var(--ink-3);font-family:var(--f-mono);font-size:.85rem}
+
+  footer{border-top:1px solid var(--rule);padding-top:1.4rem;font-size:.85rem;color:var(--ink-3);max-width:42rem}
+  :focus-visible{outline:2px solid var(--me);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* ---- standalone additions ---- */
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  .theme-btn{
+    position:fixed;top:1rem;right:1rem;z-index:20;
+    font-family:var(--f-mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-3);background:var(--surface);border:1px solid var(--rule);
+    border-radius:2px;padding:.4rem .6rem;cursor:pointer;line-height:1;
+  }
+  .theme-btn:hover{color:var(--me);border-color:var(--me)}
+  @media print{
+    .theme-btn{display:none}
+    body{background:#fff;color:#000}
+    .wrap{max-width:none;padding:0;gap:2rem}
+    figure,.trace,.card,.plainwrap,.tablewrap,.note{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<button class="theme-btn" id="themeBtn" type="button" aria-label="切换深浅色主题">Theme</button>
+
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Interval DP · Visual Notes</div>
+    <h1>区间 DP 图解</h1>
+    <p class="lede">从「吃披萨」那道题出发，把<strong>转移为什么跨两步</strong>、<strong>表怎么填</strong>、<strong>两端收缩和中心开花的区别</strong>画出来。三天后重做这题之前，先看这一页。</p>
+    <div class="rule"></div>
+  </header>
+
+  <!-- 01 CORE -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">01 · 卡点</div>
+      <h2>为什么转移要跨两步</h2>
+    </div>
+    <p><code>dp[i][j]</code> 的定义里锁死了一个前提：<strong class="c-me">轮到我先手</strong>。我拿完之后，那个区间属于朋友，<strong>不是 dp</strong>——必须等朋友也拿完，才回到同一个前提上。</p>
+
+    <figure>
+      <div class="svg-scroll">
+      <svg viewBox="0 0 920 430" role="img" aria-label="转移树：dp[i][j] 我先手，我有两个选择（拿左 nums[i] 或拿右 nums[j]），max 只在这一层；每个选择通向一个属于朋友的区间，那一层没有 dp；朋友按固定规则拿一个后，区间共缩小两格，落回四个 dp 格子 dp[i+2][j]、dp[i+1][j-1]、dp[i+1][j-1]、dp[i][j-2]">
+        <defs>
+          <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#3A4CA8"/>
+          </marker>
+          <marker id="ar1f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#BE5A38"/>
+          </marker>
+        </defs>
+
+        <!-- ===== LEVEL 0 : 轮到我 ===== -->
+        <text class="t-me" x="460" y="26" text-anchor="middle">轮到我  =  dp[i][j]  ✓</text>
+        <rect class="bar-me" x="250" y="40" width="420" height="36" rx="2"/>
+        <text class="t-m" x="266" y="64">i</text>
+        <text class="t-m" x="654" y="64" text-anchor="end">j</text>
+
+        <!-- my two choices -->
+        <line class="ln-me" x1="390" y1="82" x2="252" y2="146" marker-end="url(#ar1)"/>
+        <line class="ln-me" x1="530" y1="82" x2="668" y2="146" marker-end="url(#ar1)"/>
+        <text class="t-me" x="300" y="106" text-anchor="end">🅰️ 我拿左 nums[i]</text>
+        <text class="t-me" x="620" y="106" text-anchor="start">🅱️ 我拿右 nums[j]</text>
+        <text class="t-me" x="460" y="130" text-anchor="middle">↑ 整张图只有这一处 max</text>
+
+        <!-- ===== LEVEL 1 : 轮到朋友（无 dp） ===== -->
+        <text class="t-fr" x="225" y="156" text-anchor="middle">轮到朋友 · 没有 dp ✗</text>
+        <rect class="bar-fr" x="75" y="168" width="300" height="34" rx="2"/>
+        <text class="t-m" x="89" y="190">i+1</text>
+        <text class="t-m" x="361" y="190" text-anchor="end">j</text>
+
+        <text class="t-fr" x="695" y="156" text-anchor="middle">轮到朋友 · 没有 dp ✗</text>
+        <rect class="bar-fr" x="545" y="168" width="300" height="34" rx="2"/>
+        <text class="t-m" x="559" y="190">i</text>
+        <text class="t-m" x="831" y="190" text-anchor="end">j-1</text>
+
+        <!-- friend's deterministic branches -->
+        <line class="ln-fr" x1="195" y1="206" x2="120" y2="270" marker-end="url(#ar1f)"/>
+        <line class="ln-fr" x1="255" y1="206" x2="330" y2="270" marker-end="url(#ar1f)"/>
+        <line class="ln-fr" x1="665" y1="206" x2="590" y2="270" marker-end="url(#ar1f)"/>
+        <line class="ln-fr" x1="725" y1="206" x2="800" y2="270" marker-end="url(#ar1f)"/>
+        <text class="t-s" x="128" y="228" text-anchor="middle">他拿左</text>
+        <text class="t-s" x="322" y="228" text-anchor="middle">他拿右</text>
+        <text class="t-s" x="598" y="228" text-anchor="middle">他拿左</text>
+        <text class="t-s" x="792" y="228" text-anchor="middle">他拿右</text>
+
+        <!-- ===== LEVEL 2 : 回到轮到我 ===== -->
+        <text class="t-me" x="110" y="284" text-anchor="middle">dp[i+2][j]</text>
+        <rect class="bar-me" x="15" y="296" width="190" height="34" rx="2"/>
+        <text class="t-m" x="27" y="318">i+2</text>
+        <text class="t-m" x="193" y="318" text-anchor="end">j</text>
+
+        <text class="t-me" x="340" y="284" text-anchor="middle">dp[i+1][j-1]</text>
+        <rect class="bar-me" x="245" y="296" width="190" height="34" rx="2"/>
+        <text class="t-m" x="257" y="318">i+1</text>
+        <text class="t-m" x="423" y="318" text-anchor="end">j-1</text>
+
+        <text class="t-me" x="580" y="284" text-anchor="middle">dp[i+1][j-1]</text>
+        <rect class="bar-me" x="485" y="296" width="190" height="34" rx="2"/>
+        <text class="t-m" x="497" y="318">i+1</text>
+        <text class="t-m" x="663" y="318" text-anchor="end">j-1</text>
+
+        <text class="t-me" x="810" y="284" text-anchor="middle">dp[i][j-2]</text>
+        <rect class="bar-me" x="715" y="296" width="190" height="34" rx="2"/>
+        <text class="t-m" x="727" y="318">i</text>
+        <text class="t-m" x="893" y="318" text-anchor="end">j-2</text>
+
+        <!-- ===== bottom notes ===== -->
+        <line x1="15" y1="352" x2="905" y2="352" stroke="var(--rule)" stroke-width="1"/>
+        <text class="t-s" x="460" y="376" text-anchor="middle">第一层是「我选」→ 取 max ｜ 第二层是「朋友按规则动」→ 算出来，不取 max</text>
+        <text class="t-s" x="460" y="398" text-anchor="middle">两层加起来区间缩 2 格，才回到「轮到我」这个前提</text>
+      </svg>
+      </div>
+      <figcaption><b>两个层级的性质完全不同。</b>第一层是我的选择，所以取 <code>max</code>；第二层是朋友按题目规则动，结果<b>是算出来的，不是选出来的</b>——所以整张图只有一处 max。中间那一层的区间属于朋友，<b>没有对应的 dp 值</b>，这就是 <code>dp[i+1][j]</code> 写不对的原因。注意中间两个叶子都是 <code>dp[i+1][j-1]</code>：两条不同的路可能落到同一个格子。</figcaption>
+    </figure>
+
+    <div class="note">
+      <b>朋友拿了多少钱，你完全不关心。</b>你只关心他拿的是<b>哪一边</b>——因为那决定了剩给你哪个区间。所以那个 <code>if/else</code> 不是在算钱，是在<b>决定查哪个格子</b>。
+    </div>
+  </section>
+
+  <!-- 02 WALKTHROUGH -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">02 · 走查</div>
+      <h2>拿 <code>[2, 1, 100, 3]</code> 走一遍</h2>
+    </div>
+    <p>我先手，面对整个数组。<strong>两条路各算一遍，取大的</strong>——我不需要「知道」该拿哪个。</p>
+
+    <div class="traces">
+
+      <div class="trace win">
+        <div class="trace-h"><span class="c-me">🅰️ 我拿左边</span><span class="tot c-ans">= 102 ✓</span></div>
+
+        <div class="step">
+          <div class="chips">
+            <span class="chip take-me">2</span><span class="chip">1</span><span class="chip">100</span><span class="chip">3</span>
+          </div>
+          <div class="step-t"><span class="c-me">我</span>拿走 <b>2</b> · 我的账：2</div>
+        </div>
+
+        <div class="step">
+          <div class="chips">
+            <span class="chip gone">2</span><span class="chip">1</span><span class="chip">100</span><span class="chip take-fr">3</span>
+          </div>
+          <div class="step-t"><span class="c-fr">朋友</span>面对 <code>[1,100,3]</code>，两端是 1 和 3 → 拿 <b>3</b></div>
+        </div>
+
+        <div class="step">
+          <div class="chips">
+            <span class="chip gone">2</span><span class="chip left">1</span><span class="chip left">100</span><span class="chip gone">3</span>
+          </div>
+          <div class="step-t">剩 <code>[1,100]</code> 给我 → 查表 <code>dp[1][2] = 100</code></div>
+        </div>
+
+        <div class="trace-sum">a = 2 + dp[1][2] = 2 + 100 = <span class="c-ans">102</span></div>
+      </div>
+
+      <div class="trace">
+        <div class="trace-h"><span class="c-me">🅱️ 我拿右边</span><span class="tot">= 5</span></div>
+
+        <div class="step">
+          <div class="chips">
+            <span class="chip">2</span><span class="chip">1</span><span class="chip">100</span><span class="chip take-me">3</span>
+          </div>
+          <div class="step-t"><span class="c-me">我</span>拿走 <b>3</b> · 我的账：3</div>
+        </div>
+
+        <div class="step">
+          <div class="chips">
+            <span class="chip">2</span><span class="chip">1</span><span class="chip take-fr">100</span><span class="chip gone">3</span>
+          </div>
+          <div class="step-t"><span class="c-fr">朋友</span>面对 <code>[2,1,100]</code>，两端是 2 和 100 → 拿 <b>100</b></div>
+        </div>
+
+        <div class="step">
+          <div class="chips">
+            <span class="chip left">2</span><span class="chip left">1</span><span class="chip gone">100</span><span class="chip gone">3</span>
+          </div>
+          <div class="step-t">剩 <code>[2,1]</code> 给我 → 查表 <code>dp[0][1] = 2</code></div>
+        </div>
+
+        <div class="trace-sum">b = 3 + dp[0][1] = 3 + 2 = 5</div>
+      </div>
+
+    </div>
+
+    <div class="note">
+      <b>每一步只做三件事：</b>① 我拿走一块，记账 → ② 朋友按规则拿一块，算出来 → ③ 剩下的区间，查表。<br>
+      <code>dp[0][3] = max(102, 5) = 102</code>
+    </div>
+  </section>
+
+  <!-- 03 TABLE -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">03 · 表</div>
+      <h2>填满之后长这样</h2>
+    </div>
+    <p><code>dp[i][j]</code> = 轮到我、面对区间 <code>[i, j]</code> 时我能拿到的最大总和。只有右上三角有意义（因为 <code>i ≤ j</code>）。</p>
+
+    <div class="tablewrap">
+      <table class="dp">
+        <thead>
+          <tr><th></th><th>j=0<br>(2)</th><th>j=1<br>(1)</th><th>j=2<br>(100)</th><th>j=3<br>(3)</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>i=0 (2)</th><td class="src">2</td><td class="src">2</td><td>101</td><td class="ans">102</td></tr>
+          <tr><th>i=1 (1)</th><td class="empty">·</td><td>1</td><td class="src">100</td><td>4</td></tr>
+          <tr><th>i=2 (100)</th><td class="empty">·</td><td class="empty">·</td><td>100</td><td>100</td></tr>
+          <tr><th>i=3 (3)</th><td class="empty">·</td><td class="empty">·</td><td class="empty">·</td><td>3</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="font-size:.9rem;color:var(--ink-2)">
+      <span class="c-ans">绿色</span>是答案 <code>dp[0][3]</code>，<span class="c-me">蓝色</span>是它读到的两个格子：<code>dp[1][2]=100</code>（走 A）和 <code>dp[0][1]=2</code>（走 B）。
+      注意它<strong>不读 <code>dp[1][3]</code> 或 <code>dp[0][2]</code></strong>——那两个是「只退一步」的格子，属于朋友的回合。
+    </p>
+  </section>
+
+  <!-- 04 ORDER -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">04 · 顺序</div>
+      <h2>填表方向由依赖决定</h2>
+    </div>
+    <p><code>dp[i][j]</code> 依赖 <code>dp[i+2][j]</code>（更大的 i）和 <code>dp[i][j-2]</code>（更小的 j）。<strong>你依赖谁，谁就得先算。</strong></p>
+
+    <figure>
+      <div class="svg-scroll">
+      <svg viewBox="0 0 620 300" role="img" aria-label="四乘四 dp 表格，按区间长度着色：主对角线是长度1最先填，右上角是长度4最后填，填表沿对角线一条一条向右上推进">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#454D5E"/>
+          </marker>
+        </defs>
+
+        <text class="t-s" x="30" y="30">i ↓</text>
+        <text class="t-s" x="90" y="30">j →</text>
+
+        <!-- column headers -->
+        <text class="t-s" x="140" y="52" text-anchor="middle">j=0</text>
+        <text class="t-s" x="200" y="52" text-anchor="middle">j=1</text>
+        <text class="t-s" x="260" y="52" text-anchor="middle">j=2</text>
+        <text class="t-s" x="320" y="52" text-anchor="middle">j=3</text>
+
+        <!-- row headers -->
+        <text class="t-s" x="102" y="86" text-anchor="end">i=0</text>
+        <text class="t-s" x="102" y="146" text-anchor="end">i=1</text>
+        <text class="t-s" x="102" y="206" text-anchor="end">i=2</text>
+        <text class="t-s" x="102" y="266" text-anchor="end">i=3</text>
+
+        <!-- row i=0 -->
+        <rect class="bar-n" x="110" y="60" width="60" height="40" rx="2" opacity="1"/>
+        <text class="t-m" x="140" y="86" text-anchor="middle">1</text>
+        <rect class="bar-me" x="170" y="60" width="60" height="40" rx="2" opacity=".45"/>
+        <text class="t-m" x="200" y="86" text-anchor="middle">2</text>
+        <rect class="bar-me" x="230" y="60" width="60" height="40" rx="2" opacity=".75"/>
+        <text class="t-m" x="260" y="86" text-anchor="middle">3</text>
+        <rect class="bar-k" x="290" y="60" width="60" height="40" rx="2"/>
+        <text class="t-m" x="320" y="86" text-anchor="middle">4</text>
+
+        <!-- row i=1 -->
+        <rect x="110" y="120" width="60" height="40" rx="2" fill="var(--surface-2)" stroke="var(--rule-soft)"/>
+        <rect class="bar-n" x="170" y="120" width="60" height="40" rx="2"/>
+        <text class="t-m" x="200" y="146" text-anchor="middle">1</text>
+        <rect class="bar-me" x="230" y="120" width="60" height="40" rx="2" opacity=".45"/>
+        <text class="t-m" x="260" y="146" text-anchor="middle">2</text>
+        <rect class="bar-me" x="290" y="120" width="60" height="40" rx="2" opacity=".75"/>
+        <text class="t-m" x="320" y="146" text-anchor="middle">3</text>
+
+        <!-- row i=2 -->
+        <rect x="110" y="180" width="120" height="40" rx="2" fill="var(--surface-2)" stroke="var(--rule-soft)"/>
+        <rect class="bar-n" x="230" y="180" width="60" height="40" rx="2"/>
+        <text class="t-m" x="260" y="206" text-anchor="middle">1</text>
+        <rect class="bar-me" x="290" y="180" width="60" height="40" rx="2" opacity=".45"/>
+        <text class="t-m" x="320" y="206" text-anchor="middle">2</text>
+
+        <!-- row i=3 -->
+        <rect x="110" y="240" width="180" height="40" rx="2" fill="var(--surface-2)" stroke="var(--rule-soft)"/>
+        <rect class="bar-n" x="290" y="240" width="60" height="40" rx="2"/>
+        <text class="t-m" x="320" y="266" text-anchor="middle">1</text>
+
+        <!-- sweep arrow -->
+        <line class="ln" x1="380" y1="255" x2="380" y2="80" marker-end="url(#ar2)"/>
+        <text class="t-s" x="398" y="130">区间从短</text>
+        <text class="t-s" x="398" y="148">填到长</text>
+        <text class="t-s" x="398" y="176">len = 1 → 2 → 3 → 4</text>
+
+        <text class="t-ans" x="480" y="86">← 答案在这</text>
+      </svg>
+      </div>
+      <figcaption>格子里的数字是<b>区间长度</b> <code>len = j - i + 1</code>。同一条对角线上的格子长度相同。<b>先把所有长度 1 的算完，再算长度 2 的</b>，一条对角线一条对角线往右上角推，最后落在 <code>dp[0][n-1]</code>。</figcaption>
+    </figure>
+
+    <div class="cards">
+      <div class="card a">
+        <div class="card-k">写法一 · 逐行</div>
+        <pre>for (int i = n-1; i &gt;= 0; i--)
+  for (int j = i; j &lt; n; j++)</pre>
+        <p><code>i</code> 从大到小、<code>j</code> 从小到大。从表格右下角起，一行一行往上。</p>
+      </div>
+      <div class="card b">
+        <div class="card-k">写法二 · 按长度</div>
+        <pre>for (int len = 1; len &lt;= n; len++)
+  for (int i = 0; i+len-1 &lt; n; i++) {
+    int j = i + len - 1;</pre>
+        <p>直接沿对角线推。<strong>更能看出「短的先算」这个本质</strong>，也是教材里区间 DP 的标准写法。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 TWO FAMILIES -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">05 · 分类</div>
+      <h2>两端收缩 vs 中心开花</h2>
+    </div>
+    <p>区间 DP 的状态都是 <code>dp[i][j]</code>，但<strong>转移的形状分两大类</strong>。你做的这题属于左边那类；「中心开花」是右边那类。</p>
+
+    <figure>
+      <div class="svg-scroll">
+      <svg viewBox="0 0 760 280" role="img" aria-label="两类区间 DP 对比：左侧两端收缩，每次砍掉一端，子区间与原区间有重叠；右侧中心开花，枚举中间的分割点 k，把区间劈成互不重叠的左右两半">
+        <defs>
+          <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#454D5E"/>
+          </marker>
+        </defs>
+
+        <line x1="380" y1="20" x2="380" y2="260" stroke="var(--rule)" stroke-width="1" stroke-dasharray="4 4"/>
+
+        <!-- ===== LEFT: 两端收缩 ===== -->
+        <text class="t-hd" x="180" y="28" text-anchor="middle">两端收缩</text>
+
+        <rect class="bar-me" x="40" y="46" width="280" height="34" rx="2"/>
+        <text class="t-m" x="54" y="69">i</text>
+        <text class="t-m" x="306" y="69" text-anchor="end">j</text>
+
+        <line class="ln" x1="150" y1="86" x2="120" y2="126" marker-end="url(#ar3)"/>
+        <line class="ln" x1="215" y1="86" x2="245" y2="186" marker-end="url(#ar3)"/>
+
+        <rect class="bar-n" x="68" y="130" width="252" height="30" rx="2"/>
+        <text class="t-m" x="82" y="150">i+1</text>
+        <text class="t-m" x="306" y="150" text-anchor="end">j</text>
+
+        <rect class="bar-n" x="40" y="190" width="252" height="30" rx="2"/>
+        <text class="t-m" x="54" y="210">i</text>
+        <text class="t-m" x="278" y="210" text-anchor="end">j-1</text>
+
+        <text class="t-s" x="180" y="248" text-anchor="middle">每次只砍掉一端，子区间和原区间重叠</text>
+
+        <!-- ===== RIGHT: 中心开花 ===== -->
+        <text class="t-hd" x="570" y="28" text-anchor="middle">中心开花</text>
+
+        <rect class="bar-me" x="430" y="46" width="280" height="34" rx="2"/>
+        <rect class="bar-k" x="552" y="46" width="36" height="34" rx="2"/>
+        <text class="t-m" x="444" y="69">i</text>
+        <text class="t-ans" x="570" y="69" text-anchor="middle">k</text>
+        <text class="t-m" x="696" y="69" text-anchor="end">j</text>
+
+        <line class="ln" x1="500" y1="86" x2="490" y2="126" marker-end="url(#ar3)"/>
+        <line class="ln" x1="640" y1="86" x2="650" y2="126" marker-end="url(#ar3)"/>
+
+        <rect class="bar-n" x="430" y="130" width="112" height="30" rx="2"/>
+        <text class="t-m" x="442" y="150">i</text>
+        <text class="t-m" x="530" y="150" text-anchor="end">k-1</text>
+
+        <rect class="bar-n" x="598" y="130" width="112" height="30" rx="2"/>
+        <text class="t-m" x="610" y="150">k+1</text>
+        <text class="t-m" x="698" y="150" text-anchor="end">j</text>
+
+        <text class="t-s" x="570" y="190" text-anchor="middle">枚举 k，把区间劈成互不重叠的两半</text>
+        <text class="t-s" x="570" y="212" text-anchor="middle">多一层 k 的循环 → O(n³)</text>
+        <text class="t-s" x="570" y="248" text-anchor="middle">k 通常是「最后处理的那个元素」</text>
+      </svg>
+      </div>
+      <figcaption>左边的子区间和原区间<b>重叠</b>（只少了一端）；右边被 <code>k</code> 切开的两半<b>互不重叠</b>。这个差别决定了循环层数：<b>两端收缩 O(n²)，中心开花 O(n³)</b>。</figcaption>
+    </figure>
+
+    <div class="plainwrap">
+      <table class="pt">
+        <thead><tr><th></th><th>两端收缩</th><th>中心开花</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>转移</strong></td>
+            <td class="m">dp[i][j] ← dp[i+1][j]<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← dp[i][j-1]<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← dp[i+1][j-1]</td>
+            <td class="m">dp[i][j] = best over k of<br>&nbsp;&nbsp;dp[i][k-1] + dp[k+1][j] + cost(k)</td>
+          </tr>
+          <tr><td><strong>循环</strong></td><td class="m">两层（i, j）</td><td class="m">三层（i, j, k）</td></tr>
+          <tr><td><strong>复杂度</strong></td><td class="m">O(n²)</td><td class="m">O(n³)</td></tr>
+          <tr>
+            <td><strong>典型题</strong></td>
+            <td>吃披萨（这题）<br>最长回文子序列<br>石子游戏 / 预测赢家</td>
+            <td>戳气球 Burst Balloons<br>矩阵链乘法<br>合并石子 / 石子归并</td>
+          </tr>
+          <tr>
+            <td><strong>思考角度</strong></td>
+            <td>「<b>这一步</b>从哪端拿？」</td>
+            <td>「区间里<b>最后</b>处理的是谁？」</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <b>中心开花的关键思路是「倒着想」。</b>戳气球那题正着想（先戳谁）会让两边互相影响，切不干净；反过来问「<b>最后</b>被戳破的是哪个」，那一个左右两边就彻底独立了，才能拆成两个子区间。<br>
+      你这题不用这套——因为披萨只能从两端拿，天然就是收缩型。
+    </div>
+  </section>
+
+  <!-- 06 SIGNALS -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">06 · 识别</div>
+      <h2>什么时候该想到区间 DP</h2>
+    </div>
+    <div class="cards">
+      <div class="card a">
+        <div class="card-k">信号 1</div>
+        <h3>状态天然是一段连续区间</h3>
+        <p>剩下的东西永远是原数组的一个连续片段，不会散成好几块。</p>
+      </div>
+      <div class="card a">
+        <div class="card-k">信号 2</div>
+        <h3>操作发生在两端，或者需要挑中间一个点</h3>
+        <p>从两头拿 → 收缩型。在中间选一个「最后处理的」→ 开花型。</p>
+      </div>
+      <div class="card a">
+        <div class="card-k">信号 3</div>
+        <h3>大区间的答案能由小区间拼出来</h3>
+        <p>而且 <code>n</code> 通常不大（几百以内），因为复杂度是 O(n²) 或 O(n³)。</p>
+      </div>
+    </div>
+
+    <p style="font-size:.9rem;color:var(--ink-2)">面试里说出来就是：<code>This is an <strong>interval DP</strong> — the state is a contiguous range, and I build longer ranges from shorter ones.</code></p>
+  </section>
+
+  <!-- 07 SELF TEST -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">07 · 三天后</div>
+      <h2>不看笔记，自测这五条</h2>
+    </div>
+    <p>现在再看十遍，测的是「记住了没有」。<strong>三天后重做，才测得出「懂了没有」。</strong>卡在同一个地方 = 真没懂；顺下来了 = 真懂了。</p>
+    <ol class="checks">
+      <li><code>dp[i][j]</code> 的定义是什么？里面<strong>隐含的前提</strong>是什么？</li>
+      <li>为什么不能写 <code>dp[i+1][j]</code>？那个区间属于谁？</li>
+      <li>代码里 <code>a</code> 和 <code>b</code> 分别代表什么？<code>Math.max</code> 为什么只出现一次？</li>
+      <li>循环方向为什么是 <code>i</code> 递减、<code>j</code> 递增？（不许背，要能从依赖推出来）</li>
+      <li>哪个输入会让 <code>dp[i][j-2]</code> 的下标变成 <code>-1</code>？</li>
+    </ol>
+  </section>
+
+  <footer>
+    这题难，不是错觉：<strong>区间 DP + 对手动作确定 + 转移跨两步</strong>，三个东西叠在一起。你独立做到的部分——圈出 <code>always</code> 那句、从 example 推出谁先手、自己推出转移——是这题真正的难点。卡住的是「怎么落成代码」，那是另一回事。
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var btn = document.getElementById('themeBtn');
+  var root = document.documentElement;
+  btn.addEventListener('click', function () {
+    var current = root.getAttribute('data-theme');
+    if (!current) {
+      current = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  });
+})();
+</script>
+
+</body>
+</html>
