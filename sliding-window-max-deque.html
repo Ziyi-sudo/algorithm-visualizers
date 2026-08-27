@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>单调队列推演台</title>
+<meta name="description" content="LeetCode/LaiCode 204 滑动窗口最大值：单调队列的逐步推演。队列里装的是下标、i−k 怎么判过期、i≥k−1 何时收答案。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#EDF0F4;
+  --surface:#FFFFFF;
+  --surface-2:#F4F6F9;
+  --ink:#11161C;
+  --muted:#5B6572;
+  --line:#D1D7E0;
+  --line-strong:#A6B0BE;
+
+  --win:#A96A03;        --win-soft:#FDF2D9;  --win-edge:#E8C87E;
+  --dq:#4235A6;         --dq-soft:#E7E4F8;   --dq-edge:#AEA4E3;
+  --dead:#A62F20;       --dead-soft:#FAE2DE; --dead-edge:#E0AA9F;
+  --got:#146348;        --got-soft:#D9EDE4;  --got-edge:#8DC7B0;
+
+  --shadow:0 1px 0 rgba(17,22,28,.03), 0 12px 32px -24px rgba(17,22,28,.6);
+  --sans:"Archivo","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --cw:58px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1015; --surface:#161A21; --surface-2:#1C212A;
+    --ink:#E1E5EB; --muted:#8A94A2; --line:#282F39; --line-strong:#3C4450;
+    --win:#DFA83C;  --win-soft:#2C2411;  --win-edge:#5A481D;
+    --dq:#9C91EF;   --dq-soft:#1D1A32;   --dq-edge:#393163;
+    --dead:#EE8878; --dead-soft:#2F1B17; --dead-edge:#573029;
+    --got:#5CC59B;  --got-soft:#11281E;  --got-edge:#254A3A;
+    --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -24px rgba(0,0,0,.95);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1015; --surface:#161A21; --surface-2:#1C212A;
+  --ink:#E1E5EB; --muted:#8A94A2; --line:#282F39; --line-strong:#3C4450;
+  --win:#DFA83C;  --win-soft:#2C2411;  --win-edge:#5A481D;
+  --dq:#9C91EF;   --dq-soft:#1D1A32;   --dq-edge:#393163;
+  --dead:#EE8878; --dead-soft:#2F1B17; --dead-edge:#573029;
+  --got:#5CC59B;  --got-soft:#11281E;  --got-edge:#254A3A;
+  --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -24px rgba(0,0,0,.95);
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+     font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:40px 22px 76px;display:flex;flex-direction:column;gap:24px}
+
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 9px}
+h1{font-size:clamp(27px,4.2vw,38px);line-height:1.14;margin:0 0 11px;font-weight:700;letter-spacing:-.022em;text-wrap:balance}
+.thesis{margin:0;max-width:62ch;color:var(--muted);font-size:15.5px}
+.thesis b{color:var(--ink);font-weight:600}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
+.pad{padding:22px}
+.card h2{font-size:18px;margin:0 0 12px;font-weight:600;letter-spacing:-.012em}
+.card h3{font-size:14.5px;margin:0 0 6px;font-weight:600}
+.card p{margin:0 0 11px;max-width:66ch}
+.card p:last-child{margin-bottom:0}
+
+.sets{display:flex;gap:8px;flex-wrap:wrap;padding:16px 22px 14px;border-bottom:1px solid var(--line);align-items:stretch}
+.sets-label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+            align-self:center;margin-right:2px}
+.setbtn{font-family:var(--mono);font-size:12px;padding:6px 11px;border-radius:7px;border:1px solid var(--line-strong);
+        background:var(--surface);color:var(--ink);cursor:pointer;text-align:left;
+        transition:background .14s,border-color .14s,color .14s}
+.setbtn small{display:block;font-family:var(--sans);font-size:10.5px;color:var(--muted);margin-top:1px;letter-spacing:0}
+.setbtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.setbtn[aria-pressed="true"] small{color:var(--surface);opacity:.75}
+.setbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.code{font-family:var(--mono);font-size:12.5px;line-height:1.95;background:var(--surface-2);
+      border-bottom:1px solid var(--line);padding:14px 22px;overflow-x:auto}
+.cl{display:block;white-space:pre;padding:0 8px;margin:0 -8px;border-radius:5px;color:var(--muted);
+    border-left:2px solid transparent;transition:background .16s,color .16s}
+.cl.on{background:var(--dq-soft);color:var(--ink);border-left-color:var(--dq);font-weight:500}
+.cl .n{color:var(--dq);font-weight:700}
+
+/* ---- 判定面板 ---- */
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 22px 0}
+.check{border:1.5px solid var(--line);border-radius:10px;padding:10px 13px;background:var(--surface-2);
+       display:flex;flex-direction:column;gap:5px;transition:border-color .18s,background .18s,box-shadow .18s}
+.check.active{border-color:var(--dq);background:var(--dq-soft);box-shadow:0 0 0 3px var(--dq-soft)}
+.check.active.hit{border-color:var(--dead);background:var(--dead-soft);box-shadow:0 0 0 3px var(--dead-soft)}
+.chead{display:flex;align-items:baseline;gap:7px}
+.cnum{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--dq)}
+.check.active.hit .cnum{color:var(--dead)}
+.clabel{font-size:12.5px;font-weight:600}
+.csub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;letter-spacing:.04em}
+.cexpr{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+.cverdict{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--muted)}
+.check.hit .cverdict{color:var(--dead)}
+.check.miss .cverdict{color:var(--got)}
+
+.stage{padding:20px 22px 8px;overflow-x:auto}
+.grid{display:grid;grid-template-columns:repeat(var(--n),var(--cw));gap:8px;min-width:min-content}
+.lane-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+            color:var(--muted);margin:0 0 7px}
+.lane-label b{color:var(--dq);font-weight:700;letter-spacing:0;text-transform:none;font-size:11.5px}
+
+.dqlane{min-height:66px;align-items:end}
+.chip{border:1.5px solid var(--dq-edge);background:var(--dq-soft);border-radius:9px;padding:5px 2px 4px;
+      display:flex;flex-direction:column;align-items:center;transition:transform .18s,background .18s,border-color .18s}
+.chip .ix{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--dq);line-height:1.15}
+.chip .va{font-family:var(--mono);font-size:10.5px;color:var(--muted);line-height:1.3}
+.chip.dead{border-color:var(--dead);background:var(--dead-soft);transform:translateY(-5px)}
+.chip.dead .ix{color:var(--dead);text-decoration:line-through}
+.chip.dead .va{color:var(--dead)}
+.chip.fresh{border-color:var(--ink);background:var(--ink)}
+.chip.fresh .ix{color:var(--surface)}
+.chip.fresh .va{color:var(--surface);opacity:.75}
+.chip.got{border-color:var(--got);background:var(--got-soft)}
+.chip.got .ix{color:var(--got)}
+.tag{font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--muted);text-align:center;margin-top:3px;min-height:12px}
+.tag.dead{color:var(--dead);font-weight:700}
+
+.tick{height:22px;display:flex;flex-direction:column;align-items:center}
+.tick i{display:block;width:0;height:15px;border-left:1.5px dashed var(--dq-edge)}
+.tick s{display:block;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;
+        border-top:5px solid var(--dq-edge)}
+.tick.dead i{border-left-color:var(--dead)}
+.tick.dead s{border-top-color:var(--dead)}
+
+.acell{height:52px;display:grid;place-items:center;border-radius:9px;border:1.5px solid var(--line);
+       background:var(--surface-2);font-family:var(--mono);font-size:20px;font-weight:500;
+       transition:background .18s,border-color .18s,opacity .18s,color .18s}
+.acell.win{background:var(--win-soft);border-color:var(--win-edge)}
+.acell.winpartial{background:transparent;border-style:dashed;border-color:var(--win-edge)}
+.acell.expired{background:var(--dead-soft);border-color:var(--dead-edge);border-style:dashed;
+               color:var(--dead);text-decoration:line-through;opacity:.66}
+.acell.future{opacity:.28}
+.acell.cur{border-color:var(--ink);border-width:2.5px}
+.acell.got{background:var(--got-soft);border-color:var(--got);color:var(--got);font-weight:700;text-decoration:none}
+.acell.flash{background:var(--dead);border-color:var(--dead);color:#fff;text-decoration:none;opacity:1}
+
+.ixcell{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;padding-top:5px}
+.ixcell.expired{color:var(--dead);font-weight:700}
+.ptr{height:24px;font-family:var(--mono);font-size:10.5px;text-align:center;padding-top:3px;line-height:1.2}
+.ptr.i{color:var(--ink);font-weight:700}
+.ptr.ik{color:var(--dead);font-weight:700}
+
+.readout{display:flex;gap:9px;flex-wrap:wrap;padding:4px 22px 0}
+.stat{font-family:var(--mono);font-size:12px;padding:5px 10px;border-radius:7px;border:1px solid var(--line);
+      background:var(--surface-2);font-variant-numeric:tabular-nums}
+.stat b{font-weight:700}
+.stat.win{border-color:var(--win-edge);background:var(--win-soft);color:var(--win)}
+.stat.dead{border-color:var(--dead-edge);background:var(--dead-soft);color:var(--dead)}
+.stat.dq{border-color:var(--dq-edge);background:var(--dq-soft);color:var(--dq)}
+
+.note{margin:14px 22px 0;font-family:var(--mono);font-size:12.5px;line-height:1.68;white-space:pre-line;
+      min-height:56px;padding:11px 13px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2)}
+
+.resline{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:14px 22px 0}
+.reslabel{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.rchip{font-family:var(--mono);font-size:14px;font-weight:600;padding:3px 11px;border-radius:7px;
+       border:1px solid var(--got-edge);background:var(--got-soft);color:var(--got)}
+.rchip.new{background:var(--got);color:#fff;border-color:var(--got)}
+.rempty{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+.controls{border-top:1px solid var(--line);background:var(--surface-2);padding:14px 22px;
+          display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:0 0 12px 12px;margin-top:20px}
+button.ctl{font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--ink);background:var(--surface);
+        border:1px solid var(--line-strong);border-radius:8px;padding:8px 15px;cursor:pointer;
+        transition:background .14s,border-color .14s}
+button.ctl:hover:not(:disabled){border-color:var(--ink)}
+button.ctl:disabled{opacity:.4;cursor:not-allowed}
+button.ctl:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button.ctl.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+button.ctl.jump{font-family:var(--mono);font-size:12px;padding:8px 12px;border-color:var(--dead-edge);color:var(--dead);background:var(--dead-soft)}
+.counter{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+
+.q{border-left:3px solid var(--dq);padding-left:16px;margin-bottom:22px}
+.q:last-child{margin-bottom:0}
+.q h3{color:var(--dq)}
+.math{font-family:var(--mono);font-size:12.5px;line-height:1.85;background:var(--surface-2);border:1px solid var(--line);
+      border-radius:9px;padding:12px 14px;overflow-x:auto;margin:10px 0 0;white-space:pre}
+code{font-family:var(--mono);font-size:.9em;background:var(--surface-2);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:13px;margin-top:10px}
+.tw{overflow-x:auto}
+th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--line)}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+   font-weight:500;border-bottom:1px solid var(--line-strong)}
+td.m{font-family:var(--mono);font-size:12.5px}
+td.m b{color:var(--dq)}
+footer{color:var(--muted);font-size:12.5px;text-align:center;padding-top:6px}
+
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+@media (max-width:700px){ .checks{grid-template-columns:1fr} }
+@media (max-width:640px){ :root{--cw:48px} .counter{margin-left:0} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">204 · Maximum Values Of Size K Sliding Windows</p>
+    <h1>队列里躺着的是下标</h1>
+    <p class="thesis">这个容器装的从头到尾都是 <b>index</b>，不是值。值要用 <code>array[下标]</code> 现取。想通这一点，另外两个问题就都是算术题了：<b>什么时候过期</b>（下标 ≤ i−k）和 <b>什么时候能收答案</b>（i ≥ k−1）。</p>
+  </header>
+
+  <section class="card">
+    <div class="sets" id="sets"><span class="sets-label">数据组</span></div>
+
+    <div class="code" id="code"></div>
+
+    <div class="checks">
+      <div class="check" id="chk1">
+        <div class="chead"><span class="cnum">①</span><span class="clabel">判过期 · 看队头</span>
+          <span class="csub" id="chk1n">触发 0 次</span></div>
+        <div class="cexpr" id="chk1e">—</div>
+        <div class="cverdict" id="chk1v">—</div>
+      </div>
+      <div class="check" id="chk2">
+        <div class="chead"><span class="cnum">②</span><span class="clabel">判大小 · 看队尾</span>
+          <span class="csub" id="chk2n">触发 0 次</span></div>
+        <div class="cexpr" id="chk2e">—</div>
+        <div class="cverdict" id="chk2v">—</div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <p class="lane-label">单调队列 · 里面装的是 <b>下标</b>（左＝队头＝最大）</p>
+      <div class="grid dqlane" id="laneDq"></div>
+      <div class="grid" id="laneTick"></div>
+      <div class="grid" id="laneArr" style="margin-top:2px"></div>
+      <div class="grid" id="laneIx"></div>
+      <div class="grid" id="lanePtr"></div>
+    </div>
+
+    <div class="readout" id="readout"></div>
+    <div class="note" id="note" aria-live="polite"></div>
+
+    <div class="resline">
+      <span class="reslabel">答案</span>
+      <div id="res" style="display:flex;gap:7px;flex-wrap:wrap"></div>
+    </div>
+
+    <div class="controls">
+      <button class="ctl" id="prev">← 上一步</button>
+      <button class="ctl primary" id="next">下一步 →</button>
+      <button class="ctl" id="play">自动播放</button>
+      <button class="ctl" id="reset">重置</button>
+      <button class="ctl jump" id="jump">跳到下一次 ① 出局</button>
+      <span class="counter" id="counter"></span>
+    </div>
+  </section>
+
+  <section class="card pad">
+    <h2>你问的三件事</h2>
+
+    <div class="q">
+      <h3>一、为什么存下标，不存值</h3>
+      <p>因为要判断「过期」，而过期是<b>位置</b>的概念——某个人滑出窗口了。值本身不带位置：队列里躺着一个 <code>4</code>，它自己不知道它是第几个，也就没法判断该不该走。</p>
+      <p>下标则两样都有：位置直接可读，值 <code>array[idx]</code> 一步就取到。<b>下标能推出值，值推不出下标</b>——存下标信息不丢，存值是有损的。</p>
+      <p>678 Next Greater Number 那题存值是特例（无重复 + 全程不关心位置）。这题两个条件都不成立，只能存下标。</p>
+    </div>
+
+    <div class="q">
+      <h3>二、<code>peekFirst() &lt;= i - k</code> 这个不等式是怎么来的</h3>
+      <p>先把窗口写成下标区间。以 <code>i</code> 结尾、长度 <code>k</code> 的窗口，左端是 <code>i-k+1</code>：</p>
+      <pre class="math">窗口 = [i-k+1, i]      两端都含，正好 k 个
+
+还在窗口内   ⇔  idx >= i-k+1
+已经过期     ⇔  idx <= i-k          ← 上一行取反
+
+验算 i=3, k=3：窗口 = [1, 3]，过期线 i-k = 0
+              → 下标 0 出局，下标 1、2、3 留下   ✓</pre>
+      <p style="margin-top:11px">为什么只用 <code>if</code> 就够（很多标准写法是 <code>if</code>）：每一步 <code>i</code> 只前进 1，窗口只往右挪一格，所以<b>最多只有一个人过期</b>。写 <code>while</code> 也对，只是循环体最多执行一次。</p>
+    </div>
+
+    <div class="q">
+      <h3>三、为什么 <code>i &gt;= k - 1</code> 才开始收答案</h3>
+      <p>第一个完整窗口是 <code>[0, k-1]</code>，它的<b>右端下标就是 k-1</b>。所以 <code>i</code> 走到 <code>k-1</code> 那一刻，窗口才第一次凑满 k 个元素。</p>
+      <pre class="math">i = 0 .. k-2   窗口还没凑够 k 个 → 不收
+i = k-1        第一个完整窗口 [0, k-1] → 收第 1 个答案
+i = n-1        最后一个窗口 [n-k, n-1] → 收第 n-k+1 个答案
+
+答案个数 = n - k + 1</pre>
+      <p style="margin-top:11px">这一步排在 ②③ <b>之后</b>，不是随便排的：<code>array[i]</code> 必须先进队，因为它自己就可能是当前窗口的最大值。</p>
+    </div>
+
+    <div class="q">
+      <h3>补充：① 和 ② 各自在防什么</h3>
+      <p><b>② 管队列的「质量」</b>——踢掉又小又老的，保证从头到尾严格递减，所以队头一定是队列里最大的。</p>
+      <p><b>① 管队列的「长度」</b>——踢掉滑出窗口的，保证队列里的人全都还在窗口内。少了它，队头可能是个早就出界的旧最大值，答案直接错；同时队列会一路涨到 O(n)，而不是 O(k)。</p>
+      <p>两条合起来才推得出「队头 = 当前窗口最大值」。切到<b>严格递减</b>那组数据看得最清楚：② 一次都不触发（新人永远最小），全靠 ① 撑着。</p>
+    </div>
+  </section>
+
+  <section class="card pad">
+    <h2>哪个指向哪个</h2>
+    <p style="color:var(--muted)">抄错最多的地方：同一个容器，三个调用点对「里面装的是什么」假设不一致。对着这张表逐行检查。</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>写法</th><th>拿到的是</th><th>什么时候用</th></tr></thead>
+        <tbody>
+          <tr><td class="m"><b>deque.peekFirst()</b></td><td>最老的<b>下标</b></td><td class="m">判过期：<code>&lt;= i-k</code></td></tr>
+          <tr><td class="m"><b>deque.peekLast()</b></td><td>最新的<b>下标</b></td><td class="m">要先套 <code>array[]</code> 才能比大小</td></tr>
+          <tr><td class="m">array[deque.peekFirst()]</td><td>窗口<b>最大值</b></td><td class="m">收答案时用这个</td></tr>
+          <tr><td class="m">array[deque.peekLast()]</td><td>队尾那人的<b>值</b></td><td class="m">和 <code>array[i]</code> 比大小</td></tr>
+          <tr><td class="m"><b>deque.offerLast(i)</b></td><td>存进去<b>下标</b></td><td class="m">不是 <code>offerLast(array[i])</code></td></tr>
+          <tr><td class="m">res.add(array[...])</td><td>收进去<b>值</b></td><td class="m">答案要值，所以必须解引用</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:14px">一条防呆：声明容器时把契约写进注释，然后每个调用点对着它检查。</p>
+    <pre class="math">Deque&lt;Integer&gt; deque = new ArrayDeque&lt;&gt;();  // 装【下标】，对应值从头到尾严格递减</pre>
+  </section>
+
+  <footer>单文件 HTML，无外部依赖（仅 Google Fonts，离线时自动回退系统字体）。</footer>
+</div>
+
+<script>
+(function(){
+  var SETS = [
+    {label:'4,3,5,4,3,2,6,1', A:[4,3,5,4,3,2,6,1], K:3, hint:'① ② 都反复触发（推荐）'},
+    {label:'9,8,7,6,5,4,3',   A:[9,8,7,6,5,4,3],   K:3, hint:'严格递减 · 只有 ① 在干活'},
+    {label:'1,2,3,2,4,2,1',   A:[1,2,3,2,4,2,1],   K:3, hint:'题目原例 · ① 一次都不触发'},
+    {label:'7,2,4,6,1,3',     A:[7,2,4,6,1,3],     K:3, hint:'混合 · ① 触发 1 次'}
+  ];
+
+  var CODE = [
+    {p:'0', t:'   for (int i = 0; i < array.length; i++) {'},
+    {p:'1', t:'@1   while (!dq.isEmpty() && dq.peekFirst() <= i - k)  dq.pollFirst();'},
+    {p:'2', t:'@2   while (!dq.isEmpty() && array[dq.peekLast()] <= array[i]) dq.pollLast();'},
+    {p:'3', t:'@3   dq.offerLast(i);'},
+    {p:'4', t:'@4   if (i >= k - 1) res.add(array[dq.peekFirst()]);'},
+    {p:'',  t:'   }'}
+  ];
+
+  function build(A, K){
+    var dq = [], res = [], frames = [];
+    var c1 = null, c2 = null, n1 = 0, n2 = 0;
+
+    function snap(i, phase, note, hl){
+      frames.push({
+        i:i, dq:dq.slice(), res:res.slice(), phase:phase, note:note, hl:hl||{},
+        c1:c1?{e:c1.e,v:c1.v,hit:c1.hit}:null,
+        c2:c2?{e:c2.e,v:c2.v,hit:c2.hit}:null,
+        n1:n1, n2:n2
+      });
+    }
+    function win(i){ return '[' + Math.max(0, i-K+1) + ', ' + i + ']'; }
+
+    for (var i = 0; i < A.length; i++){
+      c1 = null; c2 = null;
+      snap(i, '0', 'i = ' + i + '　读入 A[' + i + '] = ' + A[i]);
+
+      // ① 队头：判过期
+      while (true){
+        if (!dq.length){
+          c1 = {e:'队列为空，没有队头', v:'跳过', hit:false};
+          snap(i, '1', '① 队列为空 → 没有队头可踢');
+          break;
+        }
+        var h = dq[0], hit1 = h <= i - K;
+        c1 = {e:'队头下标 ' + h + '　≤　i−k = ' + (i-K) + ' ?', hit:hit1,
+              v: hit1 ? '是 → pollFirst() 出局' : '否 → 还在窗口内，留下'};
+        if (hit1){
+          n1++;
+          snap(i, '1', '① 队头下标 ' + h + ' ≤ i−k = ' + (i-K) +
+                '\n它已经滑出窗口 ' + win(i) + ' → pollFirst() 出局', {dead:h});
+          dq.shift();
+        } else {
+          snap(i, '1', '① 队头下标 ' + h + ' > i−k = ' + (i-K) +
+                '\n还在窗口 ' + win(i) + ' 里 → 不用踢');
+          break;
+        }
+      }
+
+      // ② 队尾：判大小
+      while (true){
+        if (!dq.length){
+          c2 = {e:'队列为空，没有队尾', v:'跳过', hit:false};
+          snap(i, '2', '② 队列为空 → 没有队尾可踢');
+          break;
+        }
+        var t = dq[dq.length-1], hit2 = A[t] <= A[i];
+        c2 = {e:'A[' + t + '] = ' + A[t] + '　≤　A[' + i + '] = ' + A[i] + ' ?', hit:hit2,
+              v: hit2 ? '是 → pollLast() 出局' : '否 → 留下'};
+        if (hit2){
+          n2++;
+          snap(i, '2', '② 队尾 A[' + t + '] = ' + A[t] + ' ≤ A[' + i + '] = ' + A[i] +
+                '\n它又小、又比新人先过期，永无出头之日 → pollLast()', {dead:t});
+          dq.pop();
+        } else {
+          snap(i, '2', '② 队尾 A[' + t + '] = ' + A[t] + ' > A[' + i + '] = ' + A[i] +
+                '\n留着——它现在排在前面，等 A[' + i + '] 还活着的时候它可能已经过期了');
+          break;
+        }
+      }
+
+      // ③ 新人进队
+      dq.push(i);
+      snap(i, '3', '③ offerLast(' + i + ')\n进队的是【下标 ' + i + '】，不是值 ' + A[i], {fresh:i});
+
+      // ④ 收答案
+      if (i >= K-1){
+        res.push(A[dq[0]]);
+        snap(i, '4', '④ i = ' + i + ' ≥ k−1 = ' + (K-1) + (i===K-1 ? '，窗口第一次凑满' : '，窗口成型') +
+              '\n队头下标 ' + dq[0] + ' → A[' + dq[0] + '] = ' + A[dq[0]] + ' 收进答案', {got:dq[0]});
+      } else {
+        snap(i, '4', '④ i = ' + i + ' < k−1 = ' + (K-1) +
+              '\n窗口现在只有 ' + (i+1) + ' 个元素，不够 ' + K + ' 个 → 不收');
+      }
+    }
+    snap(A.length-1, 'end',
+      '扫描结束\n答案 = [' + res.join(', ') + ']　共 ' + (A.length-K+1) + ' 个 = n − k + 1' +
+      '\n① 共触发 ' + n1 + ' 次，② 共触发 ' + n2 + ' 次', {done:true});
+    return frames;
+  }
+
+  function $(id){ return document.getElementById(id); }
+  var setIdx = 0, A, K, frames, step = 0, timer = null;
+
+  SETS.forEach(function(s, idx){
+    var b = document.createElement('button');
+    b.className = 'setbtn';
+    b.innerHTML = 'A = {' + s.label + '}, k = ' + s.K + '<small>' + s.hint + '</small>';
+    b.onclick = function(){ setIdx = idx; load(); };
+    b.setAttribute('data-idx', idx);
+    $('sets').appendChild(b);
+  });
+
+  var codeEls = CODE.map(function(c){
+    var d = document.createElement('span');
+    d.className = 'cl';
+    d.innerHTML = c.t.replace(/@(\d)/, '<span class="n">$1</span> ');
+    $('code').appendChild(d);
+    return {el:d, p:c.p};
+  });
+
+  function lane(el, n, fn){
+    el.style.setProperty('--n', n);
+    el.innerHTML = '';
+    for (var c = 0; c < n; c++) el.appendChild(fn(c));
+  }
+
+  function paintCheck(box, eEl, vEl, nEl, data, active, count){
+    box.className = 'check' + (active ? ' active' : '') +
+      (data ? (data.hit ? ' hit' : ' miss') : '');
+    eEl.textContent = data ? data.e : '—';
+    vEl.textContent = data ? data.v : '—';
+    nEl.textContent = '触发 ' + count + ' 次';
+  }
+
+  function render(){
+    var f = frames[step], n = A.length;
+    var lo = f.i - K + 1, inDq = {};
+    f.dq.forEach(function(x){ inDq[x] = true; });
+
+    codeEls.forEach(function(c){
+      if (c.p === f.phase && f.phase !== '') c.el.classList.add('on');
+      else c.el.classList.remove('on');
+    });
+
+    paintCheck($('chk1'), $('chk1e'), $('chk1v'), $('chk1n'), f.c1, f.phase === '1', f.n1);
+    paintCheck($('chk2'), $('chk2e'), $('chk2v'), $('chk2n'), f.c2, f.phase === '2', f.n2);
+
+    lane($('laneDq'), n, function(c){
+      var box = document.createElement('div');
+      if (!inDq[c]) return box;
+      var d = document.createElement('div');
+      d.className = 'chip';
+      if (f.hl.dead === c) d.className += ' dead';
+      if (f.hl.fresh === c) d.className += ' fresh';
+      if (f.hl.got === c) d.className += ' got';
+      d.innerHTML = '<span class="ix">' + c + '</span><span class="va">A=' + A[c] + '</span>';
+      box.appendChild(d);
+      var t = document.createElement('div');
+      t.className = 'tag' + (f.hl.dead === c ? ' dead' : '');
+      t.textContent = f.hl.dead === c ? '出局' :
+        (f.dq.length === 1 ? '头·尾' : c === f.dq[0] ? '头' : c === f.dq[f.dq.length-1] ? '尾' : '');
+      box.appendChild(t);
+      return box;
+    });
+
+    lane($('laneTick'), n, function(c){
+      var d = document.createElement('div');
+      d.className = 'tick' + (f.hl.dead === c ? ' dead' : '');
+      if (inDq[c]) d.innerHTML = '<i></i><s></s>';
+      return d;
+    });
+
+    lane($('laneArr'), n, function(c){
+      var d = document.createElement('div');
+      d.className = 'acell';
+      d.textContent = A[c];
+      if (c > f.i) d.className += ' future';
+      else if (c < lo) d.className += ' expired';
+      else d.className += (f.i >= K-1 ? ' win' : ' winpartial');
+      if (c === f.i && f.phase !== 'end') d.className += ' cur';
+      if (f.hl.got === c) d.className += ' got';
+      if (f.hl.dead === c) d.className += ' flash';
+      return d;
+    });
+
+    lane($('laneIx'), n, function(c){
+      var d = document.createElement('div');
+      d.className = 'ixcell' + (c < lo && c <= f.i ? ' expired' : '');
+      d.textContent = c;
+      return d;
+    });
+
+    lane($('lanePtr'), n, function(c){
+      var d = document.createElement('div');
+      d.className = 'ptr';
+      if (c === f.i){ d.className += ' i'; d.innerHTML = '▲<br>i'; }
+      else if (c === f.i - K && c >= 0){ d.className += ' ik'; d.innerHTML = '▲<br>i−k'; }
+      return d;
+    });
+
+    $('readout').innerHTML =
+      '<span class="stat">i = <b>' + f.i + '</b></span>' +
+      '<span class="stat">k = <b>' + K + '</b></span>' +
+      '<span class="stat dead">过期线 i−k = <b>' + (f.i-K) + '</b>　下标 ≤ 它的出局</span>' +
+      '<span class="stat win">窗口 [' + Math.max(0, lo) + ', ' + f.i + ']' + (f.i < K-1 ? '　未凑满' : '') + '</span>' +
+      '<span class="stat dq">deque = [' + f.dq.join(', ') + ']　值 [' + f.dq.map(function(x){return A[x];}).join(', ') + ']</span>';
+
+    $('note').textContent = f.note;
+
+    var r = $('res');
+    r.innerHTML = '';
+    if (!f.res.length) r.innerHTML = '<span class="rempty">（还没收到答案）</span>';
+    else f.res.forEach(function(v, idx){
+      var s = document.createElement('span');
+      s.className = 'rchip' + (idx === f.res.length-1 && f.hl.got !== undefined ? ' new' : '');
+      s.textContent = v;
+      r.appendChild(s);
+    });
+
+    $('counter').textContent = '第 ' + (step+1) + ' / ' + frames.length + ' 步';
+    $('prev').disabled = step === 0;
+    $('next').disabled = step === frames.length-1;
+
+    var more = false;
+    for (var q = step+1; q < frames.length; q++){
+      if (frames[q].phase === '1' && frames[q].hl.dead !== undefined){ more = true; break; }
+    }
+    $('jump').disabled = !more;
+    if (step === frames.length-1) stop();
+  }
+
+  function load(){
+    stop();
+    A = SETS[setIdx].A; K = SETS[setIdx].K;
+    frames = build(A, K);
+    step = 0;
+    var btns = document.querySelectorAll('.setbtn');
+    for (var b = 0; b < btns.length; b++)
+      btns[b].setAttribute('aria-pressed', String(Number(btns[b].getAttribute('data-idx')) === setIdx));
+    render();
+  }
+
+  function stop(){ if (timer){ clearInterval(timer); timer = null; } $('play').textContent = '自动播放'; }
+
+  $('next').onclick  = function(){ if (step < frames.length-1){ step++; render(); } };
+  $('prev').onclick  = function(){ if (step > 0){ step--; render(); } };
+  $('reset').onclick = function(){ stop(); step = 0; render(); };
+  $('jump').onclick  = function(){
+    stop();
+    for (var q = step+1; q < frames.length; q++){
+      if (frames[q].phase === '1' && frames[q].hl.dead !== undefined){ step = q; render(); return; }
+    }
+  };
+  $('play').onclick = function(){
+    if (timer){ stop(); return; }
+    if (step === frames.length-1) step = 0;
+    $('play').textContent = '暂停';
+    timer = setInterval(function(){
+      if (step >= frames.length-1){ stop(); return; }
+      step++; render();
+    }, 1000);
+  };
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight'){ e.preventDefault(); $('next').click(); }
+    if (e.key === 'ArrowLeft'){  e.preventDefault(); $('prev').click(); }
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
