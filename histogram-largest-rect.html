@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>直方图最大矩形推演台</title>
+<meta name="description" content="LaiCode 198 Largest Rectangle In Histogram：单调栈逐步推演，弹出那一刻左右边界如何同时到齐。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#EDF0F4; --surface:#FFFFFF; --surface-2:#F4F6F9;
+  --ink:#11161C; --muted:#5B6572; --line:#D1D7E0; --line-strong:#A6B0BE;
+
+  --bar:#7C8798;        --bar-soft:#E3E7ED;
+  --dq:#4235A6;         --dq-soft:#E7E4F8;   --dq-edge:#AEA4E3;
+  --hot:#A65314;        --hot-soft:#FBEADB;  --hot-edge:#E4B583;
+  --best:#146348;       --best-soft:#D9EDE4; --best-edge:#8DC7B0;
+
+  --shadow:0 1px 0 rgba(17,22,28,.03), 0 12px 32px -24px rgba(17,22,28,.6);
+  --sans:"Archivo","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --cw:56px; --gap:8px; --unit:30px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1015; --surface:#161A21; --surface-2:#1C212A;
+    --ink:#E1E5EB; --muted:#8A94A2; --line:#282F39; --line-strong:#3C4450;
+    --bar:#6C7686; --bar-soft:#242B34;
+    --dq:#9C91EF; --dq-soft:#1D1A32; --dq-edge:#393163;
+    --hot:#E9A257; --hot-soft:#2E2214; --hot-edge:#5A4426;
+    --best:#5CC59B; --best-soft:#11281E; --best-edge:#254A3A;
+    --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -24px rgba(0,0,0,.95);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1015; --surface:#161A21; --surface-2:#1C212A;
+  --ink:#E1E5EB; --muted:#8A94A2; --line:#282F39; --line-strong:#3C4450;
+  --bar:#6C7686; --bar-soft:#242B34;
+  --dq:#9C91EF; --dq-soft:#1D1A32; --dq-edge:#393163;
+  --hot:#E9A257; --hot-soft:#2E2214; --hot-edge:#5A4426;
+  --best:#5CC59B; --best-soft:#11281E; --best-edge:#254A3A;
+  --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -24px rgba(0,0,0,.95);
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+     font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:40px 22px 76px;display:flex;flex-direction:column;gap:24px}
+
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 9px}
+h1{font-size:clamp(27px,4.2vw,38px);line-height:1.14;margin:0 0 11px;font-weight:700;letter-spacing:-.022em;text-wrap:balance}
+.thesis{margin:0;max-width:62ch;color:var(--muted);font-size:15.5px}
+.thesis b{color:var(--ink);font-weight:600}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
+.pad{padding:22px}
+.card h2{font-size:18px;margin:0 0 12px;font-weight:600;letter-spacing:-.012em}
+.card h3{font-size:14.5px;margin:0 0 6px;font-weight:600}
+.card p{margin:0 0 11px;max-width:66ch}
+.card p:last-child{margin-bottom:0}
+
+.sets{display:flex;gap:8px;flex-wrap:wrap;padding:16px 22px 14px;border-bottom:1px solid var(--line)}
+.sets-label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);align-self:center;margin-right:2px}
+.setbtn{font-family:var(--mono);font-size:12px;padding:6px 11px;border-radius:7px;border:1px solid var(--line-strong);
+        background:var(--surface);color:var(--ink);cursor:pointer;text-align:left;transition:background .14s,border-color .14s,color .14s}
+.setbtn small{display:block;font-family:var(--sans);font-size:10.5px;color:var(--muted);margin-top:1px;letter-spacing:0}
+.setbtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.setbtn[aria-pressed="true"] small{color:var(--surface);opacity:.75}
+.setbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.code{font-family:var(--mono);font-size:12.5px;line-height:1.95;background:var(--surface-2);
+      border-bottom:1px solid var(--line);padding:14px 22px;overflow-x:auto}
+.cl{display:block;white-space:pre;padding:0 8px;margin:0 -8px;border-radius:5px;color:var(--muted);
+    border-left:2px solid transparent;transition:background .16s,color .16s}
+.cl.on{background:var(--hot-soft);color:var(--ink);border-left-color:var(--hot);font-weight:500}
+
+.stage{padding:22px;overflow-x:auto}
+.field{position:relative;min-width:min-content}
+.lane{display:grid;gap:var(--gap);grid-template-columns:repeat(var(--n),var(--cw))}
+
+.lane-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 7px}
+.lane-label b{color:var(--dq);font-weight:700;letter-spacing:0;text-transform:none;font-size:11.5px}
+
+.chipslot{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.chip{border:1.5px solid var(--dq-edge);background:var(--dq-soft);border-radius:9px;padding:4px 2px 3px;width:100%;
+      display:flex;flex-direction:column;align-items:center;transition:transform .18s,background .18s,border-color .18s}
+.chip .ix{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--dq);line-height:1.15}
+.chip .va{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.3}
+.chip.pop{border-color:var(--hot);background:var(--hot-soft);transform:translateY(-5px)}
+.chip.pop .ix{color:var(--hot);text-decoration:line-through}
+.chip.push{border-color:var(--ink);background:var(--ink)}
+.chip.push .ix{color:var(--surface)}
+.chip.push .va{color:var(--surface);opacity:.75}
+.chiptag{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;min-height:11px}
+
+.bars{position:relative;height:calc(var(--maxh) * var(--unit) + 6px);align-items:end}
+.barslot{display:flex;align-items:flex-end;justify-content:center;height:100%}
+.bar{width:100%;background:var(--bar-soft);border:1.5px solid var(--bar);border-radius:5px 5px 0 0;
+     display:flex;align-items:flex-start;justify-content:center;padding-top:3px;
+     font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink);
+     transition:background .18s,border-color .18s}
+.bar.instack{background:var(--dq-soft);border-color:var(--dq);color:var(--dq)}
+.bar.popping{background:var(--hot-soft);border-color:var(--hot);color:var(--hot)}
+.bar.zero{height:4px !important;border-radius:2px;padding:0;background:var(--bar);border:none}
+.bar.sentinel{height:6px !important;border:1.5px dashed var(--line-strong);background:transparent;padding:0}
+
+.rect{position:absolute;bottom:0;border-radius:4px;pointer-events:none;transition:none}
+.rect.cur{background:color-mix(in srgb, var(--hot) 26%, transparent);border:2px solid var(--hot);z-index:3}
+.rect.best{background:color-mix(in srgb, var(--best) 16%, transparent);border:2px dashed var(--best);z-index:2}
+.rlabel{position:absolute;top:-11px;left:50%;transform:translateX(-50%);white-space:nowrap;
+        font-family:var(--mono);font-size:11px;font-weight:700;padding:1px 7px;border-radius:5px}
+.rect.cur .rlabel{background:var(--hot);color:#fff}
+.rect.best .rlabel{background:var(--best);color:#fff}
+
+.edge{position:absolute;top:-6px;bottom:-26px;width:0;border-left:2px dashed var(--hot);z-index:4;pointer-events:none}
+.edge span{position:absolute;bottom:-2px;left:3px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--hot);white-space:nowrap}
+
+.ixlane{margin-top:6px}
+.ixcell{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center}
+.ixcell.cur{color:var(--ink);font-weight:700}
+.ixcell.sent{color:var(--line-strong)}
+
+.readout{display:flex;gap:9px;flex-wrap:wrap;padding:2px 22px 0}
+.stat{font-family:var(--mono);font-size:12px;padding:5px 10px;border-radius:7px;border:1px solid var(--line);
+      background:var(--surface-2);font-variant-numeric:tabular-nums}
+.stat b{font-weight:700}
+.stat.dq{border-color:var(--dq-edge);background:var(--dq-soft);color:var(--dq)}
+.stat.hot{border-color:var(--hot-edge);background:var(--hot-soft);color:var(--hot)}
+.stat.best{border-color:var(--best-edge);background:var(--best-soft);color:var(--best)}
+
+.note{margin:14px 22px 0;font-family:var(--mono);font-size:12.5px;line-height:1.7;white-space:pre-line;
+      min-height:78px;padding:11px 13px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2)}
+
+.controls{border-top:1px solid var(--line);background:var(--surface-2);padding:14px 22px;
+          display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:0 0 12px 12px;margin-top:18px}
+button.ctl{font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--ink);background:var(--surface);
+        border:1px solid var(--line-strong);border-radius:8px;padding:8px 15px;cursor:pointer;transition:background .14s,border-color .14s}
+button.ctl:hover:not(:disabled){border-color:var(--ink)}
+button.ctl:disabled{opacity:.4;cursor:not-allowed}
+button.ctl:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button.ctl.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+button.ctl.jump{font-family:var(--mono);font-size:12px;padding:8px 12px;border-color:var(--hot-edge);color:var(--hot);background:var(--hot-soft)}
+.counter{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+
+.q{border-left:3px solid var(--hot);padding-left:16px;margin-bottom:22px}
+.q:last-child{margin-bottom:0}
+.q h3{color:var(--hot)}
+.math{font-family:var(--mono);font-size:12.5px;line-height:1.85;background:var(--surface-2);border:1px solid var(--line);
+      border-radius:9px;padding:12px 14px;overflow-x:auto;margin:10px 0 0;white-space:pre}
+code{font-family:var(--mono);font-size:.9em;background:var(--surface-2);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+footer{color:var(--muted);font-size:12.5px;text-align:center;padding-top:6px}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+@media (max-width:640px){ :root{--cw:46px;--unit:26px} .counter{margin-left:0} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">198 · Largest Rectangle In Histogram</p>
+    <h1>弹出的那一刻，两个边界同时到齐</h1>
+    <p class="thesis">栈里装的是<b>下标</b>，对应高度从栈底到栈顶严格递增。当某根柱子被弹出，它的<b>右边界就是触发弹出的 i</b>，<b>左边界就是弹完后露出来的新栈顶</b>——两个边界在同一瞬间凑齐，所以一趟就够。</p>
+  </header>
+
+  <section class="card">
+    <div class="sets" id="sets"><span class="sets-label">数据组</span></div>
+    <div class="code" id="code"></div>
+
+    <div class="stage">
+      <p class="lane-label">单调栈 · 装的是 <b>下标</b>（左＝栈底＝矮，右＝栈顶＝高）</p>
+      <div class="field" id="field">
+        <div class="lane" id="laneChips"></div>
+        <div class="lane bars" id="laneBars"></div>
+        <div class="lane ixlane" id="laneIx"></div>
+      </div>
+    </div>
+
+    <div class="readout" id="readout"></div>
+    <div class="note" id="note" aria-live="polite"></div>
+
+    <div class="controls">
+      <button class="ctl" id="prev">← 上一步</button>
+      <button class="ctl primary" id="next">下一步 →</button>
+      <button class="ctl" id="play">自动播放</button>
+      <button class="ctl" id="reset">重置</button>
+      <button class="ctl jump" id="jump">跳到下一次结算</button>
+      <span class="counter" id="counter"></span>
+    </div>
+  </section>
+
+  <section class="card pad">
+    <h2>三个数字是怎么来的</h2>
+
+    <div class="q">
+      <h3>height —— 被弹出那根的高度</h3>
+      <p><code>int height = array[stack.pollFirst()];</code></p>
+      <p>矩形的高，由<b>被弹出的那根</b>决定，不是当前这根 <code>array[i]</code>。这是最容易搞反的一处：我们不是在为 <code>i</code> 算矩形，是在为<b>刚被 i 挤掉的那个人</b>算矩形。</p>
+    </div>
+
+    <div class="q">
+      <h3>右边界 —— 就是 i</h3>
+      <p>它被弹出的原因就是 <code>array[i] &lt; 它的高度</code>。所以 <code>i</code> 正是「它右边第一个比它矮的位置」。矩形延伸到 <code>i-1</code> 为止，碰到 <code>i</code> 就撞墙了。</p>
+      <p>末尾那根<b>高度 0 的哨兵</b>（<code>i == array.length</code> 时 <code>cur = 0</code>）的作用就在这里：让栈里剩下的人都能撞到一堵墙，否则递增序列永远没人来弹它们，<code>{1,2,3}</code> 会返回 0。</p>
+    </div>
+
+    <div class="q">
+      <h3>左边界 —— 弹完之后露出来的新栈顶</h3>
+      <p><code>int left = stack.isEmpty() ? 0 : stack.peekFirst() + 1;</code></p>
+      <p>栈里的高度是<b>严格递增</b>的，所以新栈顶一定比刚弹掉那根矮 —— 它就是「左边第一个比它矮的位置」。而它俩之间夹着的人，早就被更早的弹出清光了，中间不可能藏着更矮的。</p>
+      <pre class="math">新栈顶 = 左边第一个更矮的下标
+left  = 新栈顶 + 1          ← 矩形从它的右邻居开始
+宽    = i - left            ← 右边界 i 不含在内，所以直接相减
+
+栈空时：左边一个更矮的都没有 → 可以一路铺到 0 → left = 0</pre>
+      <p style="margin-top:11px">如果换成记 <code>lb = 新栈顶</code>（不 +1），那宽度就要写成 <code>i - lb - 1</code>。两种写法完全等价，官方答案选了前者，少一个 <code>-1</code>。</p>
+    </div>
+  </section>
+
+  <footer>单文件 HTML，无外部依赖（仅 Google Fonts，离线自动回退系统字体）。</footer>
+</div>
+
+<script>
+(function(){
+  var SETS = [
+    {label:'2,1,3,3,4',   a:[2,1,3,3,4],   hint:'题目原例 · 答案 9'},
+    {label:'2,1,5,6,2,3', a:[2,1,5,6,2,3], hint:'经典例子 · 答案 10'},
+    {label:'1,2,3,4,5',   a:[1,2,3,4,5],   hint:'严格递增 · 全靠哨兵清栈'},
+    {label:'5,4,3,2,1',   a:[5,4,3,2,1],   hint:'严格递减 · 每步都弹'}
+  ];
+
+  var CODE = [
+    {p:'for', t:'for (int i = 0; i <= array.length; i++) {'},
+    {p:'cur', t:'    int cur = i == array.length ? 0 : array[i];        // 末尾补一根高 0 的哨兵'},
+    {p:'chk', t:'    while (!stack.isEmpty() && array[stack.peekFirst()] >= cur) {'},
+    {p:'pop', t:'        int height = array[stack.pollFirst()];         // 矩形的高 = 被弹的那根'},
+    {p:'pop', t:'        int left = stack.isEmpty() ? 0 : stack.peekFirst() + 1;   // 左边界'},
+    {p:'pop', t:'        result = Math.max(result, height * (i - left));           // 宽 = i - left'},
+    {p:'chk', t:'    }'},
+    {p:'push',t:'    stack.offerFirst(i);'},
+    {p:'',    t:'}'}
+  ];
+
+  function build(a){
+    var n = a.length, st = [], frames = [], best = 0, bestRect = null;
+    function snap(phase, note, x){
+      frames.push({
+        st: st.slice(), i: x.i, cur: x.cur, phase: phase, note: note,
+        best: best, bestRect: bestRect ? JSON.parse(JSON.stringify(bestRect)) : null,
+        rect: x.rect || null, pop: x.pop, push: x.push
+      });
+    }
+    for (var i = 0; i <= n; i++){
+      var cur = (i === n) ? 0 : a[i];
+      snap('cur', 'i = ' + i + '　cur = ' + (i === n ? '0（哨兵，逼所有人出栈结算）' : 'array[' + i + '] = ' + cur), {i:i, cur:cur});
+
+      var did = false;
+      while (st.length && a[st[0]] >= cur){
+        var top = st[0], h = a[top];
+        snap('chk', '判定：栈顶下标 ' + top + '，高度 array[' + top + '] = ' + h +
+             '\n' + h + ' ≥ cur = ' + cur + ' → 它被挡住了，弹！', {i:i, cur:cur, pop:top});
+        st.shift();
+        var left = st.length ? st[0] + 1 : 0;
+        var w = i - left, area = h * w, isNew = area > best;
+        var rect = {left:left, right:i-1, h:h, w:w, area:area, from:top, lb: st.length ? st[0] : null};
+        if (isNew){ best = area; bestRect = JSON.parse(JSON.stringify(rect)); }
+        snap('pop',
+          '弹出下标 ' + top + '，height = ' + h +
+          '\n左边界 left = ' + (st.length ? ('新栈顶 ' + st[0] + ' + 1 = ' + left) : '栈空 → 0') +
+          '\n右边界 = i = ' + i + '　宽 = ' + i + ' − ' + left + ' = ' + w +
+          '\n面积 = ' + h + ' × ' + w + ' = ' + area + (isNew ? '　★ 新纪录' : '　（没超过 ' + best + '）'),
+          {i:i, cur:cur, rect:rect, pop:top});
+        did = true;
+      }
+      if (!did){
+        snap('chk', st.length
+          ? '判定：栈顶下标 ' + st[0] + '，高度 ' + a[st[0]] + ' < cur = ' + cur + '\n挡不住，不弹 —— 新人比它高，它还能往右长'
+          : '判定：栈为空，没人可弹', {i:i, cur:cur});
+      }
+
+      st.unshift(i);
+      snap('push', (i === n ? '哨兵 ' + i : '下标 ' + i) + ' 入栈（无条件）\n栈底→栈顶 = [' +
+           st.slice().reverse().join(', ') + ']　高度 = [' +
+           st.slice().reverse().map(function(x){ return x === n ? '0' : a[x]; }).join(', ') + ']',
+           {i:i, cur:cur, push:i});
+    }
+    snap('end', '扫描结束\n最大矩形面积 = ' + best +
+         (bestRect ? '\n高 ' + bestRect.h + ' × 宽 ' + bestRect.w + '，占下标 [' + bestRect.left + ', ' + bestRect.right + ']' : ''),
+         {i:n, cur:0});
+    return frames;
+  }
+
+  function $(id){ return document.getElementById(id); }
+  var setIdx = 0, A, N, frames, step = 0, timer = null, maxH = 1;
+
+  SETS.forEach(function(s, idx){
+    var b = document.createElement('button');
+    b.className = 'setbtn';
+    b.innerHTML = 'array = {' + s.label + '}<small>' + s.hint + '</small>';
+    b.onclick = function(){ setIdx = idx; load(); };
+    b.setAttribute('data-idx', idx);
+    $('sets').appendChild(b);
+  });
+
+  var codeEls = CODE.map(function(c){
+    var d = document.createElement('span');
+    d.className = 'cl';
+    d.textContent = c.t;
+    $('code').appendChild(d);
+    return {el:d, p:c.p};
+  });
+
+  function px(v){ return v + 'px'; }
+  function geom(){
+    var cs = getComputedStyle(document.documentElement);
+    return { cw: parseFloat(cs.getPropertyValue('--cw')),
+             gap: parseFloat(cs.getPropertyValue('--gap')),
+             unit: parseFloat(cs.getPropertyValue('--unit')) };
+  }
+
+  function render(){
+    var f = frames[step], g = geom(), cols = N + 1;
+    var inStack = {};
+    f.st.forEach(function(x){ inStack[x] = true; });
+
+    codeEls.forEach(function(c){
+      if (c.p && c.p === f.phase) c.el.classList.add('on');
+      else if (c.p === 'chk' && f.phase === 'pop') c.el.classList.add('on');
+      else c.el.classList.remove('on');
+    });
+
+    // chips
+    var lc = $('laneChips'); lc.innerHTML = ''; lc.style.setProperty('--n', cols);
+    for (var c = 0; c < cols; c++){
+      var slot = document.createElement('div');
+      slot.className = 'chipslot';
+      if (inStack[c]){
+        var ch = document.createElement('div');
+        ch.className = 'chip' + (f.pop === c ? ' pop' : '') + (f.push === c ? ' push' : '');
+        ch.innerHTML = '<span class="ix">' + c + '</span><span class="va">h=' + (c === N ? 0 : A[c]) + '</span>';
+        slot.appendChild(ch);
+        var tg = document.createElement('div');
+        tg.className = 'chiptag';
+        var top = f.st[0], bot = f.st[f.st.length-1];
+        tg.textContent = f.pop === c ? '弹出' : (f.st.length === 1 ? '底·顶' : c === top ? '栈顶' : c === bot ? '栈底' : '');
+        slot.appendChild(tg);
+      }
+      lc.appendChild(slot);
+    }
+
+    // bars
+    var lb = $('laneBars'); lb.innerHTML = ''; lb.style.setProperty('--n', cols);
+    lb.style.setProperty('--maxh', maxH);
+    for (var c2 = 0; c2 < cols; c2++){
+      var s2 = document.createElement('div'); s2.className = 'barslot';
+      var bar = document.createElement('div');
+      var h = (c2 === N) ? 0 : A[c2];
+      bar.className = 'bar' + (c2 === N ? ' sentinel' : (h === 0 ? ' zero' : '')) +
+                      (inStack[c2] ? ' instack' : '') + (f.pop === c2 ? ' popping' : '');
+      bar.style.height = px(Math.max(h * g.unit, 6));
+      bar.textContent = (c2 === N) ? '' : h;
+      s2.appendChild(bar);
+      lb.appendChild(s2);
+    }
+
+    // rectangles
+    [['best', f.bestRect], ['cur', f.rect]].forEach(function(pair){
+      var kind = pair[0], r = pair[1];
+      if (!r || r.w <= 0 || r.h <= 0) return;
+      var d = document.createElement('div');
+      d.className = 'rect ' + kind;
+      d.style.left = px(r.left * (g.cw + g.gap));
+      d.style.width = px(r.w * g.cw + (r.w - 1) * g.gap);
+      d.style.height = px(r.h * g.unit);
+      d.innerHTML = '<span class="rlabel">' + (kind === 'best' ? '最佳 ' : '') + r.h + ' × ' + r.w + ' = ' + r.area + '</span>';
+      lb.appendChild(d);
+    });
+
+    // boundary lines during a pop
+    if (f.rect){
+      [[f.rect.left, 'left = ' + f.rect.left], [f.i, 'i = ' + f.i]].forEach(function(p){
+        var e = document.createElement('div');
+        e.className = 'edge';
+        e.style.left = px(p[0] * (g.cw + g.gap) - g.gap / 2);
+        e.innerHTML = '<span>' + p[1] + '</span>';
+        lb.appendChild(e);
+      });
+    }
+
+    // index lane
+    var li = $('laneIx'); li.innerHTML = ''; li.style.setProperty('--n', cols);
+    for (var c3 = 0; c3 < cols; c3++){
+      var d3 = document.createElement('div');
+      d3.className = 'ixcell' + (c3 === f.i ? ' cur' : '') + (c3 === N ? ' sent' : '');
+      d3.textContent = (c3 === N) ? '哨兵' : c3;
+      li.appendChild(d3);
+    }
+
+    $('readout').innerHTML =
+      '<span class="stat">i = <b>' + f.i + '</b></span>' +
+      '<span class="stat">cur = <b>' + f.cur + '</b>' + (f.i === N ? '（哨兵）' : '') + '</span>' +
+      '<span class="stat dq">栈（底→顶）= [' + f.st.slice().reverse().join(', ') + ']</span>' +
+      (f.rect ? '<span class="stat hot">本次结算 ' + f.rect.h + ' × (' + f.i + ' − ' + f.rect.left + ') = ' + f.rect.area + '</span>' : '') +
+      '<span class="stat best">result = <b>' + f.best + '</b></span>';
+
+    $('note').textContent = f.note;
+    $('counter').textContent = '第 ' + (step+1) + ' / ' + frames.length + ' 步';
+    $('prev').disabled = step === 0;
+    $('next').disabled = step === frames.length - 1;
+
+    var more = false;
+    for (var q = step+1; q < frames.length; q++) if (frames[q].rect){ more = true; break; }
+    $('jump').disabled = !more;
+    if (step === frames.length - 1) stop();
+  }
+
+  function load(){
+    stop();
+    A = SETS[setIdx].a; N = A.length;
+    maxH = Math.max.apply(null, A.concat([1]));
+    frames = build(A);
+    step = 0;
+    var btns = document.querySelectorAll('.setbtn');
+    for (var b = 0; b < btns.length; b++)
+      btns[b].setAttribute('aria-pressed', String(Number(btns[b].getAttribute('data-idx')) === setIdx));
+    render();
+  }
+
+  function stop(){ if (timer){ clearInterval(timer); timer = null; } $('play').textContent = '自动播放'; }
+
+  $('next').onclick  = function(){ if (step < frames.length-1){ step++; render(); } };
+  $('prev').onclick  = function(){ if (step > 0){ step--; render(); } };
+  $('reset').onclick = function(){ stop(); step = 0; render(); };
+  $('jump').onclick  = function(){
+    stop();
+    for (var q = step+1; q < frames.length; q++) if (frames[q].rect){ step = q; render(); return; }
+  };
+  $('play').onclick = function(){
+    if (timer){ stop(); return; }
+    if (step === frames.length-1) step = 0;
+    $('play').textContent = '暂停';
+    timer = setInterval(function(){
+      if (step >= frames.length-1){ stop(); return; }
+      step++; render();
+    }, 1100);
+  };
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight'){ e.preventDefault(); $('next').click(); }
+    if (e.key === 'ArrowLeft'){  e.preventDefault(); $('prev').click(); }
+  });
+  window.addEventListener('resize', function(){ render(); });
+
+  load();
+})();
+</script>
+</body>
+</html>
