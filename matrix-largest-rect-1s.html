@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>全1矩形推演台</title>
+<meta name="description" content="LaiCode 102 Largest Rectangle Of 1s：把 0/1 矩阵拍扁成高度矩阵，每行调一次直方图最大矩形。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#EDF0F4; --surface:#FFFFFF; --surface-2:#F4F6F9;
+  --ink:#11161C; --muted:#5B6572; --line:#D1D7E0; --line-strong:#A6B0BE;
+  --one:#1D6E7A;  --one-soft:#DCEDEF; --one-edge:#8FC3CB;
+  --bar:#7C8798;  --bar-soft:#E3E7ED;
+  --dq:#4235A6;   --dq-soft:#E7E4F8;  --dq-edge:#AEA4E3;
+  --hot:#A65314;  --hot-soft:#FBEADB; --hot-edge:#E4B583;
+  --best:#146348; --best-soft:#D9EDE4; --best-edge:#8DC7B0;
+  --shadow:0 1px 0 rgba(17,22,28,.03), 0 12px 32px -24px rgba(17,22,28,.6);
+  --sans:"Archivo","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --mc:46px; --mg:6px; --cw:56px; --gap:8px; --unit:30px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1015; --surface:#161A21; --surface-2:#1C212A;
+    --ink:#E1E5EB; --muted:#8A94A2; --line:#282F39; --line-strong:#3C4450;
+    --one:#5FBCC8; --one-soft:#122A2D; --one-edge:#255055;
+    --bar:#6C7686; --bar-soft:#242B34;
+    --dq:#9C91EF; --dq-soft:#1D1A32; --dq-edge:#393163;
+    --hot:#E9A257; --hot-soft:#2E2214; --hot-edge:#5A4426;
+    --best:#5CC59B; --best-soft:#11281E; --best-edge:#254A3A;
+    --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -24px rgba(0,0,0,.95);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1015; --surface:#161A21; --surface-2:#1C212A;
+  --ink:#E1E5EB; --muted:#8A94A2; --line:#282F39; --line-strong:#3C4450;
+  --one:#5FBCC8; --one-soft:#122A2D; --one-edge:#255055;
+  --bar:#6C7686; --bar-soft:#242B34;
+  --dq:#9C91EF; --dq-soft:#1D1A32; --dq-edge:#393163;
+  --hot:#E9A257; --hot-soft:#2E2214; --hot-edge:#5A4426;
+  --best:#5CC59B; --best-soft:#11281E; --best-edge:#254A3A;
+  --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -24px rgba(0,0,0,.95);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1020px;margin:0 auto;padding:40px 22px 76px;display:flex;flex-direction:column;gap:24px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 9px}
+h1{font-size:clamp(27px,4.2vw,38px);line-height:1.14;margin:0 0 11px;font-weight:700;letter-spacing:-.022em;text-wrap:balance}
+.thesis{margin:0;max-width:62ch;color:var(--muted);font-size:15.5px}
+.thesis b{color:var(--ink);font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
+.pad{padding:22px}
+.card h2{font-size:18px;margin:0 0 12px;font-weight:600;letter-spacing:-.012em}
+.card h3{font-size:14.5px;margin:0 0 6px;font-weight:600}
+.card p{margin:0 0 11px;max-width:66ch}
+.card p:last-child{margin-bottom:0}
+
+.sets{display:flex;gap:8px;flex-wrap:wrap;padding:16px 22px 14px;border-bottom:1px solid var(--line)}
+.sets-label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);align-self:center;margin-right:2px}
+.setbtn{font-family:var(--mono);font-size:12px;padding:6px 11px;border-radius:7px;border:1px solid var(--line-strong);
+        background:var(--surface);color:var(--ink);cursor:pointer;text-align:left;transition:background .14s,border-color .14s,color .14s}
+.setbtn small{display:block;font-family:var(--sans);font-size:10.5px;color:var(--muted);margin-top:1px}
+.setbtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.setbtn[aria-pressed="true"] small{color:var(--surface);opacity:.75}
+.setbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.code{font-family:var(--mono);font-size:12.5px;line-height:1.95;background:var(--surface-2);border-bottom:1px solid var(--line);padding:14px 22px;overflow-x:auto}
+.cl{display:block;white-space:pre;padding:0 8px;margin:0 -8px;border-radius:5px;color:var(--muted);border-left:2px solid transparent;transition:background .16s,color .16s}
+.cl.on{background:var(--hot-soft);color:var(--ink);border-left-color:var(--hot);font-weight:500}
+.cl.hdr{color:var(--muted);opacity:.65;font-size:11.5px}
+
+.mats{display:flex;gap:26px;flex-wrap:wrap;padding:20px 22px 4px}
+.matbox{display:flex;flex-direction:column;gap:8px}
+.mlabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.mgrid{position:relative;display:grid;gap:var(--mg);grid-template-columns:repeat(var(--c),var(--mc))}
+.mcell{height:var(--mc);display:grid;place-items:center;border-radius:7px;border:1.5px solid var(--line);
+       background:var(--surface-2);font-family:var(--mono);font-size:17px;font-weight:600;color:var(--muted);
+       transition:background .16s,border-color .16s,color .16s}
+.mcell.one{background:var(--one-soft);border-color:var(--one-edge);color:var(--one)}
+.mcell.blank{opacity:.28}
+.mcell.cur{border-color:var(--ink);border-width:2.5px;color:var(--ink)}
+.mcell.rowlit{box-shadow:inset 0 0 0 2px var(--hot-edge)}
+.mrect{position:absolute;border:2.5px solid var(--hot);border-radius:5px;pointer-events:none;
+       background:color-mix(in srgb, var(--hot) 16%, transparent);z-index:3}
+.mrect.best{border-color:var(--best);border-style:dashed;background:color-mix(in srgb, var(--best) 14%, transparent);z-index:2}
+
+.stage{padding:16px 22px 8px;overflow-x:auto}
+.field{position:relative;min-width:min-content}
+.lane{display:grid;gap:var(--gap);grid-template-columns:repeat(var(--n),var(--cw))}
+.chipslot{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.chip{border:1.5px solid var(--dq-edge);background:var(--dq-soft);border-radius:9px;padding:3px 2px 2px;width:100%;
+      display:flex;flex-direction:column;align-items:center;transition:transform .18s,background .18s,border-color .18s}
+.chip .ix{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--dq);line-height:1.15}
+.chip .va{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3}
+.chip.pop{border-color:var(--hot);background:var(--hot-soft);transform:translateY(-5px)}
+.chip.pop .ix{color:var(--hot);text-decoration:line-through}
+.chip.push{border-color:var(--ink);background:var(--ink)}
+.chip.push .ix{color:var(--surface)}
+.chip.push .va{color:var(--surface);opacity:.75}
+.chiptag{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;min-height:11px}
+.bars{position:relative;height:calc(var(--maxh) * var(--unit) + 6px);align-items:end}
+.barslot{display:flex;align-items:flex-end;justify-content:center;height:100%}
+.bar{width:100%;background:var(--bar-soft);border:1.5px solid var(--bar);border-radius:5px 5px 0 0;
+     display:flex;align-items:flex-start;justify-content:center;padding-top:2px;
+     font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink);transition:background .18s,border-color .18s}
+.bar.instack{background:var(--dq-soft);border-color:var(--dq);color:var(--dq)}
+.bar.popping{background:var(--hot-soft);border-color:var(--hot);color:var(--hot)}
+.bar.zero{height:4px !important;border-radius:2px;padding:0;background:var(--bar);border:none}
+.bar.sentinel{height:6px !important;border:1.5px dashed var(--line-strong);background:transparent;padding:0}
+.rect{position:absolute;bottom:0;border-radius:4px;pointer-events:none}
+.rect.cur{background:color-mix(in srgb, var(--hot) 26%, transparent);border:2px solid var(--hot);z-index:3}
+.rlabel{position:absolute;top:-11px;left:50%;transform:translateX(-50%);white-space:nowrap;
+        font-family:var(--mono);font-size:11px;font-weight:700;padding:1px 7px;border-radius:5px;background:var(--hot);color:#fff}
+.ixlane{margin-top:6px}
+.ixcell{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center}
+.ixcell.cur{color:var(--ink);font-weight:700}
+.ixcell.sent{color:var(--line-strong)}
+
+.readout{display:flex;gap:9px;flex-wrap:wrap;padding:2px 22px 0}
+.stat{font-family:var(--mono);font-size:12px;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:var(--surface-2);font-variant-numeric:tabular-nums}
+.stat b{font-weight:700}
+.stat.dq{border-color:var(--dq-edge);background:var(--dq-soft);color:var(--dq)}
+.stat.hot{border-color:var(--hot-edge);background:var(--hot-soft);color:var(--hot)}
+.stat.best{border-color:var(--best-edge);background:var(--best-soft);color:var(--best)}
+.note{margin:14px 22px 0;font-family:var(--mono);font-size:12.5px;line-height:1.7;white-space:pre-line;min-height:72px;
+      padding:11px 13px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2)}
+.controls{border-top:1px solid var(--line);background:var(--surface-2);padding:14px 22px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:0 0 12px 12px;margin-top:18px}
+button.ctl{font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--ink);background:var(--surface);
+        border:1px solid var(--line-strong);border-radius:8px;padding:8px 15px;cursor:pointer;transition:background .14s,border-color .14s}
+button.ctl:hover:not(:disabled){border-color:var(--ink)}
+button.ctl:disabled{opacity:.4;cursor:not-allowed}
+button.ctl:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button.ctl.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+button.ctl.jump{font-family:var(--mono);font-size:12px;padding:8px 12px;border-color:var(--hot-edge);color:var(--hot);background:var(--hot-soft)}
+.counter{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+
+.q{border-left:3px solid var(--one);padding-left:16px;margin-bottom:22px}
+.q:last-child{margin-bottom:0}
+.q h3{color:var(--one)}
+.math{font-family:var(--mono);font-size:12.5px;line-height:1.85;background:var(--surface-2);border:1px solid var(--line);
+      border-radius:9px;padding:12px 14px;overflow-x:auto;margin:10px 0 0;white-space:pre}
+code{font-family:var(--mono);font-size:.9em;background:var(--surface-2);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+footer{color:var(--muted);font-size:12.5px;text-align:center;padding-top:6px}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+@media (max-width:640px){ :root{--mc:38px;--cw:46px;--unit:26px} .counter{margin-left:0} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">102 · Largest Rectangle Of 1s</p>
+    <h1>拍扁成柱子，一行调一次</h1>
+    <p class="thesis">把 0/1 矩阵变成<b>高度矩阵</b>——每格记「从我往上数，连续几个 1」。这样<b>每一行就是一排柱子</b>，直接扔给 198 的 <code>largestRectangleInHistogram</code>。M 行调 M 次，取最大。新东西只有「拍扁」这一步。</p>
+  </header>
+
+  <section class="card">
+    <div class="sets" id="sets"><span class="sets-label">数据组</span></div>
+    <div class="code" id="code"></div>
+
+    <div class="mats">
+      <div class="matbox">
+        <div class="mlabel">0/1 矩阵 matrix</div>
+        <div class="mgrid" id="gridM"></div>
+      </div>
+      <div class="matbox">
+        <div class="mlabel">高度矩阵 height（往上数几个 1）</div>
+        <div class="mgrid" id="gridH"></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="field" id="field">
+        <div class="lane" id="laneChips"></div>
+        <div class="lane bars" id="laneBars"></div>
+        <div class="lane ixlane" id="laneIx"></div>
+      </div>
+    </div>
+
+    <div class="readout" id="readout"></div>
+    <div class="note" id="note" aria-live="polite"></div>
+
+    <div class="controls">
+      <button class="ctl" id="prev">← 上一步</button>
+      <button class="ctl primary" id="next">下一步 →</button>
+      <button class="ctl" id="play">自动播放</button>
+      <button class="ctl" id="reset">重置</button>
+      <button class="ctl jump" id="skip">跳过建表</button>
+      <button class="ctl jump" id="jrow">跳到下一行</button>
+      <button class="ctl jump" id="jpop">跳到下一次结算</button>
+      <span class="counter" id="counter"></span>
+    </div>
+  </section>
+
+  <section class="card pad">
+    <h2>「拍扁」到底在拍什么</h2>
+
+    <div class="q">
+      <h3>一行代码，两种情况</h3>
+      <pre class="math">if (matrix[i][j] == 1) {
+    height[i][j] = i > 0 ? height[i-1][j] + 1 : 1;
+}
+// else 不写 —— Java 的 int[][] 默认就是 0</pre>
+      <p style="margin-top:11px"><b>撞到 1</b>：柱子往上接一节 —— 我头顶那格能往上数几个 1（<code>height[i-1][j]</code>），我就比它多一节。第一行头顶没东西，只能是 1。</p>
+      <p><b>撞到 0</b>：柱子断了，归 0。这一格站不住人，上面再高也接不下来。</p>
+      <p>官方代码没写 <code>else height[i][j] = 0</code>，是因为 Java 新建的 <code>int[][]</code> 每格默认就是 0。<b>但如果你改成滚动的一维数组反复复用，这个 else 就必须补上</b>，不然上一行的旧值会漏过来。</p>
+    </div>
+
+    <div class="q">
+      <h3>为什么拍扁之后就能直接用 198</h3>
+      <p>把第 <code>r</code> 行的高度当成一排柱子。这排柱子里一个「高 h、宽 w」的矩形，翻译回原矩阵就是：</p>
+      <pre class="math">直方图里：第 r 行，高 h，占列 [left, right]
+原矩阵里：占行 [r-h+1, r]，占列 [left, right]，全是 1
+
+因为 height[r][j] >= h 的意思就是
+「(r,j) 往上连续 h 格全是 1」
+—— 这 w 列每一列都能往上撑 h 格，合起来正好一块实心矩形</pre>
+      <p style="margin-top:11px">动图里每次结算，<b>直方图上的橙色矩形和左边 0/1 矩阵里的橙色框是同一个矩形</b>，一个是侧视图，一个是俯视图。</p>
+    </div>
+
+    <div class="q">
+      <h3>为什么「每行都当底边」不会漏</h3>
+      <p>任何一个全 1 矩形，都有一条<b>最下面的边</b>，假设它落在第 <code>r</code> 行。那么当外层循环走到第 <code>r</code> 行、把这一行当直方图跑的时候，这个矩形一定会被算到。</p>
+      <p>M 行各当一次底边，就覆盖了所有可能的矩形。所以外层那个 <code>for (int[] heightArray : heights)</code> 不是在"试一试"，是在<b>穷举底边</b>。</p>
+    </div>
+
+    <div class="q">
+      <h3>复杂度</h3>
+      <pre class="math">拍扁      O(M × N)     每格看一眼
+每行直方图 O(N)         每个下标进栈一次出栈一次
+一共 M 行  O(M × N)
+
+Time  O(M × N)      方阵时写成 O(n²)
+Space O(M × N)      height 矩阵本身
+                    （只留一维滚动数组可以压到 O(N)）</pre>
+    </div>
+  </section>
+
+  <footer>单文件 HTML，无外部依赖（仅 Google Fonts，离线自动回退系统字体）。</footer>
+</div>
+
+<script>
+(function(){
+  var SETS = [
+    {label:'题目原例', M:[[0,0,0,0],[1,1,1,1],[0,1,1,1],[1,0,1,1]], hint:'答案 6 = 2 × 3'},
+    {label:'高瘦 vs 矮宽', M:[[1,0,1,1,1],[1,1,1,1,1],[1,1,1,1,0],[0,1,1,0,0]], hint:'答案 8，柱子最高长到 4'},
+    {label:'全是 1', M:[[1,1,1],[1,1,1],[1,1,1]], hint:'答案 9，栈一路不弹'},
+    {label:'0 打断柱子', M:[[1,1,1,1],[1,0,1,1],[1,1,1,1]], hint:'看中间那根怎么被归零'}
+  ];
+
+  var CODE = [
+    {p:'h0', t:'private void buildHeightMatrix(int[][] matrix, int[][] height) {', hdr:1},
+    {p:'h1', t:'    for (i) for (j)  if (matrix[i][j] == 1)'},
+    {p:'h1', t:'        height[i][j] = i > 0 ? height[i-1][j] + 1 : 1;      // 0 的格子留默认 0'},
+    {p:'g0', t:'for (int[] heightArray : heights)                            // 每行当一次底边', hdr:1},
+    {p:'g0', t:'    max = Math.max(max, largestRectangleInHistogram(heightArray));'},
+    {p:'cur',t:'    int cur = i == array.length ? 0 : array[i];              // 哨兵'},
+    {p:'chk',t:'    while (!stack.isEmpty() && array[stack.peekFirst()] >= cur) {'},
+    {p:'pop',t:'        int height = array[stack.pollFirst()];'},
+    {p:'pop',t:'        int left = stack.isEmpty() ? 0 : stack.peekFirst() + 1;'},
+    {p:'pop',t:'        result = Math.max(result, height * (i - left));'},
+    {p:'push',t:'    stack.offerFirst(i);'}
+  ];
+
+  function build(M){
+    var R = M.length, C = M[0].length, frames = [];
+    var H = [], i, j;
+    for (i = 0; i < R; i++){ H.push([]); for (j = 0; j < C; j++) H[i].push(0); }
+    var best = 0, bestRect = null;
+    function copyH(){ return H.map(function(r){ return r.slice(); }); }
+    function push(o){
+      o.H = copyH(); o.best = best;
+      o.bestRect = bestRect ? JSON.parse(JSON.stringify(bestRect)) : null;
+      frames.push(o);
+    }
+
+    push({kind:'build', bi:-1, bj:-1, phase:'h0',
+      note:'① 先把 0/1 矩阵「拍扁」成高度矩阵\nheight[i][j] = 从 (i,j) 这一格往上数，连续有几个 1'});
+
+    for (i = 0; i < R; i++) for (j = 0; j < C; j++){
+      var was = M[i][j];
+      H[i][j] = (was === 1) ? (i > 0 ? H[i-1][j] + 1 : 1) : 0;
+      push({kind:'build', bi:i, bj:j, phase:'h1',
+        note: was === 1
+          ? 'matrix[' + i + '][' + j + '] = 1 → 柱子往上接一节\n' +
+            (i > 0 ? 'height[' + (i-1) + '][' + j + '] = ' + H[i-1][j] + '，加 1' : '第 0 行，头顶没东西，就是 1') +
+            '　→ height = ' + H[i][j]
+          : 'matrix[' + i + '][' + j + '] = 0 → 柱子断了\nheight = 0（这一格站不住人，上面再高也接不下来）'});
+    }
+
+    for (var r = 0; r < R; r++){
+      var a = H[r], n = C, st = [], rowBest = 0;
+      push({kind:'hist', row:r, st:[], i:-1, cur:null, phase:'g0', rowBest:0,
+        note:'② 第 ' + r + ' 行的高度 = [' + a.join(', ') + ']\n把这一行当成一排柱子，调一次 largestRectangleInHistogram\n（等于：把第 ' + r + ' 行当作矩形的底边）'});
+
+      for (var k = 0; k <= n; k++){
+        var cur = (k === n) ? 0 : a[k];
+        push({kind:'hist', row:r, st:st.slice(), i:k, cur:cur, phase:'cur', rowBest:rowBest,
+          note:'i = ' + k + '　cur = ' + (k === n ? '0（哨兵，逼所有人出栈）' : 'height[' + r + '][' + k + '] = ' + cur)});
+
+        var did = false;
+        while (st.length && a[st[0]] >= cur){
+          var top = st[0], h = a[top];
+          st.shift();
+          var left = st.length ? st[0] + 1 : 0;
+          var w = k - left, area = h * w, isNew = area > best;
+          if (area > rowBest) rowBest = area;
+          var rect = {row:r, left:left, right:k-1, h:h, w:w, area:area};
+          if (isNew){ best = area; bestRect = JSON.parse(JSON.stringify(rect)); }
+          push({kind:'hist', row:r, st:st.slice(), i:k, cur:cur, phase:'pop', pop:top,
+            rect:(h > 0 && w > 0) ? rect : null, rowBest:rowBest,
+            note:'弹出下标 ' + top + '，height = ' + h +
+                 '\nleft = ' + (st.length ? ('新栈顶 ' + st[0] + ' + 1 = ' + left) : '栈空 → 0') +
+                 '　宽 = ' + k + ' − ' + left + ' = ' + w +
+                 '\n面积 = ' + h + ' × ' + w + ' = ' + area + (isNew ? '　★ 全局新纪录' : '') +
+                 (h > 0 && w > 0 ? '\n→ 原矩阵里就是 行[' + (r-h+1) + ', ' + r + '] × 列[' + left + ', ' + (k-1) + ']' : '\n（高或宽为 0，不是矩形）')});
+          did = true;
+        }
+        if (!did && st.length){
+          push({kind:'hist', row:r, st:st.slice(), i:k, cur:cur, phase:'chk', rowBest:rowBest,
+            note:'栈顶高度 ' + a[st[0]] + ' < cur = ' + cur + '　挡不住，不弹'});
+        }
+        st.unshift(k);
+        push({kind:'hist', row:r, st:st.slice(), i:k, cur:cur, phase:'push', push:k, rowBest:rowBest,
+          note:(k === n ? '哨兵' : '下标 ' + k) + ' 入栈（无条件）\n栈底→栈顶 = [' + st.slice().reverse().join(', ') + ']'});
+      }
+      push({kind:'hist', row:r, st:[], i:-1, cur:null, phase:'g0', rowBest:rowBest,
+        note:'第 ' + r + ' 行跑完，本行最大 = ' + rowBest + '　全局最大 = ' + best});
+    }
+    push({kind:'end', phase:'', row:-1, st:[], i:-1, cur:null, rowBest:0,
+      note:'全部 ' + R + ' 行跑完\n答案 = ' + best + (bestRect ? '\n高 ' + bestRect.h + ' × 宽 ' + bestRect.w + '，底边在第 ' + bestRect.row + ' 行' : '')});
+    return frames;
+  }
+
+  function $(id){ return document.getElementById(id); }
+  var setIdx = 0, MAT, R, C, frames, step = 0, timer = null;
+
+  SETS.forEach(function(s, idx){
+    var b = document.createElement('button');
+    b.className = 'setbtn';
+    b.innerHTML = s.label + '　' + s.M.length + '×' + s.M[0].length + '<small>' + s.hint + '</small>';
+    b.onclick = function(){ setIdx = idx; load(); };
+    b.setAttribute('data-idx', idx);
+    $('sets').appendChild(b);
+  });
+
+  var codeEls = CODE.map(function(c){
+    var d = document.createElement('span');
+    d.className = 'cl' + (c.hdr ? ' hdr' : '');
+    d.textContent = c.t;
+    $('code').appendChild(d);
+    return {el:d, p:c.p};
+  });
+
+  function px(v){ return v + 'px'; }
+  function cssn(name){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)); }
+
+  function render(){
+    var f = frames[step];
+    var mc = cssn('--mc'), mg = cssn('--mg'), cw = cssn('--cw'), gap = cssn('--gap'), unit = cssn('--unit');
+    var isHist = f.kind === 'hist';
+    var built = f.kind !== 'build' || f.bi >= 0;
+
+    codeEls.forEach(function(c){
+      var on = (c.p === f.phase) || (c.p === 'chk' && f.phase === 'pop');
+      c.el.classList.toggle('on', !!on);
+    });
+
+    // 0/1 matrix
+    var gm = $('gridM'); gm.innerHTML = ''; gm.style.setProperty('--c', C);
+    for (var i = 0; i < R; i++) for (var j = 0; j < C; j++){
+      var d = document.createElement('div');
+      d.className = 'mcell' + (MAT[i][j] === 1 ? ' one' : '') +
+                    (f.kind === 'build' && f.bi === i && f.bj === j ? ' cur' : '') +
+                    (isHist && f.row === i ? ' rowlit' : '');
+      d.textContent = MAT[i][j];
+      gm.appendChild(d);
+    }
+    // rectangles projected onto the 0/1 matrix
+    [['best', f.bestRect], ['cur', f.rect]].forEach(function(p){
+      var kind = p[0], r = p[1];
+      if (!r || r.h <= 0 || r.w <= 0) return;
+      var top = r.row - r.h + 1;
+      var e = document.createElement('div');
+      e.className = 'mrect' + (kind === 'best' ? ' best' : '');
+      e.style.left = px(r.left * (mc + mg) - 2);
+      e.style.top = px(top * (mc + mg) - 2);
+      e.style.width = px(r.w * mc + (r.w - 1) * mg + 4);
+      e.style.height = px(r.h * mc + (r.h - 1) * mg + 4);
+      gm.appendChild(e);
+    });
+
+    // height matrix
+    var gh = $('gridH'); gh.innerHTML = ''; gh.style.setProperty('--c', C);
+    var filled = (f.kind === 'build') ? (f.bi * C + f.bj) : R * C;
+    for (var i2 = 0; i2 < R; i2++) for (var j2 = 0; j2 < C; j2++){
+      var d2 = document.createElement('div');
+      var done = (i2 * C + j2) <= filled;
+      d2.className = 'mcell' + (done && f.H[i2][j2] > 0 ? ' one' : '') + (done ? '' : ' blank') +
+                     (f.kind === 'build' && f.bi === i2 && f.bj === j2 ? ' cur' : '') +
+                     (isHist && f.row === i2 ? ' rowlit' : '');
+      d2.textContent = done ? f.H[i2][j2] : '·';
+      gh.appendChild(d2);
+    }
+
+    // histogram
+    var showHist = isHist && f.i >= 0;
+    $('field').style.opacity = showHist ? '1' : '.28';
+    var cols = C + 1;
+    var a = (f.row >= 0) ? f.H[f.row] : new Array(C).fill(0);
+    var inStack = {}; f.st.forEach(function(x){ inStack[x] = true; });
+    var maxh = Math.max(1, R);
+
+    var lc = $('laneChips'); lc.innerHTML = ''; lc.style.setProperty('--n', cols);
+    for (var c3 = 0; c3 < cols; c3++){
+      var slot = document.createElement('div'); slot.className = 'chipslot';
+      if (showHist && inStack[c3]){
+        var ch = document.createElement('div');
+        ch.className = 'chip' + (f.pop === c3 ? ' pop' : '') + (f.push === c3 ? ' push' : '');
+        ch.innerHTML = '<span class="ix">' + c3 + '</span><span class="va">h=' + (c3 === C ? 0 : a[c3]) + '</span>';
+        slot.appendChild(ch);
+        var tg = document.createElement('div'); tg.className = 'chiptag';
+        tg.textContent = f.pop === c3 ? '弹出' : (f.st.length === 1 ? '底·顶' : c3 === f.st[0] ? '栈顶' : c3 === f.st[f.st.length-1] ? '栈底' : '');
+        slot.appendChild(tg);
+      }
+      lc.appendChild(slot);
+    }
+
+    var lb = $('laneBars'); lb.innerHTML = ''; lb.style.setProperty('--n', cols); lb.style.setProperty('--maxh', maxh);
+    for (var c4 = 0; c4 < cols; c4++){
+      var s4 = document.createElement('div'); s4.className = 'barslot';
+      var bar = document.createElement('div');
+      var hh = (c4 === C) ? 0 : a[c4];
+      bar.className = 'bar' + (c4 === C ? ' sentinel' : (hh === 0 ? ' zero' : '')) +
+                      (showHist && inStack[c4] ? ' instack' : '') + (f.pop === c4 ? ' popping' : '');
+      bar.style.height = px(Math.max(hh * unit, 6));
+      bar.textContent = (c4 === C || hh === 0) ? '' : hh;
+      s4.appendChild(bar); lb.appendChild(s4);
+    }
+    if (f.rect && f.rect.h > 0 && f.rect.w > 0){
+      var rd = document.createElement('div');
+      rd.className = 'rect cur';
+      rd.style.left = px(f.rect.left * (cw + gap));
+      rd.style.width = px(f.rect.w * cw + (f.rect.w - 1) * gap);
+      rd.style.height = px(f.rect.h * unit);
+      rd.innerHTML = '<span class="rlabel">' + f.rect.h + ' × ' + f.rect.w + ' = ' + f.rect.area + '</span>';
+      lb.appendChild(rd);
+    }
+
+    var li = $('laneIx'); li.innerHTML = ''; li.style.setProperty('--n', cols);
+    for (var c5 = 0; c5 < cols; c5++){
+      var d5 = document.createElement('div');
+      d5.className = 'ixcell' + (showHist && c5 === f.i ? ' cur' : '') + (c5 === C ? ' sent' : '');
+      d5.textContent = (c5 === C) ? '哨兵' : c5;
+      li.appendChild(d5);
+    }
+
+    $('readout').innerHTML =
+      (f.kind === 'build'
+        ? '<span class="stat">阶段 <b>① 拍扁</b></span>' +
+          (f.bi >= 0 ? '<span class="stat">格子 (' + f.bi + ', ' + f.bj + ')</span>' : '')
+        : '<span class="stat">阶段 <b>② 逐行直方图</b></span>' +
+          (f.row >= 0 ? '<span class="stat hot">当前底边 = 第 <b>' + f.row + '</b> 行</span>' : '') +
+          (f.i >= 0 ? '<span class="stat">i = <b>' + f.i + '</b>　cur = <b>' + f.cur + '</b></span>' : '') +
+          '<span class="stat dq">栈（底→顶）= [' + f.st.slice().reverse().join(', ') + ']</span>' +
+          '<span class="stat">本行最大 <b>' + (f.rowBest || 0) + '</b></span>') +
+      '<span class="stat best">全局 max = <b>' + f.best + '</b></span>';
+
+    $('note').textContent = f.note;
+    $('counter').textContent = '第 ' + (step+1) + ' / ' + frames.length + ' 步';
+    $('prev').disabled = step === 0;
+    $('next').disabled = step === frames.length - 1;
+    $('skip').disabled = frames[step].kind !== 'build';
+    var hasRow = false, hasPop = false, q;
+    for (q = step+1; q < frames.length; q++){
+      if (!hasRow && frames[q].kind === 'hist' && frames[q].phase === 'g0' && frames[q].i === -1) hasRow = true;
+      if (!hasPop && frames[q].rect) hasPop = true;
+    }
+    $('jrow').disabled = !hasRow;
+    $('jpop').disabled = !hasPop;
+    if (step === frames.length - 1) stop();
+  }
+
+  function load(){
+    stop();
+    MAT = SETS[setIdx].M; R = MAT.length; C = MAT[0].length;
+    frames = build(MAT);
+    step = 0;
+    var btns = document.querySelectorAll('.setbtn');
+    for (var b = 0; b < btns.length; b++)
+      btns[b].setAttribute('aria-pressed', String(Number(btns[b].getAttribute('data-idx')) === setIdx));
+    render();
+  }
+  function stop(){ if (timer){ clearInterval(timer); timer = null; } $('play').textContent = '自动播放'; }
+  function jumpTo(test){
+    stop();
+    for (var q = step+1; q < frames.length; q++) if (test(frames[q])){ step = q; render(); return; }
+  }
+
+  $('next').onclick  = function(){ if (step < frames.length-1){ step++; render(); } };
+  $('prev').onclick  = function(){ if (step > 0){ step--; render(); } };
+  $('reset').onclick = function(){ stop(); step = 0; render(); };
+  $('skip').onclick  = function(){ jumpTo(function(x){ return x.kind === 'hist'; }); };
+  $('jrow').onclick  = function(){ jumpTo(function(x){ return x.kind === 'hist' && x.phase === 'g0' && x.i === -1; }); };
+  $('jpop').onclick  = function(){ jumpTo(function(x){ return !!x.rect; }); };
+  $('play').onclick = function(){
+    if (timer){ stop(); return; }
+    if (step === frames.length-1) step = 0;
+    $('play').textContent = '暂停';
+    timer = setInterval(function(){
+      if (step >= frames.length-1){ stop(); return; }
+      step++; render();
+    }, 950);
+  };
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight'){ e.preventDefault(); $('next').click(); }
+    if (e.key === 'ArrowLeft'){  e.preventDefault(); $('prev').click(); }
+  });
+  window.addEventListener('resize', function(){ render(); });
+
+  load();
+})();
+</script>
+</body>
+</html>
