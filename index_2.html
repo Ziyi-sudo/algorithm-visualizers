@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>面试 45 分钟执行顺序</title>
+<meta name="description" content="45 分钟技术面试的完整执行顺序：每一段该做什么、说哪句英文、什么时候可以沉默。">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#FAF9F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131417" media="(prefers-color-scheme: dark)">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+:root{
+  --paper:#FAF9F6;
+  --card:#FFFFFF;
+  --ink:#16171B;
+  --ink-2:#4A4943;
+  --muted:#78766D;
+  --rule:#E4E1DA;
+  --rule-soft:#EFEDE7;
+  --speak:#0B6B5B;
+  --speak-soft:#DCEDE9;
+  --silent:#A9A69B;
+  --silent-soft:#EAE8E1;
+  --warn:#A8412A;
+  --shadow:0 1px 2px rgba(22,23,27,.05), 0 8px 24px -16px rgba(22,23,27,.18);
+
+  --f-head:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --f-say:"Source Serif 4",Georgia,"Songti SC",serif;
+  --f-zh:"Archivo",-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#131417;
+    --card:#191A1E;
+    --ink:#E9E7E1;
+    --ink-2:#BFBCB3;
+    --muted:#8E8B82;
+    --rule:#2C2E33;
+    --rule-soft:#232529;
+    --speak:#5FC7B0;
+    --speak-soft:#16302C;
+    --silent:#6E6B63;
+    --silent-soft:#222427;
+    --warn:#E08A70;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#131417;
+  --card:#191A1E;
+  --ink:#E9E7E1;
+  --ink-2:#BFBCB3;
+  --muted:#8E8B82;
+  --rule:#2C2E33;
+  --rule-soft:#232529;
+  --speak:#5FC7B0;
+  --speak-soft:#16302C;
+  --silent:#6E6B63;
+  --silent-soft:#222427;
+  --warn:#E08A70;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+img{max-width:100%}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--f-zh);
+  font-size:15px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+code{font-family:var(--f-mono);font-size:.9em}
+.wrap{max-width:840px;margin:0 auto;padding:48px 24px 96px}
+
+/* ---------- masthead ---------- */
+.mast{display:flex;flex-direction:column;gap:14px;padding-bottom:28px;border-bottom:1px solid var(--rule)}
+.eyebrow{
+  font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--muted);
+}
+h1{
+  font-family:var(--f-head);font-weight:700;font-size:clamp(30px,5.2vw,42px);
+  line-height:1.08;letter-spacing:-.02em;margin:0;text-wrap:balance;
+}
+.dek{margin:0;max-width:60ch;color:var(--ink-2);font-size:15px}
+.dek b{color:var(--ink);font-weight:600}
+
+/* ---------- legend + controls ---------- */
+.bar-top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;margin-top:6px}
+.key{display:flex;align-items:center;gap:7px;font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.swatch{width:14px;height:9px;border-radius:2px;display:inline-block}
+.swatch.sp{background:var(--speak)}
+.swatch.si{background:var(--silent-soft);border:1px solid var(--silent)}
+.ctrls{margin-left:auto;display:flex;gap:8px}
+button.btn{
+  font-family:var(--f-mono);font-size:11.5px;letter-spacing:.04em;
+  background:var(--card);color:var(--ink-2);border:1px solid var(--rule);
+  border-radius:999px;padding:6px 14px;cursor:pointer;
+  transition:border-color .15s,color .15s;
+}
+button.btn:hover{border-color:var(--speak);color:var(--speak)}
+button.btn:focus-visible{outline:2px solid var(--speak);outline-offset:2px}
+
+/* ---------- overview band ---------- */
+.band-sec{margin:36px 0 8px}
+.band{display:flex;height:34px;border-radius:5px;overflow:hidden;border:1px solid var(--rule)}
+.band span{position:relative}
+.band .sp{background:var(--speak)}
+.band .si{
+  background:var(--silent-soft);
+  background-image:repeating-linear-gradient(-45deg,transparent 0 4px,var(--silent) 4px 5px);
+}
+.band-ticks{
+  display:flex;margin-top:7px;font-family:var(--f-mono);font-size:10.5px;
+  color:var(--muted);font-variant-numeric:tabular-nums;
+}
+.band-ticks span{white-space:nowrap}
+.band-note{margin:12px 0 0;font-size:13.5px;color:var(--muted);max-width:62ch}
+.band-note b{color:var(--ink-2);font-weight:600}
+
+/* ---------- section headers ---------- */
+h2{
+  font-family:var(--f-head);font-weight:600;font-size:13px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted);
+  margin:56px 0 20px;padding-bottom:9px;border-bottom:1px solid var(--rule);
+}
+
+/* ---------- timeline ---------- */
+.tl{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:62px 3px 1fr;gap:0 18px;align-items:stretch}
+.tc{
+  font-family:var(--f-mono);font-size:11.5px;font-weight:500;color:var(--muted);
+  padding-top:16px;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+}
+.spine{border-radius:2px;background:var(--speak)}
+.row.silent .spine{
+  background:var(--silent-soft);
+  background-image:repeating-linear-gradient(180deg,transparent 0 5px,var(--silent) 5px 6px);
+}
+.rbody{padding:14px 0 22px;min-width:0}
+.row + .row .rbody{border-top:1px solid var(--rule-soft)}
+
+.tag{
+  display:inline-block;font-family:var(--f-mono);font-size:10px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:3px;
+  vertical-align:2px;margin-left:9px;
+}
+.tag.sp{background:var(--speak-soft);color:var(--speak)}
+.tag.si{background:var(--silent-soft);color:var(--muted)}
+h3{
+  font-family:var(--f-head);font-weight:600;font-size:17.5px;letter-spacing:-.01em;
+  margin:0 0 6px;color:var(--ink);
+}
+.do{margin:0;color:var(--ink-2);font-size:14px}
+.do + .do{margin-top:4px}
+
+.say{
+  margin:12px 0 0;padding:0 0 0 15px;border-left:2px solid var(--speak);
+  display:flex;flex-direction:column;gap:7px;
+}
+.say q{
+  font-family:var(--f-say);font-size:15.5px;line-height:1.5;color:var(--ink);
+  quotes:"\201C" "\201D";display:block;
+}
+.say q em{font-style:normal;font-weight:600;color:var(--speak)}
+.why{
+  margin:10px 0 0;font-size:13px;color:var(--muted);line-height:1.6;
+  padding-left:15px;border-left:2px solid var(--rule-soft);
+}
+.why b{color:var(--ink-2);font-weight:600}
+
+/* ---------- two-column contrast ---------- */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.box{
+  background:var(--card);border:1px solid var(--rule);border-radius:8px;
+  padding:20px;box-shadow:var(--shadow);
+}
+.box h4{
+  font-family:var(--f-mono);font-size:11px;font-weight:600;letter-spacing:.11em;
+  text-transform:uppercase;margin:0 0 14px;
+}
+.box.ok h4{color:var(--speak)}
+.box.bad h4{color:var(--warn)}
+.box ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:13px}
+.box li{font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.box li strong{display:block;color:var(--ink);font-weight:600;font-size:14px;margin-bottom:2px}
+.box li q{
+  font-family:var(--f-say);color:var(--ink);font-size:14px;display:block;margin-top:5px;
+  quotes:"\201C" "\201D";
+}
+.box.bad li q{color:var(--warn)}
+
+/* ---------- rescue lines ---------- */
+.rescue{display:flex;flex-direction:column;gap:2px;margin:0}
+.resc{
+  display:grid;grid-template-columns:150px 1fr;gap:20px;align-items:baseline;
+  padding:13px 0;border-top:1px solid var(--rule-soft);
+}
+.resc:first-child{border-top:none}
+.resc dt{font-size:13.5px;color:var(--muted)}
+.resc dd{margin:0;font-family:var(--f-say);font-size:15px;color:var(--ink);line-height:1.5}
+
+/* ---------- loop ---------- */
+.loop{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.step{
+  background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:16px;
+  display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow);
+}
+.step .n{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;color:var(--speak);font-weight:600}
+.step .t{font-family:var(--f-head);font-weight:600;font-size:14.5px}
+.step .d{font-size:12.5px;color:var(--muted);line-height:1.5}
+
+/* ---------- checks ---------- */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--rule-soft)}
+th{
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;border-bottom:1px solid var(--rule);
+}
+td:last-child{font-family:var(--f-mono);font-size:12.5px;color:var(--speak);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.kicker{
+  margin-top:56px;padding:22px 24px;border-radius:8px;
+  background:var(--speak-soft);color:var(--ink);font-size:14.5px;line-height:1.7;
+}
+.kicker b{font-weight:600}
+
+footer{
+  margin-top:48px;padding-top:20px;border-top:1px solid var(--rule);
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--muted);
+}
+
+/* ---------- speech-only mode ---------- */
+:root.only-speech .why,
+:root.only-speech .do,
+:root.only-speech .band-note,
+:root.only-speech .step .d,
+:root.only-speech .plain,
+:root.only-speech .kicker{display:none}
+
+@media (max-width:640px){
+  .wrap{padding:32px 18px 72px}
+  .pair,.loop{grid-template-columns:1fr}
+  .row{grid-template-columns:52px 3px 1fr;gap:0 13px}
+  .resc{grid-template-columns:1fr;gap:4px}
+  .ctrls{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media print{
+  .ctrls{display:none}
+  body{background:#fff;color:#000;font-size:11pt}
+  .wrap{max-width:none;padding:0}
+  .row,.box,.step{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="eyebrow">ALG Round 3 · Execution Order</div>
+    <h1>面试 45 分钟执行顺序</h1>
+    <p class="dek">什么时候说、什么时候闭嘴、每一段说什么。<b>沉默不是问题，没被标注的沉默才是。</b>三段合法沉默都有各自的开场句，全在下面。</p>
+    <div class="bar-top">
+      <span class="key"><i class="swatch sp"></i>出声</span>
+      <span class="key"><i class="swatch si"></i>沉默（已标注）</span>
+      <span class="ctrls">
+        <button class="btn" id="tg" type="button">只看要说的话</button>
+        <button class="btn" id="th" type="button" aria-label="切换深浅色">◐</button>
+      </span>
+    </div>
+  </header>
+
+  <section class="band-sec" aria-label="45 分钟出声与沉默分布">
+    <div class="band">
+      <span class="sp" style="flex:0.25" title="申请沉默"></span>
+      <span class="si" style="flex:1.5" title="默读题面"></span>
+      <span class="sp" style="flex:6.25" title="复述 · 提问 · 推导 · 归约 · 方案"></span>
+      <span class="si" style="flex:17" title="写代码"></span>
+      <span class="sp" style="flex:20" title="测试 · 追问 · 反问"></span>
+    </div>
+    <div class="band-ticks">
+      <span style="flex:8">0:00</span>
+      <span style="flex:17">8:00</span>
+      <span style="flex:8">25:00</span>
+      <span style="flex:12;text-align:right">45:00</span>
+    </div>
+    <p class="band-note">合法沉默只有 <b>18 分钟</b>，其中 17 分钟是写代码。也就是说：<b>前 8 分钟你几乎一直在说话</b>，而那 8 分钟决定了这场面试的评分上限。</p>
+  </section>
+
+  <h2>第一段 · 开局 8 分钟</h2>
+
+  <div class="tl">
+
+    <div class="row">
+      <div class="tc">0:00</div><div class="spine"></div>
+      <div class="rbody">
+        <h3>申请沉默<span class="tag sp">说</span></h3>
+        <p class="do">拿到题的第一个动作是开口，但不是开始分析——是给自己买 90 秒。</p>
+        <div class="say"><q>Let me read through this once — <em>I'll be quiet for a minute or two.</em></q></div>
+        <p class="why">没有这句，接下来的沉默在他眼里是「卡住了」；有了这句，同样的沉默是「在读题」。<b>一句话的成本，改变整段的性质。</b></p>
+      </div>
+    </div>
+
+    <div class="row silent">
+      <div class="tc">0:15</div><div class="spine"></div>
+      <div class="rbody">
+        <h3>默读 · 圈限定词<span class="tag si">沉默</span></h3>
+        <p class="do">圈出所有限定词：strictly / any / at most / distinct / subarray / positive。看不懂的打 <code>?</code>，不查、不停。</p>
+        <p class="why">题面超过三屏就中途冒一句 <span style="font-family:var(--f-say)">“Still reading — there's a lot of setup here.”</span> 让他知道你没死机。</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="tc">1:45</div><div class="spine"></div>
+      <div class="rbody">
+        <h3>复述题目<span class="tag sp">说</span></h3>
+        <p class="do">用自己的话，不是念题。20 秒。</p>
+        <div class="say"><q>So, to make sure I understand — we're given an array of points, and we need to return <em>the size of</em> the largest subset where every pair forms a line with positive slope.</q></div>
+        <p class="why">这一步排在提问前面，不能换。复述会<b>当场暴露你读反了哪个限定词</b>——他会打断你纠正，这是白捡的一次免费校验。而且它给了你 20 秒去组织问题；直接开始问，你问的往往是最先想到的那种废问题。</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="tc">2:15</div><div class="spine"></div>
+      <div class="rbody">
+        <h3>澄清提问 ×3<span class="tag sp">说</span></h3>
+        <p class="do">只问<b>会改变代码</b>的问题。一个都不问，评分表上那一栏直接空着。</p>
+        <div class="say">
+          <q>Can the input contain <em>duplicate</em> points, or two points with the same x?</q>
+          <q>Roughly <em>how large</em> is the input? That'll tell me whether O(n²) is acceptable.</q>
+          <q>Just to confirm the return value — if there's <em>no valid pair at all</em>, I return 0, not 1?</q>
+        </div>
+        <p class="why">这三个各自对应代码里一处真实分支：垂直线处理、复杂度选型、最后一行。像「数组会是 null 吗」这种不影响代码的，他看得出你在凑数。</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="tc">3:30</div><div class="spine"></div>
+      <div class="rbody">
+        <h3>推约束 → 归约<span class="tag sp">说</span></h3>
+        <p class="do">这是全场最值钱的 150 秒。<b>推导</b>和<b>断言</b>在评分上是两档：直接说「这是 LIS」，他不知道你是懂了还是背过。</p>
+        <div class="say">
+          <q>The slope is (y₂−y₁)/(x₂−x₁). For that to be positive, first <em>the denominator can't be zero</em> — otherwise it's a vertical line and the slope is undefined.</q>
+          <q>Second, numerator and denominator need the same sign — so if x₂ &gt; x₁, then y₂ &gt; y₁, <em>strictly</em>.</q>
+          <q><em>Strict inequality is transitive</em>, so if consecutive pairs increase, every pair does.</q>
+          <q>So this <em>reduces to</em> the longest strictly increasing subsequence of the y-values.</q>
+        </div>
+        <p class="why">口语提醒：<b>strictly / distinct / transitive 要重读</b>。这是你和只会背模版的人之间最短的区分信号。模型名要说全——“the longest subsequence” 不算数，最长子序列就是整个数组。</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="tc">6:00</div><div class="spine"></div>
+      <div class="rbody">
+        <h3>Edge case + 复杂度 + 递球<span class="tag sp">说</span></h3>
+        <p class="do">主动踩坑，别等他挖。而且要给<b>具体例子</b>——只说「edge case 是返回 0」很虚。</p>
+        <div class="say">
+          <q>Before I code — one edge case: for three points on a horizontal line, like (0,0), (1,0), (2,0), the answer is 0, not 1 and not 3.</q>
+          <q>I'll start with the O(n²) DP — it's easier to get right and handles the same-x case cleanly. <em>Does that work for you?</em></q>
+        </div>
+        <p class="why">递球是同步，不是示弱。<b>被叫停反而是赚的</b>——省得写完 20 行才发现方向不对。而且这个具体例子等下测试环节能直接复用。</p>
+      </div>
+    </div>
+
+    <div class="row silent">
+      <div class="tc">8:00</div><div class="spine"></div>
+      <div class="rbody">
+        <h3>写代码<span class="tag si">沉默为主</span></h3>
+        <p class="do">最长的一段合法沉默，<b>前提是方向已经同步且他点过头</b>。方向没同步就闷头写，那不是沉默，是失联。</p>
+        <p class="do">不是静音，也不是逐行解说：<b>每 3–5 分钟一句，只说意图不念语法</b>。</p>
+        <div class="say">
+          <q>I'm handling the <em>duplicate</em> case here.</q>
+          <q>This is just the guard for the empty input.</q>
+          <q>Let me come back to this edge case in a second.</q>
+        </div>
+        <p class="why">❌ “for int i equals zero, i less than n” → 流水账，显得你只会敲键盘<br>✅ “for each point, I look back at everything before it” → 决策依据<br>他也是程序员，代码他看得懂；他让你讲是想看<b>思维清晰度</b>。</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="tc">25:00</div><div class="spine"></div>
+      <div class="rbody">
+        <h3>Walkthrough + 测试<span class="tag sp">说</span></h3>
+        <p class="do">写完<b>主动开口</b>，别等他说「试试这个」。这段分数和写代码一样重，也是最多人省略的一段。</p>
+        <div class="say">
+          <q><em>Let me walk through an example to verify.</em></q>
+          <q>[(0,0),(1,0),(2,0)] — y is [0,0,0], no strict increase, so LIS is 1, and since that's less than 2, we return 0. ✓ That's the edge case I mentioned.</q>
+        </div>
+        <p class="why">四个例子就够，但要<b>各对应一条你前面 flag 过的</b>：一个正常通过、一个触发 return 0、一个触发同 x、一个空/单元素。形成闭环，他会觉得你很有条理。</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="tc">33:00</div><div class="spine"></div>
+      <div class="rbody">
+        <h3>Follow-up + 反问<span class="tag sp">说</span></h3>
+        <p class="do">答不出细节没关系——能说出方向就拿到分了。最后一定要留问题问他。</p>
+        <div class="say">
+          <q>That would turn it into a <em>3D dominance</em> problem — sort away one dimension, then a BIT on the other two.</q>
+          <q>I have the O(n²) working. Given the time, should I optimize, or walk through more cases?</q>
+        </div>
+        <p class="why">最后那句把优先级交给他——<b>他知道评分表上还缺什么</b>，你不知道。</p>
+      </div>
+    </div>
+
+  </div>
+
+  <h2>沉默的两种性质</h2>
+  <div class="pair">
+    <div class="box ok">
+      <h4>合法 · 都有开场句</h4>
+      <ul>
+        <li><strong>读题（~90 秒）</strong><q>Let me read through this once.</q></li>
+        <li><strong>中途想（≤20 秒一段）</strong><q>Let me think for a second — I want to get the boundary right.</q></li>
+        <li class="plain"><strong>写代码（最长）</strong>前提是方向已经讲完并被认可，否则不合法。</li>
+      </ul>
+    </div>
+    <div class="box bad">
+      <h4>要命 · 每一秒都在扣分</h4>
+      <ul>
+        <li><strong>他刚问完你的沉默</strong><q>Good question, let me think about that.</q></li>
+        <li><strong>偷偷改 bug 的沉默</strong><q>Actually, wait — that doesn't handle the same-x case.</q></li>
+        <li><strong>卡住瞪屏幕</strong><q>I'm not seeing the optimal approach yet — let me start with brute force.</q></li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>卡住时的保命句</h2>
+  <dl class="rescue">
+    <div class="resc"><dt>需要想一下</dt><dd>Let me think about this for a second — I want to make sure I get the boundary right.</dd></div>
+    <div class="resc"><dt>某个词卡住了</dt><dd>…the thing that keeps track of — sorry, the auxiliary array.</dd></div>
+    <div class="resc"><dt>发现自己错了</dt><dd>Actually, wait — that doesn't handle the same-x case. Let me fix that.</dd></div>
+    <div class="resc"><dt>完全没头绪</dt><dd>Let me start with brute force and look for the redundant work.</dd></div>
+    <div class="resc"><dt>需要提示</dt><dd>I'm considering two directions — sorting first, or a graph formulation. Does one seem more promising?</dd></div>
+    <div class="resc"><dt>时间快到了</dt><dd>Given the time, should I optimize, or walk through more test cases?</dd></div>
+  </dl>
+
+  <h2>面试之外 · 每题 60 秒</h2>
+  <div class="loop">
+    <div class="step"><span class="n">45 SEC</span><span class="t">出声 · 录音</span><span class="d">只讲 1:45–8:00 那一段的四个点：Return → Constraint → Reduction → Edge case。卡壳不停下来查。</span></div>
+    <div class="step"><span class="n">15 SEC</span><span class="t">写两行</span><span class="d">❌ 死因：半句话，具体到误判。<br>💬 金句：≤15 词，是句式不是台词。</span></div>
+    <div class="step"><span class="n">DAILY</span><span class="t">听 1–2 段</span><span class="d">挑当时就觉得讲得最烂的那道。只找填充词、中译英的停顿、磕巴的词。每题都听，两天就放弃。</span></div>
+    <div class="step"><span class="n">WEEKLY</span><span class="t">连读金句</span><span class="d">出声读三遍。目标是 reduces to / transitive / guaranteed that 变成条件反射。平时不回看。</span></div>
+  </div>
+
+  <h2>5 道题后的验收</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>指标</th><th>怎么测</th><th>目标</th></tr></thead>
+      <tbody>
+        <tr><td>填充词（um / like / 那个）</td><td>听第 5 段录音数一遍</td><td>&lt; 3 次</td></tr>
+        <tr><td>四个点是否讲全</td><td>翻卡片看有没有缺项</td><td>5 道中 ≥ 4 道</td></tr>
+        <tr><td>reduces to 是否脱口而出</td><td>自己有没有卡顿感</td><td>不用想</td></tr>
+        <tr><td>沉默前有没有标注</td><td>录音开头 15 秒</td><td>每次都有</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="kicker">如果 5 道之后填充词没降，瓶颈不在流程，在你还是<b>先组中文再翻译</b>。那要换练法：直接出声读限定词表（strictly / distinct / guaranteed that / at most），把它们练成条件反射，跳过中文那一层。</p>
+
+  <footer>ALG Round 3 · Execution Order</footer>
+
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement;
+
+  // 主题：跟随系统，可手动覆盖
+  try{
+    var saved=localStorage.getItem('ic-theme');
+    if(saved==='dark'||saved==='light') root.setAttribute('data-theme',saved);
+  }catch(e){}
+
+  document.getElementById('th').addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme');
+    var isDark=cur?cur==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next=isDark?'light':'dark';
+    root.setAttribute('data-theme',next);
+    try{localStorage.setItem('ic-theme',next);}catch(e){}
+  });
+
+  // 跟读模式：只留要说的英文
+  var tg=document.getElementById('tg');
+  tg.addEventListener('click',function(){
+    var on=root.classList.toggle('only-speech');
+    tg.textContent=on?'显示全部':'只看要说的话';
+  });
+})();
+</script>
+</body>
+</html>
