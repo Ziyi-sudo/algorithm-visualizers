@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LIS 最小结尾表推演台</title>
+<meta name="description" content="LaiCode 1 Longest Ascending Subsequence 的 O(n log n) 解法：tbl[k] = 长度 k 的最小结尾，逐步演示二分与追加/替换。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#EDF0F4; --surface:#FFFFFF; --surface-2:#F4F6F9;
+  --ink:#11161C; --muted:#5B6572; --line:#D1D7E0; --line-strong:#A6B0BE;
+  --dq:#4235A6;   --dq-soft:#E7E4F8;  --dq-edge:#AEA4E3;   /* 二分窗口 */
+  --hot:#A65314;  --hot-soft:#FBEADB; --hot-edge:#E4B583;  /* 替换 */
+  --new:#146348;  --new-soft:#D9EDE4; --new-edge:#8DC7B0;  /* 追加 */
+  --dim:#7C8798;  --dim-soft:#E6EAEF;
+  --shadow:0 1px 0 rgba(17,22,28,.03), 0 12px 32px -24px rgba(17,22,28,.6);
+  --sans:"Archivo","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --cw:56px; --gap:8px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1015; --surface:#161A21; --surface-2:#1C212A;
+    --ink:#E1E5EB; --muted:#8A94A2; --line:#282F39; --line-strong:#3C4450;
+    --dq:#9C91EF; --dq-soft:#1D1A32; --dq-edge:#393163;
+    --hot:#E9A257; --hot-soft:#2E2214; --hot-edge:#5A4426;
+    --new:#5CC59B; --new-soft:#11281E; --new-edge:#254A3A;
+    --dim:#6C7686; --dim-soft:#232A33;
+    --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -24px rgba(0,0,0,.95);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1015; --surface:#161A21; --surface-2:#1C212A;
+  --ink:#E1E5EB; --muted:#8A94A2; --line:#282F39; --line-strong:#3C4450;
+  --dq:#9C91EF; --dq-soft:#1D1A32; --dq-edge:#393163;
+  --hot:#E9A257; --hot-soft:#2E2214; --hot-edge:#5A4426;
+  --new:#5CC59B; --new-soft:#11281E; --new-edge:#254A3A;
+  --dim:#6C7686; --dim-soft:#232A33;
+  --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -24px rgba(0,0,0,.95);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:40px 22px 76px;display:flex;flex-direction:column;gap:24px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 9px}
+h1{font-size:clamp(27px,4.2vw,38px);line-height:1.14;margin:0 0 11px;font-weight:700;letter-spacing:-.022em;text-wrap:balance}
+.thesis{margin:0;max-width:62ch;color:var(--muted);font-size:15.5px}
+.thesis b{color:var(--ink);font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
+.pad{padding:22px}
+.card h2{font-size:18px;margin:0 0 12px;font-weight:600;letter-spacing:-.012em}
+.card h3{font-size:14.5px;margin:0 0 6px;font-weight:600}
+.card p{margin:0 0 11px;max-width:66ch}
+.card p:last-child{margin-bottom:0}
+
+.sets{display:flex;gap:8px;flex-wrap:wrap;padding:16px 22px 14px;border-bottom:1px solid var(--line)}
+.sets-label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);align-self:center;margin-right:2px}
+.setbtn{font-family:var(--mono);font-size:12px;padding:6px 11px;border-radius:7px;border:1px solid var(--line-strong);
+        background:var(--surface);color:var(--ink);cursor:pointer;text-align:left;transition:background .14s,border-color .14s,color .14s}
+.setbtn small{display:block;font-family:var(--sans);font-size:10.5px;color:var(--muted);margin-top:1px}
+.setbtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.setbtn[aria-pressed="true"] small{color:var(--surface);opacity:.75}
+.setbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.code{font-family:var(--mono);font-size:12px;line-height:1.9;background:var(--surface-2);border-bottom:1px solid var(--line);padding:14px 22px;overflow-x:auto}
+.cl{display:block;white-space:pre;padding:0 8px;margin:0 -8px;border-radius:5px;color:var(--muted);border-left:2px solid transparent;transition:background .16s,color .16s}
+.cl.on{background:var(--dq-soft);color:var(--ink);border-left-color:var(--dq);font-weight:500}
+.cl.sec{color:var(--muted);opacity:.6;font-size:11px;padding-top:4px}
+
+.stage{padding:20px 22px 6px;overflow-x:auto}
+.lane{display:grid;gap:var(--gap);grid-template-columns:repeat(var(--n),var(--cw));min-width:min-content}
+.lane-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 7px}
+.lane-label b{color:var(--dq);font-weight:700;letter-spacing:0;text-transform:none;font-size:11.5px}
+.block{margin-bottom:20px}
+
+.cell{height:50px;display:grid;place-items:center;border-radius:8px;border:1.5px solid var(--line);
+      background:var(--surface-2);font-family:var(--mono);font-size:19px;font-weight:600;
+      transition:background .16s,border-color .16s,color .16s,transform .16s}
+.cell.unused{color:var(--dim);background:transparent;border-style:dashed;font-size:15px;font-weight:400}
+.cell.cur{border-color:var(--ink);border-width:2.5px}
+.cell.done{opacity:.42}
+.cell.inwin{background:var(--dq-soft);border-color:var(--dq-edge);color:var(--dq)}
+.cell.mid{background:var(--dq);border-color:var(--dq);color:var(--surface);transform:translateY(-3px)}
+.cell.scan{background:var(--hot-soft);border-color:var(--hot);color:var(--hot)}
+.cell.hit{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.cell.wnew{background:var(--new-soft);border-color:var(--new);color:var(--new);transform:translateY(-4px)}
+.cell.wrep{background:var(--hot-soft);border-color:var(--hot);color:var(--hot);transform:translateY(-4px)}
+.sub{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;padding-top:5px;line-height:1.3}
+.sub.cur{color:var(--ink);font-weight:700}
+.sub.unused{color:var(--dim);opacity:.6}
+.ptr{font-family:var(--mono);font-size:10px;text-align:center;height:20px;padding-top:2px;line-height:1.2;color:var(--dq);font-weight:700}
+.ptr.res{color:var(--new)}
+
+.readout{display:flex;gap:9px;flex-wrap:wrap;padding:2px 22px 0}
+.stat{font-family:var(--mono);font-size:12px;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:var(--surface-2);font-variant-numeric:tabular-nums}
+.stat b{font-weight:700}
+.stat.dq{border-color:var(--dq-edge);background:var(--dq-soft);color:var(--dq)}
+.stat.new{border-color:var(--new-edge);background:var(--new-soft);color:var(--new)}
+.stat.hot{border-color:var(--hot-edge);background:var(--hot-soft);color:var(--hot)}
+.note{margin:14px 22px 0;font-family:var(--mono);font-size:12.5px;line-height:1.7;white-space:pre-line;min-height:76px;
+      padding:11px 13px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2)}
+.controls{border-top:1px solid var(--line);background:var(--surface-2);padding:14px 22px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:0 0 12px 12px;margin-top:18px}
+button.ctl{font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--ink);background:var(--surface);
+        border:1px solid var(--line-strong);border-radius:8px;padding:8px 15px;cursor:pointer;transition:background .14s,border-color .14s}
+button.ctl:hover:not(:disabled){border-color:var(--ink)}
+button.ctl:disabled{opacity:.4;cursor:not-allowed}
+button.ctl:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button.ctl.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+button.ctl.jump{font-family:var(--mono);font-size:12px;padding:8px 12px;border-color:var(--new-edge);color:var(--new);background:var(--new-soft)}
+.counter{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+
+.q{border-left:3px solid var(--dq);padding-left:16px;margin-bottom:22px}
+.q:last-child{margin-bottom:0}
+.q h3{color:var(--dq)}
+.math{font-family:var(--mono);font-size:12.5px;line-height:1.85;background:var(--surface-2);border:1px solid var(--line);
+      border-radius:9px;padding:12px 14px;overflow-x:auto;margin:10px 0 0;white-space:pre}
+code{font-family:var(--mono);font-size:.9em;background:var(--surface-2);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:13px;margin-top:10px}
+.tw{overflow-x:auto}
+th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;border-bottom:1px solid var(--line-strong)}
+td.m{font-family:var(--mono);font-size:12.5px}
+footer{color:var(--muted);font-size:12.5px;text-align:center;padding-top:6px}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+@media (max-width:640px){ :root{--cw:46px} .counter{margin-left:0} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">1 · Longest Ascending Subsequence · Method 2</p>
+    <h1>每个长度，只留最小的那个结尾</h1>
+    <p class="thesis"><code>tbl[k]</code> = 所有<b>长度为 k</b> 的上升子序列里，<b>结尾最小</b>的那个值。结尾越小越容易接后面的人，所以每个长度只需要留一个代表。<code>tbl</code> 天生严格递增，于是能二分——<b>O(n²) 变 O(n log n) 靠的不是把循环写快，是换了一个有序的状态</b>。</p>
+  </header>
+
+  <section class="card">
+    <div class="sets" id="sets"><span class="sets-label">数据组</span></div>
+    <div class="code" id="code"></div>
+
+    <div class="stage">
+      <div class="block">
+        <p class="lane-label">输入 array</p>
+        <div class="lane" id="laneA"></div>
+        <div class="lane" id="laneAi"></div>
+      </div>
+      <div class="block">
+        <p class="lane-label">tbl · <b>tbl[k] = 长度 k 的最小结尾</b>（1 开始，灰色虚线 = 还没用到）</p>
+        <div class="lane" id="laneT"></div>
+        <div class="lane" id="laneTk"></div>
+        <div class="lane" id="laneTp"></div>
+      </div>
+    </div>
+
+    <div class="readout" id="readout"></div>
+    <div class="note" id="note" aria-live="polite"></div>
+
+    <div class="controls">
+      <button class="ctl" id="prev">← 上一步</button>
+      <button class="ctl primary" id="next">下一步 →</button>
+      <button class="ctl" id="play">自动播放</button>
+      <button class="ctl" id="reset">重置</button>
+      <button class="ctl jump" id="jnext">跳到下一个元素</button>
+      <button class="ctl jump" id="jadd">跳到下一次追加</button>
+      <span class="counter" id="counter"></span>
+    </div>
+  </section>
+
+  <section class="card pad">
+    <h2>把老师的代码翻译成人话</h2>
+
+    <div class="q">
+      <h3><code>tbl[k]</code> 到底是什么</h3>
+      <p>不是"第 k 个元素"，是「<b>长度为 k 的上升子序列，最好的那个结尾</b>」。</p>
+      <p>为什么盯"最小结尾"：同样是长度 4 的上升子序列，结尾是 <code>100</code> 还是 <code>7</code>？当然 <code>7</code> 好——<b>结尾越小，后面越容易接上</b>。所以每个长度只留最优代表，别的都不用记。</p>
+      <p><code>result</code> 就是 <code>tbl</code> 里已经用到的最大下标，也就是<b>目前最长的上升子序列长度</b>，最后直接返回它。</p>
+    </div>
+
+    <div class="q">
+      <h3><code>find(tbl, 1, result, array[i])</code> 在找什么</h3>
+      <p>找「<b>最大的那个 j，使得 tbl[j] &lt; array[i]</b>」——也就是「我能接在多长的序列后面」。</p>
+      <pre class="math">找到 j  →  长度 j 的那条序列，结尾比我小，我能接上去
+        →  我能凑出长度 j + 1 的序列
+        →  所以要写进 tbl[j + 1]
+
+找不到（返回 0）→ 我比 tbl 里所有值都小
+                → 只能自己当长度 1 的新代表 → 写 tbl[1]</pre>
+      <p style="margin-top:11px">因为 <code>tbl</code> 严格递增，这个"最大的更小值"能二分，`O(log n)`。这就是 <code>O(n²)</code> 里那层线性内循环被换掉的地方。</p>
+    </div>
+
+    <div class="q">
+      <h3>两个分支：追加 还是 替换</h3>
+      <pre class="math">if (index == result)  tbl[++result] = array[i];   // 追加
+else                  tbl[index + 1] = array[i];  // 替换</pre>
+      <p style="margin-top:11px"><b>追加</b>：<code>index == result</code> 说明我比 <code>tbl</code> 里所有值都大，能接在最长那条后面 → 最长长度 <b>+1</b>。</p>
+      <p><b>替换</b>：我接不到最长那条，但我能给「长度 <code>index+1</code>」提供一个<b>更小的结尾</b>。长度不变，但这条路以后更好走。</p>
+      <p><b>只有"追加"会让答案变大。</b>"替换"一次都不改 <code>result</code>，它是在为将来铺路。切到「全递减」那组看：全程只有替换，`result` 永远是 1。</p>
+    </div>
+
+    <div class="q">
+      <h3>⚠️ tbl 不是一个真实的子序列</h3>
+      <p>只有 <code>result</code>（长度）是可信的。<code>tbl</code> 里的值可能来自数组的不同位置、顺序甚至对不上。</p>
+      <pre class="math">{3, 4, 1}  →  最后 tbl = [_, 1, 4]
+但 1 在 4 的【后面】，[1,4] 根本不是这个数组的子序列
+result = 2 是对的（真实答案是 [3,4]）</pre>
+      <p style="margin-top:11px">要真的还原出那条子序列，得另外开一个 <code>parent[]</code> 记前驱。<b>面试常见追问。</b></p>
+    </div>
+
+    <div class="q">
+      <h3>老师这版 和 常见写法 的对照</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th></th><th>老师这版</th><th>常见写法（tails）</th></tr></thead>
+          <tbody>
+            <tr><td class="m">下标起点</td><td class="m">1 开始，<code>tbl[k]</code> = 长度 k</td><td class="m">0 开始，<code>tails[k]</code> = 长度 k+1</td></tr>
+            <tr><td class="m">二分找什么</td><td class="m">最大的 j 使 <code>tbl[j] &lt; x</code></td><td class="m">第一个位置使 <code>tails[p] &gt;= x</code></td></tr>
+            <tr><td class="m">写到哪</td><td class="m"><code>tbl[index + 1] = x</code></td><td class="m"><code>tails[p] = x</code></td></tr>
+            <tr><td class="m">长度变量</td><td class="m"><code>result</code>，初始 1</td><td class="m"><code>len</code>，初始 0</td></tr>
+            <tr><td class="m">关系</td><td class="m" colspan="2"><b>完全等价</b>：<code>index + 1</code> 和 <code>p</code> 指的是同一格，只差一个下标基准</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:14px">两版都对。<b>面试写哪版都行，但要能说出 <code>tbl[k]</code> 的含义</b>——考官问的永远是这个，不是二分的边界怎么写。</p>
+    </div>
+  </section>
+
+  <footer>单文件 HTML，无外部依赖（仅 Google Fonts，离线自动回退系统字体）。</footer>
+</div>
+
+<script>
+(function(){
+  var SETS = [
+    {label:'5,2,6,3,4,7,5', a:[5,2,6,3,4,7,5], hint:'题目原例 · 答案 4'},
+    {label:'2,7,3,8,4,9,1', a:[2,7,3,8,4,9,1], hint:'追加替换交替 · 答案 4'},
+    {label:'1,2,3,4,5',     a:[1,2,3,4,5],     hint:'全递增 · 每步都追加'},
+    {label:'5,4,3,2,1',     a:[5,4,3,2,1],     hint:'全递减 · 只有替换，result 永远 1'}
+  ];
+
+  var CODE = [
+    {p:'main', t:'tbl[1] = array[0];   result = 1;'},
+    {p:'read', t:'for (int i = 1; i < array.length; i++) {'},
+    {p:'call', t:'    int index = find(tbl, 1, result, array[i]);   // 找最大的 j 使 tbl[j] < array[i]'},
+    {p:'add',  t:'    if (index == result)  tbl[++result] = array[i];   // 追加：最长长度 +1'},
+    {p:'rep',  t:'    else                  tbl[index + 1] = array[i];  // 替换：同长度换更小结尾'},
+    {p:'',     t:'}'},
+    {p:'',     t:'', sec:1},
+    {p:'',     t:'private int find(int[] tbl, int left, int right, int target) {', sec:1},
+    {p:'bs',   t:'    while (left + 1 < right) {'},
+    {p:'bs',   t:'        int mid = left + (right - left) / 2;'},
+    {p:'bs',   t:'        if (tbl[mid] >= target) right = mid - 1;  else left = mid;'},
+    {p:'bs',   t:'    }'},
+    {p:'scan', t:'    for (int j = right; j >= left; j--)  if (tbl[j] < target) return j;'},
+    {p:'scan', t:'    return 0;'},
+    {p:'',     t:'}', sec:1}
+  ];
+
+  function build(a){
+    var n = a.length, frames = [];
+    if (n === 0) return [{i:-1, tbl:[], result:0, phase:'end', note:'空数组 → 直接返回 0'}];
+    var tbl = new Array(n + 1).fill(null);
+    var result = 1;
+    tbl[1] = a[0];
+
+    function push(o){
+      o.tbl = tbl.slice(); o.result = result;
+      frames.push(o);
+    }
+    push({i:0, x:a[0], phase:'main', write:1,
+      note:'初始化：tbl[1] = array[0] = ' + a[0] + '，result = 1\n意思是「长度 1 的上升子序列，目前最小的结尾是 ' + a[0] + '」'});
+
+    for (var i = 1; i < n; i++){
+      var x = a[i];
+      push({i:i, x:x, phase:'read',
+        note:'i = ' + i + '　读入 array[' + i + '] = ' + x + '\n问题：我能接在多长的序列后面？'});
+
+      // find(tbl, 1, result, x) —— 原样复刻
+      var left = 1, right = result, index = 0, found = false;
+      push({i:i, x:x, phase:'bs', bs:{left:left, right:right, mid:null},
+        note:'开始二分：在 tbl[1 .. ' + result + '] 里找\n「最大的 j，使得 tbl[j] < ' + x + '」'});
+
+      while (left + 1 < right){
+        var mid = left + Math.floor((right - left) / 2);
+        var ge = tbl[mid] >= x;
+        push({i:i, x:x, phase:'bs', bs:{left:left, right:right, mid:mid},
+          note:'mid = ' + mid + '　tbl[' + mid + '] = ' + tbl[mid] +
+               '\n' + tbl[mid] + ' >= ' + x + ' ? ' + (ge ? '是 → 太大了，right = mid - 1 = ' + (mid-1)
+                                                          : '否 → 还能更右，left = mid = ' + mid)});
+        if (ge) right = mid - 1; else left = mid;
+      }
+      push({i:i, x:x, phase:'bs', bs:{left:left, right:right, mid:null},
+        note:'二分收敛：窗口只剩 [' + left + ', ' + right + ']\n剩下这几格从右往左扫一遍就够了'});
+
+      for (var j = right; j >= left; j--){
+        var ok = tbl[j] < x;
+        push({i:i, x:x, phase:'scan', scan:{j:j, ok:ok}, bs:{left:left, right:right, mid:null},
+          note:'扫 j = ' + j + '：tbl[' + j + '] = ' + tbl[j] + ' < ' + x + ' ? ' +
+               (ok ? '是 → index = ' + j + '，找到了' : '否 → 太大，继续往左')});
+        if (ok){ index = j; found = true; break; }
+      }
+      if (!found){
+        index = 0;
+        push({i:i, x:x, phase:'scan', scan:null, bs:{left:left, right:right, mid:null},
+          note:'扫完了都没有比 ' + x + ' 小的\nindex = 0 —— 它比 tbl 里所有值都小'});
+      }
+
+      if (index === result){
+        result++;
+        tbl[result] = x;
+        push({i:i, x:x, phase:'add', write:result, index:index,
+          note:'【追加】index = ' + index + ' == result\n' + x + ' 比 tbl 里所有值都大，能接在最长那条后面\ntbl[' + result + '] = ' + x + '　result: ' + (result-1) + ' → ' + result + '　★ 答案变长了'});
+      } else {
+        tbl[index + 1] = x;
+        push({i:i, x:x, phase:'rep', write:index + 1, index:index,
+          note:'【替换】index = ' + index + ' != result = ' + result +
+               '\n接不到最长那条，但能给「长度 ' + (index+1) + '」换一个更小的结尾\ntbl[' + (index+1) + '] = ' + x + '　result 不变，仍是 ' + result + '\n（不涨长度，但为后面铺路）'});
+      }
+    }
+    push({i:n-1, x:null, phase:'end',
+      note:'扫描结束\nresult = ' + result + ' —— 这就是最长上升子序列的长度\n（注意：tbl 里的值不一定构成一个真实的子序列，只有长度可信）'});
+    return frames;
+  }
+
+  function $(id){ return document.getElementById(id); }
+  var setIdx = 0, A, N, frames, step = 0, timer = null;
+
+  SETS.forEach(function(s, idx){
+    var b = document.createElement('button');
+    b.className = 'setbtn';
+    b.innerHTML = 'array = {' + s.label + '}<small>' + s.hint + '</small>';
+    b.onclick = function(){ setIdx = idx; load(); };
+    b.setAttribute('data-idx', idx);
+    $('sets').appendChild(b);
+  });
+
+  var codeEls = CODE.map(function(c){
+    var d = document.createElement('span');
+    d.className = 'cl' + (c.sec ? ' sec' : '');
+    d.textContent = c.t || ' ';
+    $('code').appendChild(d);
+    return {el:d, p:c.p};
+  });
+
+  function lane(el, count, fn){
+    el.style.setProperty('--n', count);
+    el.innerHTML = '';
+    for (var k = 0; k < count; k++) el.appendChild(fn(k));
+  }
+
+  function render(){
+    var f = frames[step];
+
+    codeEls.forEach(function(c){
+      c.el.classList.toggle('on', !!c.p && c.p === f.phase);
+    });
+
+    // input array
+    lane($('laneA'), N, function(k){
+      var d = document.createElement('div');
+      d.className = 'cell' + (k === f.i && f.phase !== 'end' ? ' cur' : '') + (k < f.i ? ' done' : '');
+      d.textContent = A[k];
+      return d;
+    });
+    lane($('laneAi'), N, function(k){
+      var d = document.createElement('div');
+      d.className = 'sub' + (k === f.i && f.phase !== 'end' ? ' cur' : '');
+      d.textContent = (k === f.i && f.phase !== 'end') ? 'i=' + k : k;
+      return d;
+    });
+
+    // tbl (1-indexed, render slots 1..N)
+    var bs = f.bs || null;
+    lane($('laneT'), N, function(k){
+      var idx = k + 1;
+      var d = document.createElement('div');
+      var used = idx <= f.result;
+      var cls = 'cell';
+      if (!used) cls += ' unused';
+      if (bs && used && idx >= bs.left && idx <= bs.right) cls += ' inwin';
+      if (bs && bs.mid === idx) cls += ' mid';
+      if (f.scan && f.scan.j === idx) cls += f.scan.ok ? ' hit' : ' scan';
+      if (f.phase === 'add' && f.write === idx) cls += ' wnew';
+      if ((f.phase === 'rep' || f.phase === 'main') && f.write === idx) cls += f.phase === 'main' ? ' wnew' : ' wrep';
+      d.className = cls;
+      d.textContent = used ? f.tbl[idx] : '·';
+      return d;
+    });
+    lane($('laneTk'), N, function(k){
+      var idx = k + 1;
+      var d = document.createElement('div');
+      d.className = 'sub' + (idx > f.result ? ' unused' : '');
+      d.textContent = '长度 ' + idx;
+      return d;
+    });
+    lane($('laneTp'), N, function(k){
+      var idx = k + 1;
+      var d = document.createElement('div');
+      d.className = 'ptr';
+      var tags = [];
+      if (bs && bs.left === idx) tags.push('left');
+      if (bs && bs.right === idx) tags.push('right');
+      if (idx === f.result && !tags.length){ d.className += ' res'; tags.push('result'); }
+      d.textContent = tags.join('·');
+      return d;
+    });
+
+    $('readout').innerHTML =
+      (f.x !== null && f.x !== undefined ? '<span class="stat">array[' + f.i + '] = <b>' + f.x + '</b></span>' : '') +
+      '<span class="stat new">result = <b>' + f.result + '</b>　(= 当前最长长度)</span>' +
+      (bs ? '<span class="stat dq">二分窗口 [' + bs.left + ', ' + bs.right + ']' + (bs.mid ? '　mid = ' + bs.mid : '') + '</span>' : '') +
+      (f.index !== undefined ? '<span class="stat hot">index = <b>' + f.index + '</b>　→ 写 tbl[' + f.write + ']</span>' : '') +
+      '<span class="stat">tbl[1..' + f.result + '] = [' + f.tbl.slice(1, f.result + 1).join(', ') + ']</span>';
+
+    $('note').textContent = f.note;
+    $('counter').textContent = '第 ' + (step + 1) + ' / ' + frames.length + ' 步';
+    $('prev').disabled = step === 0;
+    $('next').disabled = step === frames.length - 1;
+    var hasR = false, hasA = false, q;
+    for (q = step + 1; q < frames.length; q++){
+      if (!hasR && frames[q].phase === 'read') hasR = true;
+      if (!hasA && frames[q].phase === 'add') hasA = true;
+    }
+    $('jnext').disabled = !hasR;
+    $('jadd').disabled = !hasA;
+    if (step === frames.length - 1) stop();
+  }
+
+  function load(){
+    stop();
+    A = SETS[setIdx].a; N = A.length;
+    frames = build(A);
+    step = 0;
+    var btns = document.querySelectorAll('.setbtn');
+    for (var b = 0; b < btns.length; b++)
+      btns[b].setAttribute('aria-pressed', String(Number(btns[b].getAttribute('data-idx')) === setIdx));
+    render();
+  }
+  function stop(){ if (timer){ clearInterval(timer); timer = null; } $('play').textContent = '自动播放'; }
+  function jumpTo(test){
+    stop();
+    for (var q = step + 1; q < frames.length; q++) if (test(frames[q])){ step = q; render(); return; }
+  }
+
+  $('next').onclick  = function(){ if (step < frames.length - 1){ step++; render(); } };
+  $('prev').onclick  = function(){ if (step > 0){ step--; render(); } };
+  $('reset').onclick = function(){ stop(); step = 0; render(); };
+  $('jnext').onclick = function(){ jumpTo(function(x){ return x.phase === 'read'; }); };
+  $('jadd').onclick  = function(){ jumpTo(function(x){ return x.phase === 'add'; }); };
+  $('play').onclick = function(){
+    if (timer){ stop(); return; }
+    if (step === frames.length - 1) step = 0;
+    $('play').textContent = '暂停';
+    timer = setInterval(function(){
+      if (step >= frames.length - 1){ stop(); return; }
+      step++; render();
+    }, 1000);
+  };
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight'){ e.preventDefault(); $('next').click(); }
+    if (e.key === 'ArrowLeft'){  e.preventDefault(); $('prev').click(); }
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
