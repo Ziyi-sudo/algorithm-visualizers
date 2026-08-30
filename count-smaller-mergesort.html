@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>右边更小计数推演台</title>
+<meta name="description" content="LaiCode 276 Get Count Array：归并排序统计「右边比我小的个数」，逐步演示 countArray[helper[l]] += (r-mid-1) 的来历。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#EDF0F4; --surface:#FFFFFF; --surface-2:#F4F6F9;
+  --ink:#11161C; --muted:#5B6572; --line:#D1D7E0; --line-strong:#A6B0BE;
+  --lft:#1B5FA8;  --lft-soft:#DEEAF6; --lft-edge:#9CC0E0;   /* 左半 */
+  --rgt:#A65314;  --rgt-soft:#FBEADB; --rgt-edge:#E4B583;   /* 右半 */
+  --cnt:#146348;  --cnt-soft:#D9EDE4; --cnt-edge:#8DC7B0;   /* 计数 */
+  --dim:#7C8798;
+  --shadow:0 1px 0 rgba(17,22,28,.03), 0 12px 32px -24px rgba(17,22,28,.6);
+  --sans:"Archivo","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --cw:56px; --gap:8px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1015; --surface:#161A21; --surface-2:#1C212A;
+    --ink:#E1E5EB; --muted:#8A94A2; --line:#282F39; --line-strong:#3C4450;
+    --lft:#6FB0EC; --lft-soft:#12243440; --lft-soft:#132434; --lft-edge:#2C4761;
+    --rgt:#E9A257; --rgt-soft:#2E2214; --rgt-edge:#5A4426;
+    --cnt:#5CC59B; --cnt-soft:#11281E; --cnt-edge:#254A3A;
+    --dim:#6C7686;
+    --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -24px rgba(0,0,0,.95);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1015; --surface:#161A21; --surface-2:#1C212A;
+  --ink:#E1E5EB; --muted:#8A94A2; --line:#282F39; --line-strong:#3C4450;
+  --lft:#6FB0EC; --lft-soft:#132434; --lft-edge:#2C4761;
+  --rgt:#E9A257; --rgt-soft:#2E2214; --rgt-edge:#5A4426;
+  --cnt:#5CC59B; --cnt-soft:#11281E; --cnt-edge:#254A3A;
+  --dim:#6C7686;
+  --shadow:0 1px 0 rgba(0,0,0,.35), 0 12px 32px -24px rgba(0,0,0,.95);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1020px;margin:0 auto;padding:40px 22px 76px;display:flex;flex-direction:column;gap:24px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 9px}
+h1{font-size:clamp(27px,4.2vw,38px);line-height:1.14;margin:0 0 11px;font-weight:700;letter-spacing:-.022em;text-wrap:balance}
+.thesis{margin:0;max-width:64ch;color:var(--muted);font-size:15.5px}
+.thesis b{color:var(--ink);font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
+.pad{padding:22px}
+.card h2{font-size:18px;margin:0 0 12px;font-weight:600;letter-spacing:-.012em}
+.card h3{font-size:14.5px;margin:0 0 6px;font-weight:600}
+.card p{margin:0 0 11px;max-width:66ch}
+.card p:last-child{margin-bottom:0}
+
+.sets{display:flex;gap:8px;flex-wrap:wrap;padding:16px 22px 14px;border-bottom:1px solid var(--line)}
+.sets-label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);align-self:center;margin-right:2px}
+.setbtn{font-family:var(--mono);font-size:12px;padding:6px 11px;border-radius:7px;border:1px solid var(--line-strong);
+        background:var(--surface);color:var(--ink);cursor:pointer;text-align:left;transition:background .14s,border-color .14s,color .14s}
+.setbtn small{display:block;font-family:var(--sans);font-size:10.5px;color:var(--muted);margin-top:1px}
+.setbtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.setbtn[aria-pressed="true"] small{color:var(--surface);opacity:.75}
+.setbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.code{font-family:var(--mono);font-size:12px;line-height:1.9;background:var(--surface-2);border-bottom:1px solid var(--line);padding:14px 22px;overflow-x:auto}
+.cl{display:block;white-space:pre;padding:0 8px;margin:0 -8px;border-radius:5px;color:var(--muted);border-left:2px solid transparent;transition:background .16s,color .16s}
+.cl.on{background:var(--lft-soft);color:var(--ink);border-left-color:var(--lft);font-weight:500}
+.cl.sec{opacity:.55;font-size:11px}
+
+.stage{padding:18px 22px 6px;overflow-x:auto}
+.lane{display:grid;gap:var(--gap);grid-template-columns:repeat(var(--n),var(--cw));min-width:min-content}
+.lane-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.lane-label b{letter-spacing:0;text-transform:none;font-size:11.5px}
+.block{margin-bottom:16px}
+
+.cell{height:46px;display:grid;place-items:center;border-radius:8px;border:1.5px solid var(--line);
+      background:var(--surface-2);font-family:var(--mono);font-size:18px;font-weight:600;
+      transition:background .16s,border-color .16s,color .16s,transform .16s,opacity .16s}
+.cell.out{opacity:.22}
+.cell.L{background:var(--lft-soft);border-color:var(--lft-edge);color:var(--lft)}
+.cell.R{background:var(--rgt-soft);border-color:var(--rgt-edge);color:var(--rgt)}
+.cell.used{opacity:.3}
+.cell.pick{border-width:2.5px;transform:translateY(-4px)}
+.cell.pickL{border-color:var(--lft)}
+.cell.pickR{border-color:var(--rgt)}
+.cell.written{border-color:var(--ink);border-width:2px}
+.cell.frozen{border-style:dashed;opacity:.75}
+.cell.bump{background:var(--cnt);border-color:var(--cnt);color:#fff;transform:translateY(-4px)}
+.cell.zero{color:var(--dim)}
+.sub{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;padding-top:4px;line-height:1.3}
+.sub.L{color:var(--lft)}
+.sub.R{color:var(--rgt)}
+.ptr{font-family:var(--mono);font-size:10px;text-align:center;height:18px;padding-top:2px;font-weight:700}
+.ptr.l{color:var(--lft)} .ptr.r{color:var(--rgt)} .ptr.c{color:var(--ink)}
+
+.formula{margin:2px 22px 0;font-family:var(--mono);font-size:13px;padding:0 13px;border-radius:9px;
+         border:1.5px dashed var(--line);background:var(--surface-2);color:var(--muted);font-weight:500;
+         height:46px;display:flex;align-items:center;overflow-x:auto;white-space:nowrap;
+         transition:border-color .16s,background .16s,color .16s}
+.formula.show{border-style:solid;border-color:var(--cnt-edge);background:var(--cnt-soft);color:var(--cnt);font-weight:700}
+.readout{display:flex;gap:9px;flex-wrap:wrap;padding:10px 22px 0;min-height:56px;align-content:flex-start}
+.stat{font-family:var(--mono);font-size:12px;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:var(--surface-2);font-variant-numeric:tabular-nums}
+.stat b{font-weight:700}
+.stat.L{border-color:var(--lft-edge);background:var(--lft-soft);color:var(--lft)}
+.stat.R{border-color:var(--rgt-edge);background:var(--rgt-soft);color:var(--rgt)}
+.stat.C{border-color:var(--cnt-edge);background:var(--cnt-soft);color:var(--cnt)}
+.note{margin:12px 22px 22px;font-family:var(--mono);font-size:12.5px;line-height:1.7;white-space:pre-line;
+      height:132px;overflow-y:auto;
+      padding:11px 13px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2)}
+.controls{position:sticky;top:0;z-index:20;border-bottom:1px solid var(--line);background:var(--surface-2);
+          padding:12px 22px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+          box-shadow:0 6px 12px -12px rgba(17,22,28,.5)}
+button.ctl{font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--ink);background:var(--surface);
+        border:1px solid var(--line-strong);border-radius:8px;padding:8px 15px;cursor:pointer;transition:background .14s,border-color .14s}
+button.ctl:hover:not(:disabled){border-color:var(--ink)}
+button.ctl:disabled{opacity:.4;cursor:not-allowed}
+button.ctl:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button.ctl.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+button.ctl.jump{font-family:var(--mono);font-size:12px;padding:8px 12px;border-color:var(--cnt-edge);color:var(--cnt);background:var(--cnt-soft)}
+.counter{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+
+.q{border-left:3px solid var(--lft);padding-left:16px;margin-bottom:22px}
+.q:last-child{margin-bottom:0}
+.q h3{color:var(--lft)}
+.math{font-family:var(--mono);font-size:12.5px;line-height:1.85;background:var(--surface-2);border:1px solid var(--line);
+      border-radius:9px;padding:12px 14px;overflow-x:auto;margin:10px 0 0;white-space:pre}
+code{font-family:var(--mono);font-size:.9em;background:var(--surface-2);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+footer{color:var(--muted);font-size:12.5px;text-align:center;padding-top:6px}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+@media (max-width:640px){ :root{--cw:46px} .counter{margin-left:0} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">276 · Get Count Array</p>
+    <h1>排序时顺手把人数记下来</h1>
+    <p class="thesis">归并排序里，<b>右半边每被取走一个，就说明它比左边剩下的所有人都小</b>。所以当左半的某个元素终于被放下时，「已经从右半取走了几个」就是它右边比它小的个数——<code>r - mid - 1</code>。排序是幌子，<b>计数才是目的</b>。</p>
+  </header>
+
+  <section class="card">
+    <div class="sets" id="sets"><span class="sets-label">数据组</span></div>
+
+    <div class="controls">
+      <button class="ctl" id="prev">← 上一步</button>
+      <button class="ctl primary" id="next">下一步 →</button>
+      <button class="ctl" id="play">自动播放</button>
+      <button class="ctl" id="reset">重置</button>
+      <button class="ctl jump" id="jcnt">跳到下一次计数</button>
+      <button class="ctl jump" id="jmerge">跳到下一次 merge</button>
+      <span class="counter" id="counter"></span>
+    </div>
+
+    <div class="code" id="code"></div>
+
+    <div class="stage">
+      <div class="block">
+        <p class="lane-label">原数组 A（<b>永远不动</b>，只被查值）</p>
+        <div class="lane" id="laneA"></div>
+        <div class="lane" id="laneAi"></div>
+      </div>
+
+      <div class="block">
+        <p class="lane-label">helper —— 本次 merge 开始前 indexArray 的快照（<b style="color:var(--lft)">蓝＝左半</b>　<b style="color:var(--rgt)">橙＝右半</b>）</p>
+        <div class="lane" id="laneH"></div>
+        <div class="lane" id="laneHv"></div>
+        <div class="lane" id="laneHp"></div>
+      </div>
+
+      <div class="block">
+        <p class="lane-label">indexArray —— 正在被写回（按 A 的值排序，但装的是<b>下标</b>）</p>
+        <div class="lane" id="laneI"></div>
+        <div class="lane" id="laneIp"></div>
+      </div>
+
+      <div class="block">
+        <p class="lane-label" style="color:var(--cnt)">countArray —— 答案，只增不减</p>
+        <div class="lane" id="laneC"></div>
+        <div class="lane" id="laneCi"></div>
+      </div>
+    </div>
+
+    <div class="formula" id="formula"></div>
+    <div class="readout" id="readout"></div>
+    <div class="note" id="note" aria-live="polite"></div>
+  </section>
+
+  <section class="card pad">
+    <h2>为什么排序能顺手算出答案</h2>
+
+    <div class="q">
+      <h3>第一件事：排的是下标，不是值</h3>
+      <p><code>indexArray</code> 里装的是<b>原下标</b> <code>0 .. n-1</code>，比较大小时才去查 <code>array[下标]</code>。</p>
+      <p>为什么必须这样：答案 <code>countArray[i]</code> 要按<b>原位置</b>存。如果直接把值排序，元素一动就不知道它原来是第几个了，答案没处放。<b>要保住位置信息，就存下标。</b>（678 / 204 / 198 都撞过这条判据。）</p>
+    </div>
+
+    <div class="q">
+      <h3>第二件事：那条撑住一切的不变式</h3>
+      <pre class="math">在任何一次 merge 里：
+
+  indexArray[left .. mid]     里的每一个原下标
+        全都 <
+  indexArray[mid+1 .. right]  里的每一个原下标</pre>
+      <p style="margin-top:11px">为什么成立：归并排序是<b>按位置区间</b>分治的。区间 <code>[left,mid]</code> 从头到尾只装原下标在 <code>[left,mid]</code> 里的元素，右半同理。归并只在区间<b>内部</b>重排，永远不跨区间搬人。</p>
+      <p><b>所以「右半的元素」和「原数组里在我右边」是同一件事。</b> 这就是为什么数右半取走的个数，等于数「右边比我小的个数」。</p>
+    </div>
+
+    <div class="q">
+      <h3>第三件事：<code>r - mid - 1</code> 是什么</h3>
+      <pre class="math">r 从 mid + 1 出发，每从右半取走一个就 +1
+
+已经取走的个数 = r - (mid + 1) = r - mid - 1</pre>
+      <p style="margin-top:11px">当左半的 <code>helper[l]</code> 终于被放下时，说明这些已取走的右半元素<b>全都比它小</b>（比它小才会先出队），而且<b>原位置全在它右边</b>（不变式）。</p>
+      <p>两个条件同时成立 → 它们正是 <code>helper[l]</code> 要数的人 → <code>countArray[helper[l]] += (r - mid - 1)</code>。</p>
+      <p>用 <code>+=</code> 不是 <code>=</code>：同一个元素会在 <b>log n 层</b> 归并里各被结算一次，每层数的是不同批人，要累加。</p>
+    </div>
+
+    <div class="q">
+      <h3>第四件事：<code>while (l &lt;= mid)</code>——右半剩下的不用管</h3>
+      <p>标准归并会用 <code>while (l &lt;= mid || r &lt;= right)</code> 把两边都倒空。这里只写了左半，看着像 bug，其实是个巧妙的省略：</p>
+      <pre class="math">每写一格，cur 和 (l 或 r) 同时前进一格
+   ⟹  cur = l + r - mid - 1   恒成立
+
+左半用完时 l = mid + 1
+   ⟹  cur = (mid+1) + r - mid - 1 = r
+
+也就是说：剩下要填的位置 [cur, right]
+         正好就是 helper 里没取的 [r, right]
+而 helper 是 indexArray 的拷贝，且 cur <= r 保证这段从没被覆盖过
+   ⟹  它们【已经在正确的位置上了】，一个字都不用写</pre>
+      <p style="margin-top:11px"><b>而且它们也不需要计数</b>——它们是右半的人，右边比它们小的，早在更深层的递归里数完了。</p>
+      <p>动图里每次 merge 结束都会把这段标成虚线，写着「原地不动」。</p>
+    </div>
+
+    <div class="q">
+      <h3>第五件事：谁在数、数谁</h3>
+      <pre class="math">只有【左半】的元素会被计数
+右半的元素在这一层一分不加
+
+因为：右边比我小的人，只可能在我右边
+      对左半的人来说，右半就是"我右边"
+      对右半的人来说，同层的右半是"我左边"，不算</pre>
+      <p style="margin-top:11px">切到「全递增」那组：右半永远不会先出队，<code>r - mid - 1</code> 恒为 0，<code>countArray</code> 全程是 0。</p>
+      <p>切到「全递减」那组：右半每次都先出队，每个左半元素被放下时都能吃到满额。</p>
+    </div>
+
+    <div class="q">
+      <h3>复杂度</h3>
+      <pre class="math">Time  O(n log n)   就是归并排序，计数是顺手的 O(1)
+Space O(n)         helper + indexArray + countArray
+
+暴力：对每个 i 扫右边一遍 → O(n²)
+这题明确要求 O(n log n)，所以暴力过不了</pre>
+    </div>
+  </section>
+
+  <footer>单文件 HTML，无外部依赖（仅 Google Fonts，离线自动回退系统字体）。</footer>
+</div>
+
+<script>
+(function(){
+  var SETS = [
+    {label:'4,1,3,2',     a:[4,1,3,2],     hint:'题目原例 · B = {3,0,1,0}'},
+    {label:'5,2,6,1,3,4', a:[5,2,6,1,3,4], hint:'6 个元素 · 三层归并'},
+    {label:'1,2,3,4',     a:[1,2,3,4],     hint:'全递增 · 一次都不计数'},
+    {label:'4,3,2,1',     a:[4,3,2,1],     hint:'全递减 · 每次都吃满'}
+  ];
+
+  var CODE = [
+    {p:'ms',   t:'mergeSort(left, right):  mid = (left+right)/2;  左递归;  右递归;  merge(left, mid, right)'},
+    {p:'',     t:'', sec:1},
+    {p:'copy', t:'merge:  copyArray(indexArray, helper, left, right);   l = left;  r = mid+1;  cur = left;'},
+    {p:'cmp',  t:'    while (l <= mid) {'},
+    {p:'cmp',  t:'        if (r > right || array[helper[l]] <= array[helper[r]]) {'},
+    {p:'takeL',t:'            countArray[helper[l]] += (r - mid - 1);      // ← 计数就这一行'},
+    {p:'takeL',t:'            indexArray[cur++] = helper[l++];'},
+    {p:'takeR',t:'        } else  indexArray[cur++] = helper[r++];'},
+    {p:'rest', t:'    }   // 左半用完就退出 —— 右半剩下的已经在正确位置上了'}
+  ];
+
+  function build(a){
+    var n = a.length, frames = [];
+    var idx = [], cnt = [], helper = [];
+    for (var t = 0; t < n; t++){ idx.push(t); cnt.push(0); helper.push(0); }
+
+    function push(o){
+      o.idx = idx.slice(); o.cnt = cnt.slice(); o.helper = helper.slice();
+      frames.push(o);
+    }
+
+    push({phase:'ms', range:null, note:'目标：countArray[i] = 原数组里，i 右边比 A[i] 小的元素个数\n\n办法：跑一遍归并排序，排序时顺手计数。\nindexArray 装【原下标】，比较时才查 A[下标]——这样元素动了也知道它原来是第几个。'});
+
+    function merge(left, mid, right){
+      for (var i = left; i <= right; i++) helper[i] = idx[i];
+      push({phase:'copy', range:[left,mid,right], l:left, r:mid+1, cur:left,
+        note:'merge [' + left + ', ' + right + ']　mid = ' + mid +
+             '\n把 indexArray[' + left + '..' + right + '] 拷进 helper（快照）\n左半 helper[' + left + '..' + mid + ']　右半 helper[' + (mid+1) + '..' + right + ']' +
+             '\n\n★ 不变式：左半装的原下标 全都小于 右半装的原下标'});
+
+      var l = left, r = mid + 1, cur = left;
+      while (l <= mid){
+        var rEmpty = r > right;
+        var vl = a[helper[l]], vr = rEmpty ? null : a[helper[r]];
+        var takeLeft = rEmpty || vl <= vr;
+        push({phase:'cmp', range:[left,mid,right], l:l, r:r, cur:cur, cmp:true,
+          note: rEmpty
+            ? '右半已经取空（r = ' + r + ' > right = ' + right + '）\n→ 只能取左边'
+            : 'A[helper[' + l + ']] = A[' + helper[l] + '] = ' + vl +
+              '　vs　A[helper[' + r + ']] = A[' + helper[r] + '] = ' + vr +
+              '\n' + vl + ' <= ' + vr + ' ? ' + (takeLeft ? '是 → 取左边' : '否 → 右边更小，先取右边')});
+
+        if (takeLeft){
+          var gain = r - mid - 1;
+          var who = helper[l];
+          cnt[who] += gain;
+          push({phase:'takeL', range:[left,mid,right], l:l, r:r, cur:cur, bump:who, gain:gain,
+            formula:'countArray[' + who + '] += r − mid − 1 = ' + r + ' − ' + mid + ' − 1 = ' + gain +
+                    '　→ countArray[' + who + '] = ' + cnt[who],
+            note:'放下左半的下标 ' + who + '（值 ' + a[who] + '）\n' +
+                 '此刻已经从右半取走了 ' + gain + ' 个，它们：\n' +
+                 '  · 都比 ' + a[who] + ' 小（比它小才先出队）\n' +
+                 '  · 原位置都在 ' + who + ' 右边（不变式）\n' +
+                 '→ 正好是它要数的人，countArray[' + who + '] += ' + gain});
+          idx[cur] = helper[l];
+          cur++; l++;
+          push({phase:'takeL', range:[left,mid,right], l:l, r:r, cur:cur, wrote:cur-1,
+            note:'indexArray[' + (cur-1) + '] = ' + who + '　l → ' + l + '　cur → ' + cur});
+        } else {
+          var whoR = helper[r];
+          idx[cur] = helper[r];
+          cur++; r++;
+          push({phase:'takeR', range:[left,mid,right], l:l, r:r, cur:cur, wrote:cur-1,
+            note:'放下右半的下标 ' + whoR + '（值 ' + a[whoR] + '）—— 它不计数\n' +
+                 'r → ' + r + '，也就是「已从右半取走」的计数 +1\n' +
+                 '（这一步的价值：它让后面每个左半元素都能多数一个人）'});
+        }
+      }
+      push({phase:'rest', range:[left,mid,right], l:l, r:r, cur:cur, frozen:[r, right],
+        note:'左半用完（l = ' + l + ' > mid = ' + mid + '）→ 退出\n\n' +
+             'cur = ' + cur + '，r = ' + r + '　两者相等，不是巧合：\n' +
+             '每写一格 cur 和 l/r 各走一格 ⟹ cur = l + r − mid − 1，左半用完时正好 = r\n\n' +
+             (r <= right
+               ? 'helper[' + r + '..' + right + '] 还没取，但它们【已经在 indexArray 的正确位置上】\n一个字都不用写（虚线那几格）'
+               : '右半也正好取完，没有剩余')});
+    }
+
+    function ms(left, right){
+      if (left >= right) return;
+      var mid = left + Math.floor((right - left) / 2);
+      ms(left, mid);
+      ms(mid + 1, right);
+      merge(left, mid, right);
+    }
+    ms(0, n - 1);
+
+    push({phase:'end', range:null,
+      note:'排序结束\ncountArray = [' + cnt.join(', ') + ']\n\n（indexArray 现在是按 A 的值升序排的下标；排序本身是副产品，答案在 countArray 里）'});
+    return frames;
+  }
+
+  function $(id){ return document.getElementById(id); }
+  var setIdx = 0, A, N, frames, step = 0, timer = null;
+
+  SETS.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.className = 'setbtn';
+    b.innerHTML = 'A = {' + s.label + '}<small>' + s.hint + '</small>';
+    b.onclick = function(){ setIdx = i; load(); };
+    b.setAttribute('data-idx', i);
+    $('sets').appendChild(b);
+  });
+
+  var codeEls = CODE.map(function(c){
+    var d = document.createElement('span');
+    d.className = 'cl' + (c.sec ? ' sec' : '');
+    d.textContent = c.t || ' ';
+    $('code').appendChild(d);
+    return {el:d, p:c.p};
+  });
+
+  function lane(el, fn){
+    el.style.setProperty('--n', N);
+    el.innerHTML = '';
+    for (var k = 0; k < N; k++) el.appendChild(fn(k));
+  }
+
+  function render(){
+    var f = frames[step];
+    var R = f.range, left = R ? R[0] : -1, mid = R ? R[1] : -1, right = R ? R[2] : -1;
+
+    codeEls.forEach(function(c){ c.el.classList.toggle('on', !!c.p && c.p === f.phase); });
+
+    lane($('laneA'), function(k){
+      var d = document.createElement('div');
+      d.className = 'cell' + (R && (k < left || k > right) ? ' out' : '');
+      d.textContent = A[k];
+      return d;
+    });
+    lane($('laneAi'), function(k){
+      var d = document.createElement('div'); d.className = 'sub'; d.textContent = k; return d;
+    });
+
+    lane($('laneH'), function(k){
+      var d = document.createElement('div');
+      var cls = 'cell';
+      if (!R || k < left || k > right) cls += ' out';
+      else {
+        cls += (k <= mid) ? ' L' : ' R';
+        if (k <= mid && k < f.l) cls += ' used';
+        if (k > mid && k < f.r) cls += ' used';
+        if (f.phase === 'cmp' && k === f.l) cls += ' pick pickL';
+        if (f.phase === 'cmp' && k === f.r && f.r <= right) cls += ' pick pickR';
+        if (f.frozen && k >= f.frozen[0] && k <= f.frozen[1]) cls += ' frozen';
+      }
+      d.className = cls;
+      d.textContent = (R && k >= left && k <= right) ? f.helper[k] : '';
+      return d;
+    });
+    lane($('laneHv'), function(k){
+      var d = document.createElement('div');
+      d.className = 'sub' + (R && k >= left && k <= right ? (k <= mid ? ' L' : ' R') : '');
+      d.textContent = (R && k >= left && k <= right) ? ('A=' + A[f.helper[k]]) : '';
+      return d;
+    });
+    lane($('laneHp'), function(k){
+      var d = document.createElement('div');
+      var tags = [];
+      if (R && k === f.l && f.l <= mid){ d.className = 'ptr l'; tags.push('l'); }
+      else if (R && k === f.r && f.r <= right){ d.className = 'ptr r'; tags.push('r'); }
+      else d.className = 'ptr';
+      d.textContent = tags.join('');
+      return d;
+    });
+
+    lane($('laneI'), function(k){
+      var d = document.createElement('div');
+      var cls = 'cell';
+      if (R && (k < left || k > right)) cls += ' out';
+      if (f.wrote === k) cls += ' written';
+      if (R && f.frozen && k >= f.frozen[0] && k <= f.frozen[1]) cls += ' frozen';
+      d.className = cls;
+      d.textContent = f.idx[k];
+      return d;
+    });
+    lane($('laneIp'), function(k){
+      var d = document.createElement('div');
+      d.className = 'ptr' + (R && k === f.cur && f.cur <= right ? ' c' : '');
+      d.textContent = (R && k === f.cur && f.cur <= right) ? 'cur' : '';
+      return d;
+    });
+
+    lane($('laneC'), function(k){
+      var d = document.createElement('div');
+      d.className = 'cell' + (f.bump === k ? ' bump' : (f.cnt[k] === 0 ? ' zero' : ''));
+      d.textContent = f.cnt[k];
+      return d;
+    });
+    lane($('laneCi'), function(k){
+      var d = document.createElement('div'); d.className = 'sub'; d.textContent = k; return d;
+    });
+
+    var fm = $('formula');
+    if (f.formula){ fm.textContent = f.formula; fm.classList.add('show'); }
+    else { fm.textContent = '（这一步没有计数）'; fm.classList.remove('show'); }
+
+    $('readout').innerHTML =
+      (R ? '<span class="stat">区间 [' + left + ', ' + right + ']　mid = <b>' + mid + '</b></span>' +
+           '<span class="stat L">l = <b>' + f.l + '</b></span>' +
+           '<span class="stat R">r = <b>' + f.r + '</b>　已从右半取走 <b>' + (f.r - mid - 1) + '</b> 个</span>' +
+           '<span class="stat">cur = <b>' + f.cur + '</b></span>'
+         : '') +
+      '<span class="stat C">countArray = [' + f.cnt.join(', ') + ']</span>';
+
+    $('note').textContent = f.note;
+    $('counter').textContent = '第 ' + (step + 1) + ' / ' + frames.length + ' 步';
+    $('prev').disabled = step === 0;
+    $('next').disabled = step === frames.length - 1;
+    var hc = false, hm = false, q;
+    for (q = step + 1; q < frames.length; q++){
+      if (!hc && frames[q].formula) hc = true;
+      if (!hm && frames[q].phase === 'copy') hm = true;
+    }
+    $('jcnt').disabled = !hc;
+    $('jmerge').disabled = !hm;
+    if (step === frames.length - 1) stop();
+  }
+
+  function load(){
+    stop();
+    A = SETS[setIdx].a; N = A.length;
+    frames = build(A);
+    step = 0;
+    var btns = document.querySelectorAll('.setbtn');
+    for (var b = 0; b < btns.length; b++)
+      btns[b].setAttribute('aria-pressed', String(Number(btns[b].getAttribute('data-idx')) === setIdx));
+    render();
+  }
+  function stop(){ if (timer){ clearInterval(timer); timer = null; } $('play').textContent = '自动播放'; }
+  function jumpTo(test){
+    stop();
+    for (var q = step + 1; q < frames.length; q++) if (test(frames[q])){ step = q; render(); return; }
+  }
+
+  $('next').onclick   = function(){ if (step < frames.length - 1){ step++; render(); } };
+  $('prev').onclick   = function(){ if (step > 0){ step--; render(); } };
+  $('reset').onclick  = function(){ stop(); step = 0; render(); };
+  $('jcnt').onclick   = function(){ jumpTo(function(x){ return !!x.formula; }); };
+  $('jmerge').onclick = function(){ jumpTo(function(x){ return x.phase === 'copy'; }); };
+  $('play').onclick = function(){
+    if (timer){ stop(); return; }
+    if (step === frames.length - 1) step = 0;
+    $('play').textContent = '暂停';
+    timer = setInterval(function(){
+      if (step >= frames.length - 1){ stop(); return; }
+      step++; render();
+    }, 950);
+  };
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight'){ e.preventDefault(); $('next').click(); }
+    if (e.key === 'ArrowLeft'){  e.preventDefault(); $('prev').click(); }
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
